@@ -5,6 +5,13 @@ runners:
   best_model_root: "./history/BestAgent"
   condition_path: "./config/AlgoCondition.xlsx"
   off_pg: False
-  agents: ['PPO', 'A3C', 'A2C']
+  agents: ['PPO']
   logger: False # False or True(OpenAI Logger)
   framework: "torch" # torch or not (Not implemented)
+  iteration: 0
+  multi_agent: False
+  self_play: False
+  # --- curriculum learning ---
+  curriculum_learning: False
+  init_n_of_enemy: 1
+  next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)

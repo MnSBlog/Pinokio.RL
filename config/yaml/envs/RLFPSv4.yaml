@@ -18,13 +18,7 @@ envs:
   save_steps: 300
   # --- Algorithm condition ---
   actions: "Discrete" # Discrete or Continuous
-  multi_agent: False
-  self_play: False
   move_seperate: 9
-  # --- curriculum learning ---
-  curriculum_learning: False
-  init_n_of_enemy: 1
-  next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)
   # --- Feature parameters ---
   parent_name: GeometricFeatures
   base_name: Plane

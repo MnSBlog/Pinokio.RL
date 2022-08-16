@@ -1,9 +1,10 @@
-from abc import ABC
-
+import time
 import gym
+from typing import Optional
+from utils.comm_manger import CommunicationManager
 
 
-class RLFPSv4(gym.Env, ABC):
+class RLFPSv4(gym.Env):
     def __init__(self, env_config):
         self.__version = 4
         self.__envConfig = env_config
@@ -17,7 +18,7 @@ class RLFPSv4(gym.Env, ABC):
                 int(self.__envConfig['agent_count'] / self.__envConfig['max_n_of_friend']))
             + '"Pause"' + str(self.__pause_mode) + '"')
 
-    def step(self, action: list):
+    def step(self, action: Optional[list] = None):
         # Send action list
         action_buffer = self.__communication_manager.serialize_action_list(action)
         self.__communication_manager.send_info(action_buffer)
@@ -35,13 +36,13 @@ class RLFPSv4(gym.Env, ABC):
         n_of_current_agent = self.__envConfig['max_n_of_friend']
         n_of_current_enemy = self.__envConfig['max_n_of_enemy']
         msg = 'Rebuild:"Selfplay"' + str(self_play) + \
-                  '"NoA"' + str(n_of_current_agent) + \
-                  '"NoE"' + str(n_of_current_enemy) + \
-                  '"Parent"' + str(self.__envConfig['parent_name']) + \
-                  '"Base"' + str(self.__envConfig['base_name']) + \
-                  '"GlRe"' + str(self.__envConfig['global_resolution']) + \
-                  '"LcRe"' + str(self.__envConfig['local_resolution']) + \
-                  '"InitHeight"' + str(self.__envConfig['init_height']) + '"'
+              '"NoA"' + str(n_of_current_agent) + \
+              '"NoE"' + str(n_of_current_enemy) + \
+              '"Parent"' + str(self.__envConfig['parent_name']) + \
+              '"Base"' + str(self.__envConfig['base_name']) + \
+              '"GlRe"' + str(self.__envConfig['global_resolution']) + \
+              '"LcRe"' + str(self.__envConfig['local_resolution']) + \
+              '"InitHeight"' + str(self.__envConfig['init_height']) + '"'
         self.__communication_manager.send_info(msg)
         # To gathering spatial-feature
         self.__communication_manager.send_info("Break")
@@ -63,3 +64,12 @@ class RLFPSv4(gym.Env, ABC):
         deserialized_step_info_list = self.__communication_manager.deserialize_info_list(step_results)
 
         return deserialized_char_info_list, deserialized_field_info_list, deserialized_step_info_list
+
+    def render(self, mode="human", **kwargs):
+        return
+
+    def seed(self, seed=None):
+        return
+
+    def close(self):
+        pass

@@ -1,0 +1,6 @@
+agent:
+  # --- Defaults ---
+  gamma: 0.99 # discount factor
+  k_epochs: 80 # evaluation epochs
+  eps_clip: 0.2 # probability limitation
+

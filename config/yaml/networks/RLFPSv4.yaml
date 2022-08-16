@@ -1,9 +1,21 @@
 network:
+  # --- module networks ---
+  n_of_actor_networks: 3
+  n_of_critic_networks: 1
+  optimizer: 'adam'
+  loss_function: 'MSE'
   # --- learning option ---
   obs_stack: True # should not use LSTM layer with this
   use_lstm: False
-  optimizer: 'NLL'
   lr: 0.01
   momentum: 0.5
-  # --- preprocessing ---
   # --- backbone ---
+  backbone: 'resnet50'
+  freeze: False
+  # --- outputs ---
+  n_of_actions:
+    - 7
+    - 6
+    - 4
+  # --- save / load ---
+  model_path: 'Networks'

@@ -1,6 +1,9 @@
 import gym
 import os
 from utils.yaml_config import YamlConfig
+from envs import REGISTRY as env_registry
+from runners.episode_runner import EpisodeRunner
+from ray.tune.registry import register_env
 
 
 def load_config(form="yaml"):
@@ -22,71 +25,28 @@ def load_config(form="yaml"):
         config_loader.get_config(filenames=module_list)
     )
 
+    config['network']['model_path'] = os.path.join(config['runners']['history_path'],
+                                                   config['envs']['name'],
+                                                   config['network']['model_path'])
+
     return config
-    # 이 조건은 Runners로
-    # if config["self_play"]:
-    #     algo_condition = pd.read_excel(config["condition_path"], engine='openpyxl')
-    #     algo_condition = algo_condition.query('Select.str.contains("' + 'Use' + '")')
-    #     algo_condition = algo_condition.query('`' + config["env_config"]["actions"] + ' Actions`.str.contains("Yes")')
-    #     algo_condition = algo_condition.query('Frameworks.str.contains("' + config["framework"] + '")')
-    #     if config["env_config"]["multi_agent"]:
-    #         algo_condition = algo_condition.query('Multi-Agent.str.contains("Yes")')
-    #
-    #     config["algorithm"] = algo_condition['Algorithm'].to_list()
-    # # Save Path Dir
-    # if os.path.exists(config["history_path"]) is False:
-    #     os.mkdir(config["history_path"])
-    # if os.path.exists(config["history_path"] + "/" + config["env"]) is False:
-    #     os.mkdir(config["history_path"] + "/" + config["env"])
-    # if os.path.exists(config["history_path"] + "/" + config["env"] + "/" + "Best") is False:
-    #     os.mkdir(config["history_path"] + "/" + config["env"] + "/" + "Best")
-    # for algorithm in config["algorithm"]:
-    #     algorithm_path = config["history_path"] + "/" + config["env"] + "/" + algorithm
-    #     if os.path.exists(algorithm_path) is False:
-    #         os.mkdir(algorithm_path)
-    # config["history_path"] = config["history_path"] + "/" + config["env"]
 
 
 def main(args):
     # Env setting
-    env:gym.Env =
+    env: gym.Env = env_registry[args['env_name']](**args['envs'])
 
-
-    if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
-        rank = 0
-        configure_logger(args.log_path)
+    if args['runner_name'] == 'ray_tune':
+        register_env(args['env_name'], env)
+        raise NotImplementedError
     else:
-        rank = MPI.COMM_WORLD.Get_rank()
-        configure_logger(args.log_path, format_strs=[])
+        runner = EpisodeRunner(config=args['runners'], env=env)
 
-    model, env = train(args, extra_args)
+    if args['network_name'] == args['env_name']:
 
-    if args.save_path is not None and rank == 0:
-        save_path = osp.expanduser(args.save_path)
-        model.save(save_path)
-
-    if args.play:
-        logger.log("Running trained model")
-        obs = env.reset()
-
-        state = model.initial_state if hasattr(model, 'initial_state') else None
-        dones = np.zeros((1,))
-
-        episode_rew = np.zeros(env.num_envs) if isinstance(env, VecEnv) else np.zeros(1)
-        while True:
-            if state is not None:
-                actions, _, state, _ = model.step(obs, S=state, M=dones)
-            else:
-                actions, _, _, _ = model.step(obs)
-
-            obs, rew, done, _ = env.step(actions)
-            episode_rew += rew
-            env.render()
-            done_any = done.any() if isinstance(done, np.ndarray) else done
-            if done_any:
-                for i in np.nonzero(done)[0]:
-                    print('episode_rew={}'.format(episode_rew[i]))
-                    episode_rew[i] = 0
+    else:
+        raise NotImplementedError
+    runner.run()
 
     env.close()
 
