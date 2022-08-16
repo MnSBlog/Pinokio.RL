@@ -1,4 +1,4 @@
-import pandas as pd
+import gym
 import os
 from utils.yaml_config import YamlConfig
 
@@ -48,11 +48,9 @@ def load_config(form="yaml"):
 
 
 def main(args):
-    # configure logger, disable logging in child MPI processes (with rank > 0)
+    # Env setting
+    env:gym.Env =
 
-    arg_parser = common_arg_parser()
-    args, unknown_args = arg_parser.parse_known_args(args)
-    extra_args = parse_cmdline_kwargs(unknown_args)
 
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
         rank = 0
@@ -96,4 +94,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    arguments = load_config()
+    main(args=arguments)
