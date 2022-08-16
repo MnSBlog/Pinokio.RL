@@ -1,0 +1,10 @@
+runners:
+  # --- Operation options ---
+  use_cuda: True # Use gpu by default unless it isn't available
+  history_path: "./history"
+  best_model_root: "./history/BestAgent"
+  condition_path: "./config/AlgoCondition.xlsx"
+  off_pg: False
+  agents: ['PPO', 'A3C', 'A2C']
+  logger: False # False or True(OpenAI Logger)
+  framework: "torch" # torch or not (Not implemented)

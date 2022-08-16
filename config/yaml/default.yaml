@@ -1,0 +1,4 @@
+# --- Modules ---
+runner_name: "episode" # path about episode / curriculum / Ray_tune
+network_name: "RLFPSv4" # custom_network_path / torchvision.models(pre-trained)
+env_name: "RLFPSv4" # Environment name (include gym.env)

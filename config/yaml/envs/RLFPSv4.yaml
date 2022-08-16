@@ -1,0 +1,40 @@
+envs:
+  # --- Defaults ---
+  name: RLFPSv4
+  host_ip: "127.0.0.1"
+  port: 49999
+  map_id: 0
+  agent_count: 5
+  enemy_count: 5
+  max_availble_action: 11
+  max_state_space: 26
+  map_capacity: 1
+  max_n_of_enemy: 5
+  max_n_of_friend: 5
+  # --- learning condition ---
+  mode: "RealTime"
+  period: 200
+  update_steps: 100
+  save_steps: 300
+  # --- Algorithm condition ---
+  actions: "Discrete" # Discrete or Continuous
+  multi_agent: False
+  self_play: False
+  move_seperate: 9
+  # --- curriculum learning ---
+  curriculum_learning: False
+  init_n_of_enemy: 1
+  next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)
+  # --- Feature parameters ---
+  parent_name: GeometricFeatures
+  base_name: Plane
+  global_resolution: 100
+  local_resolution: 30
+  init_height: -5
+  step_info_dim: 8
+  spatial_dim: 7
+  non_spatial_dim: 16
+  move_dim: 9
+  attack_dim: 8
+  view_dim: 3
+

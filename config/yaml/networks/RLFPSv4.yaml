@@ -1,0 +1,9 @@
+network:
+  # --- learning option ---
+  obs_stack: True # should not use LSTM layer with this
+  use_lstm: False
+  optimizer: 'NLL'
+  lr: 0.01
+  momentum: 0.5
+  # --- preprocessing ---
+  # --- backbone ---
