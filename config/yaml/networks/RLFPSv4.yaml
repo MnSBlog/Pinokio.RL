@@ -7,6 +7,7 @@ network:
   # --- learning option ---
   obs_stack: True # should not use LSTM layer with this
   use_lstm: False
+  n_of_lstm_layer: 2
   lr: 0.01
   momentum: 0.5
   # --- backbone ---
