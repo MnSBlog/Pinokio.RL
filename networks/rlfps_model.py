@@ -15,5 +15,5 @@ class RLModel(nn.Module):
             test = 2
 
         # Optimizer
-        if args['optimizer'] == 'adam'
+        if args['optimizer'] == 'adam':
             self.optimizer = torch.optim.adam()
