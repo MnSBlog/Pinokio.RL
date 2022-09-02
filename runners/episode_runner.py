@@ -35,7 +35,10 @@ class EpisodeRunner:
         config["history_path"] = config["history_path"] + "/" + config["env"]
 
         self.config = config
-        env.reset()
+        self.net = net
+        self.env = env
+
+        self.env.reset()
 
     def run(self):
         iteration = self.config["iteration"]
@@ -48,7 +51,7 @@ class EpisodeRunner:
                 config_loader.get_config(filenames='agents//' + agent_name))
             agent_config = config['agent']
             agent: GeneralAgent = agent_registry[agent_name](**agent_config)
-            network: nn.Module =
+            network: nn.Module = net
             while True:
                 agent_config
 
