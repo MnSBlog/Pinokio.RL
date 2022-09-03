@@ -1,0 +1,6 @@
+agent:
+  gamma: 0.95 # discount factor
+  actor_lr: 0.0001 # Actor learning rate
+  critic_lr: 0.001 # Critic learning rate
+  std_bound: [1e-2, 1.0] # A2C std. bound
+  action_bound: 0 # You have to set this value (e.g. env.action_space.high[0])

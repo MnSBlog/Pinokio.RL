@@ -7,6 +7,7 @@ from utils.yaml_config import YamlConfig
 from agents import REGISTRY as agent_registry
 from agents.general_agent import GeneralAgent
 
+
 class EpisodeRunner:
     def __init__(self, config: dict, env: gym.Env, net: nn.Module):
         if config["self_play"]:
@@ -51,7 +52,7 @@ class EpisodeRunner:
                 config_loader.get_config(filenames='agents//' + agent_name))
             agent_config = config['agent']
             agent: GeneralAgent = agent_registry[agent_name](**agent_config)
-            network: nn.Module = net
+            network: nn.Module = self.net
             while True:
                 agent_config
 

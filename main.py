@@ -3,8 +3,8 @@ import os
 from utils.yaml_config import YamlConfig
 from envs import REGISTRY as env_registry
 from runners.episode_runner import EpisodeRunner
+from runners.gym_runner import GymRunner
 from ray.tune.registry import register_env
-
 
 def load_config(form="yaml"):
     if form == "yaml":
@@ -39,19 +39,18 @@ def main(args):
     if args['runner_name'] == 'ray_tune':
         register_env(args['env_name'], env)
         raise NotImplementedError
+    elif args['runner_name'] == 'gym':
+        runner = GymRunner(config=args['runners'], env=gym.make(args['env_name']))
     else:
         runner = EpisodeRunner(config=args['runners'], env=env)
 
     if args['network_name'] == args['env_name']:
-
+        test = 1
     else:
         raise NotImplementedError
     runner.run()
 
-    env.close()
-
     return model
-
 
 if __name__ == '__main__':
     arguments = load_config()
