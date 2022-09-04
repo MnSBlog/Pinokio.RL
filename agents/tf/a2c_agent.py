@@ -1,7 +1,5 @@
-import numpy as np
-import tensorflow as tf
 from keras.optimizers import Adam
-from agents.general_agent import td_target, unpack_batch, log_pdf
+from agents.tf.util_functions import *
 from agents.tf.actorcritic import Actor, Critic
 from agents.general_agent import PolicyAgent
 
@@ -14,12 +12,11 @@ class A2cAgent(PolicyAgent):
         self.critic_lr = self._config['critic_lr']
         # 표준편차의 최솟값과 최대값 설정
         self.std_bound = self._config['std_bound']
+        self.state_dim = self._config['state_dim']
 
         # 옵티마이저 설정
         self.actor_opt = Adam(self.actor_lr)
         self.critic_opt = Adam(self.critic_lr)
-
-        self.action_bound = self._config['action_bound']
 
     def select_action(self, state):
         mu_a, std_a = self.actor(state)
@@ -27,7 +24,8 @@ class A2cAgent(PolicyAgent):
         std_a = std_a.numpy()[0]
         std_a = np.clip(std_a, self.std_bound[0], self.std_bound[1])
         action = np.random.normal(mu_a, std_a, size=self.actor.action_dim)
-        action = np.clip(action, -self.action_bound, self.action_bound)
+        action = np.clip(action, -self.actor.action_dim, self.actor.action_dim)
+
         self.batch_state.append(state)
         self.batch_action.append(action)
         return action

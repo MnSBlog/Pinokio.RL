@@ -1,4 +1,4 @@
-runners:
+runner:
   # --- Operation options ---
   use_cuda: True # Use gpu by default unless it isn't available
   history_path: "./history"

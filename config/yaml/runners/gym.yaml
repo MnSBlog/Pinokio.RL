@@ -1,18 +1,17 @@
-runners:
+runner:
   # --- Defaults ---
-  max_episode_num: 100
-  render: False
+  max_episode_num: 1000000
+  pretrain: False
+  render: True
   # --- Learning Condition ---
   batch_size: 32 # batch size
   # --- Operation options ---
   use_cuda: True # Use gpu by default unless it isn't available
   history_path: "./history"
-  best_model_root: "./history/BestAgent"
+  best_model_root: "Bes"
   condition_path: "./config/AlgoCondition.xlsx"
   off_pg: False
-  agents: 'PPO'
   logger: False # False or True(OpenAI Logger)
-  framework: "torch" # torch (Not implemented) or tensorflow
   iteration: 0
   multi_agent: False
   self_play: False

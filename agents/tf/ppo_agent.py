@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from keras.optimizers import Adam
-from agents.general_agent import unpack_batch, log_pdf
+from agents.tf.util_functions import *
 from agents.tf.actorcritic import Actor, Critic
 from agents.general_agent import PolicyAgent
 
@@ -18,31 +18,34 @@ class PpoAgent(PolicyAgent):
         self.ratio_clipping = self._config['ratio_clipping']
         # 표준편차의 최솟값과 최대값 설정
         self.std_bound = self._config['std_bound']
+        self.state_dim = self._config['state_dim']
 
         # 옵티마이저 설정
         self.actor_opt = Adam(self.actor_lr)
         self.critic_opt = Adam(self.critic_lr)
 
-        self.action_bound = self._config['action_bound']
-
     def select_action(self, state):
-        mu_a, std_a = self.actor(state)
+        mu_a, std_a = self.actor(state=state)
         mu_a = mu_a.numpy()[0]
         std_a = std_a.numpy()[0]
         std_a = np.clip(std_a, self.std_bound[0], self.std_bound[1])
         action = np.random.normal(mu_a, std_a, size=self.actor.action_dim)
-        action = np.clip(action, -self.action_bound, self.action_bound)
+        rtn_action = np.clip(action, -self.actor.action_bound, self.actor.action_bound)
 
         # 이전 정책의 로그 확률밀도함수 계산
         var_old = std_a ** 2
-        log_old_policy_pdf = -0.5 * (action - mu_a) ** 2 / var_old - 0.5 * np.log(var_old * 2 * np.pi)
+        log_old_policy_pdf = -0.5 * (rtn_action - mu_a) ** 2 / var_old - 0.5 * np.log(var_old * 2 * np.pi)
         log_old_policy_pdf = np.sum(log_old_policy_pdf)
+        log_old_policy_pdf = np.reshape(log_old_policy_pdf, [1, 1])
+
+        state = np.reshape(state, [1, self.state_dim])
+        action = np.reshape(rtn_action, [1, self.actor.action_dim])
         log_old_policy_pdf = np.reshape(log_old_policy_pdf, [1, 1])
 
         self.batch_state.append(state)
         self.batch_action.append(action)
         self.batch_log_old_policy_pdf.append(log_old_policy_pdf)
-        return action
+        return rtn_action
 
     def update(self, next_state=None, done=None):
         states = unpack_batch(self.batch_state)
@@ -76,8 +79,9 @@ class PpoAgent(PolicyAgent):
         self.critic.save_weights(checkpoint_path + "_critic.h5")
 
     def load(self, checkpoint_path: str):
-        self.actor.load_weights(checkpoint_path + '_actor.h5')
-        self.critic.load_weights(checkpoint_path + '_critic.h5')
+        body = checkpoint_path.split('_')
+        self.actor.load_weights(body[0] + '_actor.h5')
+        self.critic.load_weights(body[0] + '_critic.h5')
 
     # 액터 신경망 학습
     def actor_learn(self, log_old_policy_pdf, states, actions, gaes):

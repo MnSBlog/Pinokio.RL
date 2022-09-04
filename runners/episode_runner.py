@@ -4,8 +4,6 @@ import gym
 import pandas as pd
 import torch.nn as nn
 from utils.yaml_config import YamlConfig
-from agents import REGISTRY as agent_registry
-from agents.general_agent import GeneralAgent
 
 
 class EpisodeRunner:
@@ -51,7 +49,7 @@ class EpisodeRunner:
             config = config_loader.config_copy(
                 config_loader.get_config(filenames='agents//' + agent_name))
             agent_config = config['agent']
-            agent: GeneralAgent = agent_registry[agent_name](**agent_config)
+            #agent: GeneralAgent = agent_registry[agent_name](**agent_config)
             network: nn.Module = self.net
             while True:
                 agent_config

@@ -1,10 +1,13 @@
 agent:
   # --- Defaults ---
+  name: "PPO"
+  framework: "tf" # torch (Not implemented) or tensorflow
+  # --- Hyper parameters ---
   gamma: 0.99 # discount factor
   gae_lambda: 0.9 # GAE lambda
   actor_lr: 0.0001 # Actor learning rate
   critic_lr: 0.001 # Critic learning rate
   epochs: 5 # evaluation epochs
   ratio_clipping: 0.05 # probability limitation
-  std_bound: [1e-2, 1.0] # std. bound
-  action_bound: 0 # You have to set this value (e.g. env.action_space.high[0])
+  std_bound: [0.01, 1.0] # std. bound
+  state_dim: 0 # You have to set this value (e.g. env.observation_space.shape[0])

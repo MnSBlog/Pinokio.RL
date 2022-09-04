@@ -10,7 +10,7 @@ from Batch.Info import Info
 from Batch.InfoList import InfoList
 from Batch.FieldInfo import FieldInfo
 from Batch.FieldInfoList import FieldInfoList
-from SubModules.Utilities.zero_mq import ZmqClient
+from utils.zero_mq import ZmqClient
 
 
 class CommunicationManager:

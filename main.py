@@ -6,6 +6,7 @@ from runners.episode_runner import EpisodeRunner
 from runners.gym_runner import GymRunner
 from ray.tune.registry import register_env
 
+
 def load_config(form="yaml"):
     if form == "yaml":
         config_loader = YamlConfig(root='./config')
@@ -25,24 +26,34 @@ def load_config(form="yaml"):
         config_loader.get_config(filenames=module_list)
     )
 
-    config['network']['model_path'] = os.path.join(config['runners']['history_path'],
+    config['network']['model_path'] = os.path.join(config['runner']['history_path'],
                                                    config['envs']['name'],
                                                    config['network']['model_path'])
 
     return config
 
 
-def main(args):
-    # Env setting
-    env: gym.Env = env_registry[args['env_name']](**args['envs'])
+def save_folder_check(config):
+    root = config['runner']['history_path']
+    if os.path.exists(os.path.join(root, config['env_name'])) is False:
+        os.mkdir(os.path.join(root, config['env_name']))
+    config['runner']['history_path'] = os.path.join(root, config['env_name'])
 
+    root = config['runner']['history_path']
+    if os.path.exists(os.path.join(root, config['agent_name'])) is False:
+        os.mkdir(os.path.join(root, config['agent_name']))
+        os.mkdir(os.path.join(root, 'best'))
+    config['runner']['history_path'] = os.path.join(root, config['agent_name'])
+
+
+def main(args):
     if args['runner_name'] == 'ray_tune':
-        register_env(args['env_name'], env)
+        register_env(args['env_name'], env_registry[args['env_name']](**args['envs']))
         raise NotImplementedError
     elif args['runner_name'] == 'gym':
-        runner = GymRunner(config=args['runners'], env=gym.make(args['env_name']))
+        runner = GymRunner(config=args, env=gym.make(args['env_name']))
     else:
-        runner = EpisodeRunner(config=args['runners'], env=env)
+        runner = EpisodeRunner(config=args['runners'], env=env_registry[args['env_name']](**args['envs']))
 
     if args['network_name'] == args['env_name']:
         test = 1
@@ -50,8 +61,12 @@ def main(args):
         raise NotImplementedError
     runner.run()
 
-    return model
+    runner.plot_result()
+
 
 if __name__ == '__main__':
+    from gym import envs
+    print(envs.registry.values())
     arguments = load_config()
+    save_folder_check(arguments)
     main(args=arguments)
