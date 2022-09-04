@@ -1,0 +1,5 @@
+network:
+  # --- Defaults ---
+  name: Pendulum
+  # --- save / load ---
+  model_path: 'Networks'

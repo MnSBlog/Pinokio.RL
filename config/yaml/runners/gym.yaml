@@ -2,7 +2,7 @@ runner:
   # --- Defaults ---
   max_episode_num: 1000000
   pretrain: False
-  render: True
+  render: False
   # --- Learning Condition ---
   batch_size: 32 # batch size
   # --- Operation options ---

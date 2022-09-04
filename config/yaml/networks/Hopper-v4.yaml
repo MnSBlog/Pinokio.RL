@@ -1,0 +1,5 @@
+network:
+  # --- Defaults ---
+  name: Hopper
+  # --- save / load ---
+  model_path: 'Networks'

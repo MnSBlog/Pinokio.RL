@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: Pendulum
+  reward_range: [-8, 0]

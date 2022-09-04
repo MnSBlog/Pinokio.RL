@@ -1,0 +1,12 @@
+envs:
+  # --- Defaults ---
+  name: Hopper
+  reward_range: [0.5, 1.5]
+# reward: health reward + forward reward - ctrl cost
+# health reward: default 1.0
+# forward reward: default forward_rew_weight 1.0 * (past coordi x - now coordi x)/dt
+#   delta time dt is 0.008
+# ctrl_cost: ctrl cost weight 0.001 * sum(action sq.)
+
+# MAX reward: 1 + (forward x)/0.008 + 0           1 + 0.004
+# MIN reward: 1 - (forward x)/0.008 - 0.001 e.g. 1 - 0.003

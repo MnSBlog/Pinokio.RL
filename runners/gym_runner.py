@@ -49,6 +49,10 @@ class GymRunner:
         self.reward = 0
 
     def run(self):
+        rew_min = self.config['envs']['reward_range'][0]
+        rew_max = self.config['envs']['reward_range'][1]
+        rew_gap = (rew_max - rew_min) / 2
+        rew_numerator = (rew_max + rew_min) / 2
         # 에피소드마다 다음을 반복
         for ep in range(self.config['runner']['max_episode_num']):
             # 에피소드 초기화
@@ -62,8 +66,8 @@ class GymRunner:
                 # 다음 상태, 보상 관측
                 next_state, reward, done, _ = self.env.step(self.action)
                 reward = np.reshape(reward, [1, 1])
-                # 학습용 보상 설정 ??
-                train_reward = (reward + 8) / 8
+                # 학습용 보상 [-1, 1]로 fitting
+                train_reward = reward - rew_numerator / rew_gap
                 self.agent.batch_reward.append(train_reward)
 
                 step += 1
