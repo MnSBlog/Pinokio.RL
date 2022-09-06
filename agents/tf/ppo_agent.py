@@ -24,6 +24,9 @@ class PpoAgent(PolicyAgent):
         self.actor_opt = Adam(self.actor_lr)
         self.critic_opt = Adam(self.critic_lr)
 
+        # *****
+        self.mid_gamma = self._config['mid_gamma']
+
     def select_action(self, state):
         mu_a, std_a = self.actor(state=state)
         mu_a = mu_a.numpy()[0]
@@ -118,12 +121,25 @@ class PpoAgent(PolicyAgent):
         if not done:
             forward_val = next_v_value
 
+        # Origin
         for k in reversed(range(0, len(rewards))):
             delta = rewards[k] + self.gamma * forward_val - v_values[k]
             gae_cumulative = self.gamma * self.gae_lambda * gae_cumulative + delta
             gae[k] = gae_cumulative
             forward_val = v_values[k]
             n_step_targets[k] = gae[k] + v_values[k]
+
+        # # My idea
+        # # 13
+        # gae[len(rewards) - 1] = rewards[len(rewards) - 1] + self.mid_gamma * forward_val - v_values[len(rewards) - 1]
+        # forward_val = v_values[len(rewards) - 1]
+        #
+        # gae[len(rewards) - 2] = rewards[len(rewards) - 2] + self.gamma * rewards[len(rewards) - 1] + self.mid_gamma * forward_val - v_values[14]
+        # forward_val = v_values[len(rewards) - 2]
+        # for k in reversed(range(0, len(rewards) - 2)):
+        #     gae[k] = rewards[k] + self.gamma * rewards[k - 1] \
+        #              + self.mid_gamma * (forward_val + rewards[len(rewards) - 1]) - v_values[k]
+        #     forward_val = v_values[k]
+        #     n_step_targets[k] = gae[k] + v_values[k]
+
         return gae, n_step_targets
-
-

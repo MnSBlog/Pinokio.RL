@@ -4,6 +4,7 @@ from agents.tf.actorcritic import Actor, Critic
 class GeneralAgent:
     def __init__(self, parameters: dict):
         self._config = parameters
+        self.exconfig = dict()
         # 배치 설정
         self.batch_state = []
         self.batch_action = []

@@ -27,6 +27,10 @@ class GymRunner:
         actor.build(input_shape=(None, state_dim))
         critic.build(input_shape=(None, state_dim))
 
+        # *****
+        self.config['agent']['mid_gamma']\
+            = self.config['agent']['gamma'] ** int(self.config['runner']['batch_size'] / 2)
+
         self.agent: GeneralAgent = AgentRegistry[algo_key](parameters=self.config['agent'],
                                                            actor=actor, critic=critic)
 
@@ -67,7 +71,7 @@ class GymRunner:
                 next_state, reward, done, _ = self.env.step(self.action)
                 reward = np.reshape(reward, [1, 1])
                 # 학습용 보상 [-1, 1]로 fitting
-                train_reward = reward - rew_numerator / rew_gap
+                train_reward = (reward - rew_numerator) / rew_gap
                 self.agent.batch_reward.append(train_reward)
 
                 step += 1
