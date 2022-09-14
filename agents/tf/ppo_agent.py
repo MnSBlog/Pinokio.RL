@@ -140,6 +140,6 @@ class PpoAgent(PolicyAgent):
         #     gae[k] = rewards[k] + self.gamma * rewards[k - 1] \
         #              + self.mid_gamma * (forward_val + rewards[len(rewards) - 1]) - v_values[k]
         #     forward_val = v_values[k]
-        #     n_step_targets[k] = gae[k] + v_values[k]
+        #     n_step_targets[k] = gae[k]
 
         return gae, n_step_targets

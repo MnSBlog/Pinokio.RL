@@ -69,8 +69,18 @@ class GymRunner:
                 self.action = self.agent.select_action(tf.convert_to_tensor([self.obs], dtype=tf.float32))
                 # 다음 상태, 보상 관측
                 next_state, reward, done, _ = self.env.step(self.action)
-                reward = np.reshape(reward, [1, 1])
+                if rew_min > reward:
+                    print('reward min is updated: ', reward)
+                    rew_min = reward
+                    rew_gap = (rew_max - rew_min) / 2
+                    rew_numerator = (rew_max + rew_min) / 2
+                elif rew_max < reward:
+                    print('reward max is updated: ', reward)
+                    rew_max = reward
+                    rew_gap = (rew_max - rew_min) / 2
+                    rew_numerator = (rew_max + rew_min) / 2
                 # 학습용 보상 [-1, 1]로 fitting
+                reward = np.reshape(reward, [1, 1])
                 train_reward = (reward - rew_numerator) / rew_gap
                 self.agent.batch_reward.append(train_reward)
 
