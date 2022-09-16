@@ -1,0 +1,26 @@
+network:
+  # --- module networks ---
+  optimizer: 'adam'
+  loss_function: 'MSE'
+  # --- hyper parameters ---
+  lr: 0.01
+  momentum: 0.5
+  # --- learning option ---
+  obs_stack: True # should not use LSTM layer with this
+  n_of_obs_stack: 3
+  use_lstm: False
+  n_of_lstm_layer: 3
+  # --- spatial features ---
+  spatial_feature: True
+  spatial_dim: [30, 30, 3]
+  backbone: ''
+  freeze: False
+  # --- non-spatial features ---
+  non_spatial_feature: True
+  non_spatial_dim: [17]
+  freeze: False
+  # --- outputs ---
+  n_of_actions:
+    - 2
+  # --- save / load ---
+  model_path: 'Networks'
