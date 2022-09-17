@@ -1,8 +1,8 @@
 import gym
 import os
+import runners.standard_runner as runner_instance
 from utils.yaml_config import YamlConfig
 from envs import REGISTRY as env_registry
-from runners.episode_runner import EpisodeRunner
 from runners.gym_runner import GymRunner
 from ray.tune.registry import register_env
 
@@ -53,12 +53,9 @@ def main(args):
     elif args['runner_name'] == 'gym':
         runner = GymRunner(config=args, env=gym.make(args['env_name']))
     else:
-        runner = EpisodeRunner(config=args['runners'], env=env_registry[args['env_name']](**args['envs']))
-
-    if args['network_name'] == args['env_name']:
-        test = 1
-    else:
-        raise NotImplementedError
+        runner = getattr(runner_instance,
+                         args['runner_name'])(config=args['runners'],
+                                              env=env_registry[args['env_name']](**args['envs']))
     runner.run()
 
     runner.plot_result()
