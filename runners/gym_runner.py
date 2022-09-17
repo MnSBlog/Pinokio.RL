@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from agents.tf.actorcritic import Actor, Critic
-from agents.tf import REGISTRY as AgentRegistry
+from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
 
 
@@ -31,8 +31,8 @@ class GymRunner:
         self.config['agent']['mid_gamma']\
             = self.config['agent']['gamma'] ** int(self.config['runner']['batch_size'] / 2)
 
-        self.agent: GeneralAgent = AgentRegistry[algo_key](parameters=self.config['agent'],
-                                                           actor=actor, critic=critic)
+        self.agent: GeneralAgent = AGENT_REGISTRY[algo_key](parameters=self.config['agent'],
+                                                            actor=actor, critic=critic)
 
         if self.config['runner']['pretrain']:
             try:

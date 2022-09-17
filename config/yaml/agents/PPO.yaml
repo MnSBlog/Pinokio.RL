@@ -1,7 +1,7 @@
 agent:
   # --- Defaults ---
   name: "ppo_agent"
-  framework: "pytorch" # pytorch or tf
+  framework: "torch" # torch or tf
   # --- Hyper parameters ---
   gamma: 0.99 # discount factor
   gae_lambda: 0.9 # GAE lambda
@@ -12,5 +12,5 @@ agent:
   std_bound: [0.01, 1.0] # std. bound
   state_dim: 0 # You have to set this value (e.g. env.observation_space.shape[0])
   # - Model configuration -
-  optimizer: 'adam'
-  loss_function: 'MSE'
+  optimizer: 'Adam'
+  loss_function: 'MSELoss'

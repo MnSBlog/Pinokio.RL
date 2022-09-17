@@ -4,45 +4,37 @@ import random
 import numpy as np
 import torch
 import torch.nn as nn
-from algorithms.learner import ActorCritic, ActorCriticModel, RolloutBuffer
-from algorithms.learner import get_device
+from agents.pytorch.utilities import get_device
+from agents.general_agent import PolicyAgent
 
 
-class PPO(ActorCriticModel):
-    def __init__(self, state_dim, action_dim, lr_actor=0.0003, lr_critic=0.001, gamma=0.99, K_epochs=80, eps_clip=0.2,
-                 has_continuous_action_space=False, action_std_init=0.6):
-
+class PPO(PolicyAgent):
+    def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
         device = get_device("auto")
-        policy = ActorCritic(state_dim, action_dim, has_continuous_action_space,
-                             action_std_init, device).to(device)
+        super(PPO, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
+        self.actor_old = copy.deepcopy(actor).to(device)
+        self.critic_old = copy.deepcopy(critic).to(device)
+        # Hyper-parameters
+        self.gamma = self._config['gamma']
+        self.gae_lambda = self._config['gae_lambda']
+        self.actor_lr = self._config['actor_lr']
+        self.critic_lr = self._config['critic_lr']
+        self.epochs = self._config['epochs']
+        self.ratio_clipping = self._config['ratio_clipping']
+        # 표준편차의 최솟값과 최대값 설정
+        self.std_bound = self._config['std_bound']
+        self.state_dim = self._config['state_dim']
+        # Optimizer
+        opt_arg = [
+            {'params': self.actor.parameters(), 'lr': self.actor_lr},
+            {'params': self.critic.parameters(), 'lr': self.critic_lr}
+        ]
 
-        policy_old = ActorCritic(state_dim, action_dim, has_continuous_action_space,
-                                 action_std_init, device).to(device)
+        self.optimizer = getattr(torch.optim, parameters['optimizer'])(opt_arg)
+        self.actor_old.load_state_dict(self.actor.state_dict())
+        self.critic_old.load_state_dict(self.critic.state_dict())
 
-        parameters = {'policy': policy, 'policy_old': policy_old}
-
-        # 습관이지만 파이썬에서는 어떤 것의 super인지 명명하는 것이 중요(다중 상속에 용이하게 사용됨)
-        super(PPO, self).__init__(parameters=parameters)
-
-        self.has_continuous_action_space = has_continuous_action_space
-
-        if has_continuous_action_space:
-            self.action_std = action_std_init
-
-        self.gamma = gamma
-        self.eps_clip = eps_clip
-        self.K_epochs = K_epochs
-
-        self.buffer = RolloutBuffer()
-
-        self.optimizer = torch.optim.Adam([
-            {'params': self._policy.actor.parameters(), 'lr': lr_actor},
-            {'params': self._policy.critic.parameters(), 'lr': lr_critic}
-        ])
-
-        self._policy_old.load_state_dict(self._policy.state_dict())
-
-        self.MseLoss = nn.MSELoss()
+        self.loss = getattr(nn, parameters['loss_function'])()
 
         self.device = device
 

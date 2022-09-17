@@ -55,10 +55,12 @@ class CustomTorchNetwork(nn.Module):
         self.n_of_heads = len(config['n_of_actions'])
         self.networks = nn.ModuleDict(networks)
 
-    def forward(self, x):
-        spatial_x = self.networks['spatial_feature'](x[0])
-        non_spatial_x = self.networks['non_spatial_feature'](x[1])
-        state = torch.cat([spatial_x, non_spatial_x], dim=1)
+    def forward(self, x1, x2):
+        x1 = self.networks['spatial_feature'](x1)
+        x2 = torch.transpose(x2, 1, 2)
+        x2 = self.networks['non_spatial_feature'](x2)
+        x2 = x2.squeeze(dim=2)
+        state = torch.cat([x1, x2], dim=1)
         state = self.networks['neck'](state)
         outputs = []
 

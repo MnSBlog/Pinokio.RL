@@ -3,10 +3,15 @@ import random
 import gym
 import pandas as pd
 import torch.nn as nn
+from networks.network_generator import CustomTorchNetwork
+from agents import REGISTRY as AGENT_REGISTRY
 from utils.yaml_config import YamlConfig
 
+from torchsummary import summary
 
-def select_algorithm(config):
+
+def select_algorithm(args):
+    config = args['runner']
     if config["self_play"]:
         algo_condition = pd.read_excel(config["condition_path"], engine='openpyxl')
         algo_condition = algo_condition.query('Select.str.contains("' + 'Use' + '")')
@@ -18,21 +23,13 @@ def select_algorithm(config):
 
         config["agents"] = algo_condition['Algorithm'].to_list()
 
-    # Save Path Dir
-    if os.path.exists(config["history_path"]) is False:
-        os.mkdir(config["history_path"])
-    if os.path.exists(config["history_path"] + "/" + config["env"]) is False:
-        os.mkdir(config["history_path"] + "/" + config["env"])
-    if os.path.exists(config["history_path"] + "/" + config["env"] + "/" + "Best") is False:
-        os.mkdir(config["history_path"] + "/" + config["env"] + "/" + "Best")
+        for algorithm in config["agents"]:
+            algorithm_path = config["history_path"].replace(args['agent_name'], algorithm)
+            if os.path.exists(algorithm_path) is False:
+                os.mkdir(algorithm_path)
 
-    for algorithm in config["agents"]:
-        algorithm_path = config["history_path"] + "/" + config["env"] + "/" + algorithm
-        if os.path.exists(algorithm_path) is False:
-            os.mkdir(algorithm_path)
-    config["history_path"] = config["history_path"] + "/" + config["env"]
-
-    return config
+    args['runner'] = config
+    return args
 
 
 class EpisodeRunner:
@@ -64,8 +61,20 @@ class EpisodeRunner:
 class StepRunner:
     def __init__(self, config: dict, env: gym.Env):
         self.config = select_algorithm(config)
+        # Networks
+        actor = CustomTorchNetwork(config['network'])
+        critic = nn.Sequential(
+            nn.Linear(config['neck_input'] * 2, 64),
+            nn.Tanh(),
+            nn.Linear(64, 64),
+            nn.Tanh(),
+            nn.Linear(64, 1)
+        )
+        algo_name = config['agent']['framework'] + config['agent_name']
+        # Algorithm(Agent)
+        self.agent = AGENT_REGISTRY[algo_name](parameters=self.config['agent'], actor=actor, critic=critic)
+        # Environment
         self.env = env
-
         self.env.reset()
 
     def run(self):

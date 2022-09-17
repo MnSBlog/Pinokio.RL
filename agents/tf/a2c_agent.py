@@ -4,9 +4,9 @@ from agents.tf.actorcritic import Actor, Critic
 from agents.general_agent import PolicyAgent
 
 
-class A2cAgent(PolicyAgent):
+class A2C(PolicyAgent):
     def __init__(self, parameters: dict, actor: Actor, critic: Critic):
-        super(A2cAgent, self).__init__(parameters=parameters, actor=actor, critic=critic)
+        super(A2C, self).__init__(parameters=parameters, actor=actor, critic=critic)
         self.gamma = self._config['gamma']
         self.actor_lr = self._config['actor_lr']
         self.critic_lr = self._config['critic_lr']

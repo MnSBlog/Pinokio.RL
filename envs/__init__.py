@@ -8,4 +8,5 @@ def get_env_fn(env, **kwargs) -> gym.Env:
     return env(kwargs)
 
 
-REGISTRY = {'RLFPSv4': partial(get_env_fn, env=RLFPSv4)}
+REGISTRY = {'RLFPSv4': partial(get_env_fn, env=RLFPSv4),
+            'OHTRouting': partial(get_env_fn, env=OhtBase)}

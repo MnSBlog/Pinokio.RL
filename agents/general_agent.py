@@ -27,13 +27,10 @@ class GeneralAgent:
 
 
 class PolicyAgent(GeneralAgent):
-    def __init__(self, parameters: dict, actor: Actor, critic: Critic):
+    def __init__(self, parameters: dict, actor, critic):
         super(PolicyAgent, self).__init__(parameters=parameters)
         self.actor = actor
         self.critic = critic
-
-        self.actor.summary()
-        self.critic.summary()
 
     def select_action(self, state):
         return super(PolicyAgent, self).select_action(state)
