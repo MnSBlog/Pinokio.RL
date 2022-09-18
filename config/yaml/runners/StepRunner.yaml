@@ -7,9 +7,9 @@ runner:
   off_pg: False
   agents: ['PPO']
   logger: False # False or True(OpenAI Logger)
-  iteration: 0
   multi_agent: False
   self_play: False
+  max_step_num: 10000
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1

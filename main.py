@@ -53,14 +53,10 @@ def main(args):
     elif args['runner_name'] == 'gym':
         runner = GymRunner(config=args, env=gym.make(args['env_name']))
     else:
-        # runner = getattr(runner_instance,
-        #                  args['runner_name'])(config=args,
-        #                                       env=env_registry[args['env_name']](**args['envs']))
         runner = getattr(runner_instance,
                          args['runner_name'])(config=args,
                                               env=None)
     runner.run()
-
     runner.plot_result()
 
 

@@ -69,3 +69,6 @@ class CustomTorchNetwork(nn.Module):
             outputs.append(self.networks[key](state))
 
         return outputs
+
+    def act(self, spatial, non_spatial):
+
