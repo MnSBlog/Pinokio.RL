@@ -1,6 +1,7 @@
 envs:
   # --- Info ---
   name: RLFPSv4
+  debug: False
   # --- Defaults ---
   port: 49999
   agent_count: 5
@@ -11,7 +12,7 @@ envs:
   map_capacity: 3
   map_type: [0, 0, 0] # 0: Container Map / 1: Training Map / 2: External Map / -1: Random
   # --- learning condition ---
-  mode: "RealTime" # Pause or RealTime
+  mode: "Pause" # Pause or RealTime
   period: 200
   acceleration: 1.0
   update_steps: 100

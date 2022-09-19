@@ -29,10 +29,6 @@ class ZmqClient:
         self._socket.connect("tcp://localhost:" + str(port))
 
     def send(self, msg):
-        if isinstance(msg, str):
-            self._socket.send(msg.encode())
-        elif isinstance(msg, bytearray):
-            self._socket.send(msg)
-
+        self._socket.send(msg)
         reply = self._socket.recv()
         return reply

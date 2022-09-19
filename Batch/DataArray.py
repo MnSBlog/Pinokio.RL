@@ -6,97 +6,110 @@ import flatbuffers
 from flatbuffers.compat import import_numpy
 np = import_numpy()
 
-class Info(object):
+class DataArray(object):
     __slots__ = ['_tab']
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
-        x = Info()
+        x = DataArray()
         x.Init(buf, n + offset)
         return x
 
     @classmethod
-    def GetRootAsInfo(cls, buf, offset=0):
+    def GetRootAsDataArray(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
-    # Info
+    # DataArray
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-    # Info
+    # DataArray
     def Name(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.String(o + self._tab.Pos)
         return None
 
-    # Info
-    def MapId(self):
+    # DataArray
+    def Shape(self, j):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
+            a = self._tab.Vector(o)
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
-    # Info
-    def CharIndex(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+    # DataArray
+    def ShapeAsNumpy(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
+            return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Int32Flags, o)
         return 0
 
-    # Info
+    # DataArray
+    def ShapeLength(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            return self._tab.VectorLen(o)
+        return 0
+
+    # DataArray
+    def ShapeIsNone(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        return o == 0
+
+    # DataArray
     def Data(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
             return self._tab.Get(flatbuffers.number_types.Float32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
         return 0
 
-    # Info
+    # DataArray
     def DataAsNumpy(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Float32Flags, o)
         return 0
 
-    # Info
+    # DataArray
     def DataLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
-    # Info
+    # DataArray
     def DataIsNone(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         return o == 0
 
-def Start(builder): builder.StartObject(4)
-def InfoStart(builder):
+def Start(builder): builder.StartObject(3)
+def DataArrayStart(builder):
     """This method is deprecated. Please switch to Start."""
     return Start(builder)
 def AddName(builder, name): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
-def InfoAddName(builder, name):
+def DataArrayAddName(builder, name):
     """This method is deprecated. Please switch to AddName."""
     return AddName(builder, name)
-def AddMapId(builder, mapId): builder.PrependInt32Slot(1, mapId, 0)
-def InfoAddMapId(builder, mapId):
-    """This method is deprecated. Please switch to AddMapId."""
-    return AddMapId(builder, mapId)
-def AddCharIndex(builder, charIndex): builder.PrependInt32Slot(2, charIndex, 0)
-def InfoAddCharIndex(builder, charIndex):
-    """This method is deprecated. Please switch to AddCharIndex."""
-    return AddCharIndex(builder, charIndex)
-def AddData(builder, data): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0)
-def InfoAddData(builder, data):
+def AddShape(builder, shape): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0)
+def DataArrayAddShape(builder, shape):
+    """This method is deprecated. Please switch to AddShape."""
+    return AddShape(builder, shape)
+def StartShapeVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def DataArrayStartShapeVector(builder, numElems):
+    """This method is deprecated. Please switch to Start."""
+    return StartShapeVector(builder, numElems)
+def AddData(builder, data): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0)
+def DataArrayAddData(builder, data):
     """This method is deprecated. Please switch to AddData."""
     return AddData(builder, data)
 def StartDataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def InfoStartDataVector(builder, numElems):
+def DataArrayStartDataVector(builder, numElems):
     """This method is deprecated. Please switch to Start."""
     return StartDataVector(builder, numElems)
 def End(builder): return builder.EndObject()
-def InfoEnd(builder):
+def DataArrayEnd(builder):
     """This method is deprecated. Please switch to End."""
     return End(builder)

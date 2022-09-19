@@ -1,7 +1,10 @@
 import time
 import gym
 import torch
-from typing import Optional
+import numpy as np
+from typing import Optional, Union, Tuple
+
+from gym.core import ObsType
 from matplotlib import pyplot as plt
 from utils.comm_manger import CommunicationManager
 
@@ -13,6 +16,17 @@ class RLFPSv4(gym.Env):
         self.__pause_mode = self.__envConfig['mode'] == "Pause"
         self.__period = self.__envConfig['period']
         self.__communication_manager = CommunicationManager(self.__envConfig['port'])
+        self.__self_play = self.__envConfig['self_play']
+        self.__debug = self.__envConfig['debug']
+        self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__envConfig['agent_count']
+        self.__map_capacity = self.__envConfig['map_capacity']
+        self.__agents_of_map = self.__envConfig['agent_count']
+        if self.__envConfig['self_play']:
+            self.__agents_of_map += self.__envConfig['enemy_count']
+        self.__total_agent_count = self.__agents_of_map * self.__map_capacity
+
+        if self.__debug:
+            self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
 
     def initialize(self):
         self.__communication_manager.send_info(
@@ -35,7 +49,14 @@ class RLFPSv4(gym.Env):
         print("Action interation: ", (time.time() - begin) * 1000, "ms")
         return self.__get_observation()
 
-    def reset(self):
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
+    ) -> Union[ObsType, Tuple[ObsType, dict]]:
+
         self_play = self.__envConfig['self_play']
         n_of_current_agent = self.__envConfig['agent_count']
         n_of_current_enemy = self.__envConfig['enemy_count']
