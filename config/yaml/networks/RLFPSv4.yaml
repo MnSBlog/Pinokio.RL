@@ -1,22 +1,26 @@
 network:
-  # --- module networks ---
-  n_of_actor_networks: 3
-  n_of_critic_networks: 1
-  optimizer: 'adam'
-  loss_function: 'MSE'
   # --- learning option ---
   obs_stack: True # should not use LSTM layer with this
+  n_of_obs_stack: 3
   use_lstm: False
-  n_of_lstm_layer: 2
-  lr: 0.01
-  momentum: 0.5
-  # --- backbone ---
-  backbone: 'resnet50'
-  freeze: False
+  n_of_lstm_layer: 3
+  # - State definition -
+  # --- spatial features ---
+  spatial_feature:
+    use: True
+    dim: 7
+    backbone: 'resnet50'
+    freeze: False
+  # --- non-spatial features ---
+  non_spatial_feature:
+    use: True
+    dim: 26
+    freeze: False
   # --- outputs ---
+  neck_input: 128
   n_of_actions:
+    - 9
     - 7
-    - 6
-    - 4
+    - 3
   # --- save / load ---
   model_path: 'Networks'

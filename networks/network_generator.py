@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from torch.distributions import MultivariateNormal, Categorical
 
 
 def make_sequential(in_channels, out_channels, *args, **kwargs):
@@ -20,7 +21,7 @@ class CustomTorchNetwork(nn.Module):
         spatial_processor.append(make_sequential(in_channels=config['spatial_feature']['dim'] // 2,
                                                  out_channels=3,
                                                  kernel_size=(2, 2), stride=(1, 1)))
-        backbone = getattr(models, config['spatial_feature']['backbone'])(pretrained=True)
+        backbone = getattr(models, config['spatial_feature']['backbone'])(weights=None)
         num_ftrs = backbone.fc.in_features
         backbone.fc = nn.Linear(num_ftrs, config['neck_input'])
         spatial_processor.append(backbone)
@@ -55,12 +56,16 @@ class CustomTorchNetwork(nn.Module):
         self.n_of_heads = len(config['n_of_actions'])
         self.networks = nn.ModuleDict(networks)
 
-    def forward(self, x1, x2):
+    def pre_forward(self, x1, x2):
         x1 = self.networks['spatial_feature'](x1)
         x2 = torch.transpose(x2, 1, 2)
         x2 = self.networks['non_spatial_feature'](x2)
         x2 = x2.squeeze(dim=2)
         state = torch.cat([x1, x2], dim=1)
+        return state
+
+    def forward(self, x1, x2):
+        state = self.pre_forward(x1, x2)
         state = self.networks['neck'](state)
         outputs = []
 
@@ -71,4 +76,26 @@ class CustomTorchNetwork(nn.Module):
         return outputs
 
     def act(self, spatial, non_spatial):
+        rtn_actions = []
+        rtn_action_logprob = []
+        outputs = self.forward(x1=spatial, x2=non_spatial)
+        for action_probs in outputs:
+            dist = Categorical(action_probs)
+            action = dist.sample()
+            action_logprob = dist.log_prob(action)
+            rtn_actions.append(action.detach())
+            rtn_action_logprob.append(action_logprob)
+
+        return rtn_actions, rtn_action_logprob
+
+    def evaluate(self, state, action):
+        rtn_evaluations = []
+        outputs = self.forward(x1=state[0], x2=state[1])
+        for action_probs in outputs:
+            dist = Categorical(action_probs)
+            action_logprobs = dist.log_prob(action)
+            dist_entropy = dist.entropy()
+            rtn_evaluations.append((action_logprobs, dist_entropy))
+
+        return rtn_evaluations
 

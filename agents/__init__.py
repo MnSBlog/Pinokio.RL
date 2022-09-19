@@ -6,9 +6,9 @@ from functools import partial
 
 
 def get_policy_fn(agent, **kwargs) -> PolicyAgent:
-    return agent(kwargs)
+    return agent(**kwargs)
 
 
-REGISTRY = {'tfPPO': partial(get_policy_fn, env=TF_PPO),
-            'tfA2C': partial(get_policy_fn, env=TF_A2C),
-            'torchPPO': partial(get_policy_fn, env=TORCH_PPO)}
+REGISTRY = {'tfPPO': partial(get_policy_fn, agent=TF_PPO),
+            'tfA2C': partial(get_policy_fn, agent=TF_A2C),
+            'torchPPO': partial(get_policy_fn, agent=TORCH_PPO)}

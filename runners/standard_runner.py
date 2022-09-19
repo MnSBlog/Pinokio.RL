@@ -64,7 +64,7 @@ class StepRunner:
         # Networks
         actor = CustomTorchNetwork(config['network'])
         critic = nn.Sequential(
-            nn.Linear(config['neck_input'] * 2, 64),
+            nn.Linear(config['network']['neck_input'] * 2, 64),
             nn.Tanh(),
             nn.Linear(64, 64),
             nn.Tanh(),

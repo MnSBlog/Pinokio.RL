@@ -12,6 +12,7 @@ class GeneralAgent:
         self.batch_next_state = []
         self.batch_done = []
         self.batch_log_old_policy_pdf = []
+        self.batch_clear()
 
     def select_action(self, state):
         raise NotImplementedError
@@ -24,6 +25,14 @@ class GeneralAgent:
 
     def load(self, checkpoint_path: str):
         raise NotImplementedError
+
+    def batch_clear(self):
+        self.batch_state = []
+        self.batch_action = []
+        self.batch_reward = []
+        self.batch_next_state = []
+        self.batch_done = []
+        self.batch_log_old_policy_pdf = []
 
 
 class PolicyAgent(GeneralAgent):

@@ -19,7 +19,7 @@ def get_device(device: Union[torch.device, str] = "auto") -> torch.device:
     device = torch.device(device)
 
     # Cuda not available
-    if device.type == torch.device("cuda").type and not th.cuda.is_available():
+    if device.type == torch.device("cuda").type and not torch.cuda.is_available():
         return torch.device("cpu")
 
     return device

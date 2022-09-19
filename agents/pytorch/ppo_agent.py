@@ -39,31 +39,23 @@ class PPO(PolicyAgent):
         self.device = device
 
     def select_action(self, state):
-        if self.has_continuous_action_space:
-            with torch.no_grad():
-                state = torch.FloatTensor(state).to(self.device)
-                action, action_logprob = self._policy_old.act(state)
+        with torch.no_grad():
+            (spatial_x, non_spatial_x) = state
+            spatial_x = torch.FloatTensor(spatial_x).to(self.device)
+            non_spatial_x = torch.FloatTensor(non_spatial_x).to(self.device)
+            actions, action_logprobs = self.actor.act(spatial=spatial_x, non_spatial=non_spatial_x)
 
-            self.buffer.States.append(state)
-            self.buffer.Actions.append(action)
-            self.buffer.LogProbs.append(action_logprob)
+        self.batch_state.append(state)
+        self.batch_action(actions)
+        self.batch_log_old_policy_pdf(action_logprobs)
 
-            return action.detach().cpu().numpy().flatten()
-        else:
-            with torch.no_grad():
-                state = torch.FloatTensor(state).to(self.device)
-                action, action_logprob = self._policy_old.act(state)
-            self.buffer.States.append(state)
-            self.buffer.Actions.append(action)
-            self.buffer.LogProbs.append(action_logprob)
-            # 하나의 액션이 나오도록 *****
-            return action.item()
+        return [action.item() for action in actions]
 
-    def update(self):
+    def update(self, next_state=None, done=None):
         # Monte Carlo estimate of returns
         rewards = []
         discounted_reward = 0
-        for reward, is_terminal in zip(reversed(self.buffer.Rewards), reversed(self.buffer.IsTerminals)):
+        for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
             if is_terminal:
                 discounted_reward = 0
             discounted_reward = reward + (self.gamma * discounted_reward)
@@ -74,15 +66,18 @@ class PPO(PolicyAgent):
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
         # convert list to tensor
-        old_states = torch.squeeze(torch.stack(self.buffer.States, dim=0)).detach().to(self.device)
-        old_actions = torch.squeeze(torch.stack(self.buffer.Actions, dim=0)).detach().to(self.device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.LogProbs, dim=0)).detach().to(self.device)
+        old_states = torch.squeeze(torch.stack(self.batch_state, dim=0)).detach().to(self.device)
+        old_actions = torch.squeeze(torch.stack(self.batch_action, dim=0)).detach().to(self.device)
+        old_logprobs = torch.squeeze(torch.stack(self.batch_log_old_policy_pdf, dim=0)).detach().to(self.device)
 
         # Optimize policy for K epochs
-        for _ in range(self.K_epochs):
+        for _ in range(self.epochs):
             # Evaluating old actions and values
-            logprobs, state_values, dist_entropy = self._policy.evaluate(old_states, old_actions)
-
+            logprobs, dist_entropy = self.actor.evaluate(old_states, old_actions)
+            spatial_features = old_states[0]
+            non_spatial_features = old_states[1]
+            input_states = self.actor.pre_forward(x1=spatial_features, x2=non_spatial_features)
+            state_values = self.critic(input_states)
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)
 
@@ -92,10 +87,10 @@ class PPO(PolicyAgent):
             # Finding Surrogate Loss
             advantages = rewards - state_values.detach()
             surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            surr2 = torch.clamp(ratios, 1 - self.ratio_clipping, 1 + self.ratio_clipping) * advantages
 
             # final loss of clipped objective PPO
-            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+            loss = -torch.min(surr1, surr2) + 0.5 * self.loss(state_values, rewards) - 0.01 * dist_entropy
 
             # take gradient step
             self.optimizer.zero_grad()
@@ -103,33 +98,27 @@ class PPO(PolicyAgent):
             self.optimizer.step()
 
         # Copy new weights into old policy
-        self._policy_old.load_state_dict(self._policy.state_dict())
+        self.actor_old.load_state_dict(self.actor.state_dict())
+        self.critic_old.load_state_dict(self.critic.state_dict())
 
         # clear buffer
-        self.buffer.clear()
+        self.batch_clear()
 
-    def set_action_std(self, new_action_std):
-        if self.has_continuous_action_space:
-            self.action_std = new_action_std
-            self._policy.set_action_std(new_action_std)
-            self._policy_old.set_action_std(new_action_std)
-        else:
-            print("--------------------------------------------------------------------------------------------")
-            print("WARNING : Calling PPO::set_action_std() on discrete action space policy")
-            print("--------------------------------------------------------------------------------------------")
+    def save(self, checkpoint_path: str):
+        actor_path = checkpoint_path.replace(".pth", "actor.pth")
+        critic_path = checkpoint_path.replace(".pth", "critic.pth")
+        torch.save(self.actor_old.state_dict(), actor_path)
+        torch.save(self.critic_old.state_dict(), critic_path)
 
-    def decay_action_std(self, action_std_decay_rate, min_action_std):
-        print("--------------------------------------------------------------------------------------------")
-        if self.has_continuous_action_space:
-            self.action_std = self.action_std - action_std_decay_rate
-            self.action_std = round(self.action_std, 4)
-            if self.action_std <= min_action_std:
-                self.action_std = min_action_std
-                print("setting actor output action_std to min_action_std : ", self.action_std)
-            else:
-                print("setting actor output action_std to : ", self.action_std)
-            self.set_action_std(self.action_std)
+    def load(self, checkpoint_path: str):
+        if "actor" in checkpoint_path:
+            actor_path = checkpoint_path
+            critic_path = checkpoint_path.replace("actor.pth", "critic.pth")
+        elif "critic" in checkpoint_path:
+            critic_path = checkpoint_path
+            actor_path = checkpoint_path.replace("critic.pth", "actor.pth")
 
-        else:
-            print("WARNING : Calling PPO::decay_action_std() on discrete action space policy")
-            print("-------------------------------------------------------------------------------------------")
+        self.actor.load_state_dict(torch.load(actor_path, map_location=lambda storage, loc: storage))
+        self.actor_old.load_state_dict(torch.load(actor_path, map_location=lambda storage, loc: storage))
+        self.critic.load_state_dict(torch.load(critic_path, map_location=lambda storage, loc: storage))
+        self.critic_old.load_state_dict(torch.load(critic_path, map_location=lambda storage, loc: storage))
