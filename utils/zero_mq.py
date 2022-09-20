@@ -25,7 +25,7 @@ class ZmqServer:
 class ZmqClient:
     def __init__(self, port: int):
         self._context = zmq.Context()
-        self._socket = self._context.socket(zmq.SocketType.REQ)
+        self._socket = self._context.socket(zmq.REQ)
         self._socket.connect("tcp://localhost:" + str(port))
 
     def send(self, msg):

@@ -10,6 +10,7 @@ runner:
   multi_agent: False
   self_play: False
   max_step_num: 10000
+  update_step: 200
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1

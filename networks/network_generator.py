@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import torch.nn as nn
 import torchvision.models as models
 from torch.distributions import MultivariateNormal, Categorical
@@ -47,8 +48,10 @@ class CustomTorchNetwork(nn.Module):
         }
 
         # action 부분
+        self.action_mask = []
         for index, action_dim in enumerate(config['n_of_actions']):
             key = "head" + str(index)
+            self.action_mask.append(np.ones(action_dim))
             networks[key] = nn.Sequential(
                 nn.Linear(32, action_dim),
                 nn.Softmax(dim=-1)
@@ -58,15 +61,13 @@ class CustomTorchNetwork(nn.Module):
 
     def pre_forward(self, x1, x2):
         x1 = self.networks['spatial_feature'](x1)
-        x2 = torch.transpose(x2, 1, 2)
         x2 = self.networks['non_spatial_feature'](x2)
         x2 = x2.squeeze(dim=2)
         state = torch.cat([x1, x2], dim=1)
         return state
 
-    def forward(self, x1, x2):
-        state = self.pre_forward(x1, x2)
-        state = self.networks['neck'](state)
+    def forward(self, x):
+        state = self.networks['neck'](x)
         outputs = []
 
         for index in range(self.n_of_heads):
@@ -75,11 +76,12 @@ class CustomTorchNetwork(nn.Module):
 
         return outputs
 
-    def act(self, spatial, non_spatial):
+    def act(self, state):
         rtn_actions = []
         rtn_action_logprob = []
-        outputs = self.forward(x1=spatial, x2=non_spatial)
-        for action_probs in outputs:
+        outputs = self.forward(x=state)
+        for idx, action_probs in enumerate(outputs):
+            action_probs *= self.action_mask[idx]
             dist = Categorical(action_probs)
             action = dist.sample()
             action_logprob = dist.log_prob(action)
@@ -99,3 +101,8 @@ class CustomTorchNetwork(nn.Module):
 
         return rtn_evaluations
 
+    def set_mask(self, mask):
+        if mask is not None:
+            self.action_mask = []
+            for mask_value in mask:
+                self.action_mask.append(mask_value)

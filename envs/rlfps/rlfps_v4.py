@@ -28,6 +28,8 @@ class RLFPSv4(gym.Env):
         if self.__debug:
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
 
+        self.initialize()
+
     def initialize(self):
         self.__communication_manager.send_info(
             'Initialize:MapType"' + str(','.join(str(e) for e in self.__envConfig['map_type']))
@@ -72,7 +74,8 @@ class RLFPSv4(gym.Env):
               '"InitHeight"' + str(self.__envConfig['init_height']) + '"'
         self.__communication_manager.send_info(msg)
         # To gathering spatial-feature
-        return self.__get_observation()
+        state, _, _, _ = self.__get_observation()
+        return state
 
     def __get_observation(self):
         begin = time.time()
@@ -112,7 +115,10 @@ class RLFPSv4(gym.Env):
         done = torch.tensor(deserialized_step_info_list[:, 0], dtype=torch.bool)
         reward = self.__calculate_reward(deserialized_step_info_list)
         print("done & reward: ", (time.time() - begin) * 1000, "ms")
-        return deserialized_char_info_list, deserialized_field_info_list, done, reward, deserialized_action_mask
+        state = {'matrix': deserialized_field_info_list,
+                 'vector': deserialized_char_info_list,
+                 'action_mask': deserialized_action_mask}
+        return state, done, reward, None
 
     def __initialize_feature_display(self, batch_size, feature_size):
         figure, ax = plt.subplots(batch_size, feature_size, figsize=(15, 15))

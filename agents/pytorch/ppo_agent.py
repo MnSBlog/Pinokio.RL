@@ -39,15 +39,21 @@ class PPO(PolicyAgent):
         self.device = device
 
     def select_action(self, state):
+        spatial_x = state['matrix']
+        non_spatial_x = state['vector']
+        mask = state['action_mask']
+
+        self.actor.set_mask(mask)
         with torch.no_grad():
-            (spatial_x, non_spatial_x) = state
             spatial_x = torch.FloatTensor(spatial_x).to(self.device)
             non_spatial_x = torch.FloatTensor(non_spatial_x).to(self.device)
-            actions, action_logprobs = self.actor.act(spatial=spatial_x, non_spatial=non_spatial_x)
+            non_spatial_x = non_spatial_x.unsqueeze(dim=2)
+            vec_state = self.actor.pre_forward(x1=spatial_x, x2=non_spatial_x)
+            actions, action_logprobs = self.actor.act(state=vec_state)
 
-        self.batch_state.append(state)
-        self.batch_action(actions)
-        self.batch_log_old_policy_pdf(action_logprobs)
+            self.batch_state.append(vec_state)
+            self.batch_action(actions)
+            self.batch_log_old_policy_pdf(action_logprobs)
 
         return [action.item() for action in actions]
 
