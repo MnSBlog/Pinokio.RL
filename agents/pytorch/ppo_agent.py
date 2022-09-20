@@ -43,7 +43,7 @@ class PPO(PolicyAgent):
         non_spatial_x = state['vector']
         mask = state['action_mask']
 
-        self.actor.set_mask(mask)
+        self.actor.set_mask(mask.to(self.device))
         with torch.no_grad():
             spatial_x = torch.FloatTensor(spatial_x).to(self.device)
             non_spatial_x = torch.FloatTensor(non_spatial_x).to(self.device)

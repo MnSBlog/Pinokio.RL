@@ -92,7 +92,7 @@ class RLFPSv4(gym.Env):
         agent_num = self.__agents_of_map
         begin = time.time()
         character_info_shape = (total_agent_num, non_spatial_batch_num)
-        action_mask_shape = (total_agent_num, self.__envConfig['attack_dim'])
+        action_mask_shape = (total_agent_num, self.__envConfig['move_dim'] + self.__envConfig['attack_dim'] + self.__envConfig['view_dim'])
         field_info_shape = (
             total_agent_num, spatial_batch_num, self.__envConfig['local_resolution'],
             self.__envConfig['local_resolution'])

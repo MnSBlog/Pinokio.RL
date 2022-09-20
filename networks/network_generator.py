@@ -48,16 +48,17 @@ class CustomTorchNetwork(nn.Module):
         }
 
         # action 부분
-        self.action_mask = []
+        self.outputs_dim = []
         for index, action_dim in enumerate(config['n_of_actions']):
             key = "head" + str(index)
-            self.action_mask.append(np.ones(action_dim))
+            self.outputs_dim.append(action_dim)
             networks[key] = nn.Sequential(
                 nn.Linear(32, action_dim),
                 nn.Softmax(dim=-1)
             )
         self.n_of_heads = len(config['n_of_actions'])
         self.networks = nn.ModuleDict(networks)
+        self.action_mask = []
 
     def pre_forward(self, x1, x2):
         x1 = self.networks['spatial_feature'](x1)
@@ -81,7 +82,8 @@ class CustomTorchNetwork(nn.Module):
         rtn_action_logprob = []
         outputs = self.forward(x=state)
         for idx, action_probs in enumerate(outputs):
-            action_probs *= self.action_mask[idx]
+            if len(self.action_mask) is not 0:
+                action_probs *= self.action_mask[idx]
             dist = Categorical(action_probs)
             action = dist.sample()
             action_logprob = dist.log_prob(action)
@@ -104,5 +106,10 @@ class CustomTorchNetwork(nn.Module):
     def set_mask(self, mask):
         if mask is not None:
             self.action_mask = []
-            for mask_value in mask:
-                self.action_mask.append(mask_value)
+            last = 0
+            for output_dim in self.outputs_dim:
+                self.action_mask.append(mask[:, last:last + output_dim])
+                last = output_dim
+
+# 측정에서 모델 나오기까지의 시간
+# AI 모델을 커스텀마이징 수준: 오픈포즈 스켈레톤, 디노이징 리컨스트럭션은
