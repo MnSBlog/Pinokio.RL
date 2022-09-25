@@ -70,36 +70,40 @@ class CustomTorchNetwork(nn.Module):
     def forward(self, x):
         state = self.networks['neck'](x)
         outputs = []
-
+        dim = len(state.shape) - 1
         for index in range(self.n_of_heads):
             key = "head" + str(index)
             outputs.append(self.networks[key](state))
 
-        return outputs
+        return torch.cat(outputs, dim=dim)
 
     def act(self, state):
-        rtn_actions = []
-        rtn_action_logprob = []
+        rtn_action = []
+        rtn_logprob = []
         outputs = self.forward(x=state)
-        for idx, action_probs in enumerate(outputs):
-            if len(self.action_mask) is not 0:
-                action_probs *= self.action_mask[idx]
-            dist = Categorical(action_probs)
+        last = 0
+        for idx, output_dim in enumerate(self.outputs_dim):
+            outputs[:, last:last + output_dim] *= self.action_mask[idx]
+            dist = Categorical(outputs[:, last:last + output_dim])
             action = dist.sample()
             action_logprob = dist.log_prob(action)
-            rtn_actions.append(action.detach())
-            rtn_action_logprob.append(action_logprob)
+            rtn_action.append(action.detach())
+            rtn_logprob.append(action_logprob.detach())
+            last = output_dim
 
-        return rtn_actions, rtn_action_logprob
+        return torch.stack(rtn_action, dim=0), torch.stack(rtn_logprob, dim=0)
 
-    def evaluate(self, state, action):
+    def evaluate(self, state, actions):
         rtn_evaluations = []
-        outputs = self.forward(x1=state[0], x2=state[1])
-        for action_probs in outputs:
-            dist = Categorical(action_probs)
+        outputs = self.forward(x=state)
+        last = 0
+        for idx, output_dim in enumerate(self.outputs_dim):
+            action = actions[:, idx, :].squeeze()
+            dist = Categorical(outputs[:, :, last:last + output_dim])
             action_logprobs = dist.log_prob(action)
             dist_entropy = dist.entropy()
             rtn_evaluations.append((action_logprobs, dist_entropy))
+            last = output_dim
 
         return rtn_evaluations
 

@@ -15,7 +15,7 @@ envs:
   mode: "Pause" # Pause or RealTime
   period: 200
   acceleration: 1.0
-  update_steps: 100
+  update_steps: 50
   save_steps: 300
   max_steps: -1 # -1: No limit
   history_path: "./History"

@@ -42,7 +42,7 @@ class RLFPSv4(gym.Env):
     def step(self, action: Optional[list] = None):
         # Send action list
         begin = time.time()
-        action_buffer = self.__communication_manager.serialize_action_list(action, self.__agents_of_map)
+        action_buffer = self.__communication_manager.serialize_action_list(action.cpu(), self.__agents_of_map)
         self.__communication_manager.send_info("Action")
         print("Action serializing: ", (time.time() - begin) * 1000, "ms")
 
@@ -118,7 +118,7 @@ class RLFPSv4(gym.Env):
         state = {'matrix': deserialized_field_info_list,
                  'vector': deserialized_char_info_list,
                  'action_mask': deserialized_action_mask}
-        return state, done, reward, None
+        return state, reward, done, None
 
     def __initialize_feature_display(self, batch_size, feature_size):
         figure, ax = plt.subplots(batch_size, feature_size, figsize=(15, 15))

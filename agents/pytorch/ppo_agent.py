@@ -1,6 +1,4 @@
 import copy
-import time
-import random
 import numpy as np
 import torch
 import torch.nn as nn
@@ -52,20 +50,23 @@ class PPO(PolicyAgent):
             actions, action_logprobs = self.actor.act(state=vec_state)
 
             self.batch_state.append(vec_state)
-            self.batch_action(actions)
-            self.batch_log_old_policy_pdf(action_logprobs)
+            self.batch_action.append(actions)
+            self.batch_log_old_policy_pdf.append(action_logprobs)
 
-        return [action.item() for action in actions]
+        return actions
 
     def update(self, next_state=None, done=None):
         # Monte Carlo estimate of returns
-        rewards = []
+        rewards = np.zeros((len(self.batch_reward), len(self.batch_reward[0])))
         discounted_reward = 0
+        batch_count = 0
         for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
-            if is_terminal:
-                discounted_reward = 0
-            discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards.insert(0, discounted_reward)
+            for idx in range(len(reward)):
+                if is_terminal[idx]:
+                    discounted_reward = 0
+                discounted_reward = reward[idx] + (self.gamma * discounted_reward)
+                rewards[batch_count, idx] = discounted_reward
+            batch_count += 1
 
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
@@ -79,16 +80,22 @@ class PPO(PolicyAgent):
         # Optimize policy for K epochs
         for _ in range(self.epochs):
             # Evaluating old actions and values
-            logprobs, dist_entropy = self.actor.evaluate(old_states, old_actions)
-            spatial_features = old_states[0]
-            non_spatial_features = old_states[1]
-            input_states = self.actor.pre_forward(x1=spatial_features, x2=non_spatial_features)
-            state_values = self.critic(input_states)
+            rtn_evaluations = self.actor.evaluate(old_states, old_actions)
+            state_values = self.critic(old_states)
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)
 
+            (logprobs, dist_entropy) = rtn_evaluations[0]
+            old_logprobs_raw = old_logprobs[:, 0, :].squeeze()
+            for idx in range(1, len(rtn_evaluations)):
+                (logprob, entropy) = rtn_evaluations[idx]
+                old_logprob = old_logprobs[:, idx, :].squeeze()
+
+                logprobs += logprob
+                dist_entropy += entropy
+                old_logprobs_raw += old_logprob
             # Finding the ratio (pi_theta / pi_theta__old)
-            ratios = torch.exp(logprobs - old_logprobs.detach())
+            ratios = torch.exp(logprobs - old_logprobs_raw.detach())
 
             # Finding Surrogate Loss
             advantages = rewards - state_values.detach()

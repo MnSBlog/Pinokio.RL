@@ -1,16 +1,15 @@
 import os
 import random
 import time
-
 import gym
+import numpy as np
 import pandas as pd
+import torch
 import torch.nn as nn
 from networks.network_generator import CustomTorchNetwork
 from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
 from utils.yaml_config import YamlConfig
-
-from torchsummary import summary
 
 
 def select_algorithm(args):
@@ -75,7 +74,15 @@ class StepRunner:
         )
         algo_name = config['agent']['framework'] + config['agent_name']
         # Algorithm(Agent)
-        self.agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self.config['agent'], actor=actor, critic=critic)
+        self.agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self.config['agent'],
+                                                             actor=actor, critic=critic)
+        if self.config['runner']['pretrain']:
+            if os.listdir(self.config['runner']['history_path']):
+                name_list = os.listdir(self.config['runner']['history_path'])
+                full_list = [os.path.join(self.config['runner']['history_path'], name) for name in name_list]
+                time_sorted_list = sorted(full_list, key=os.path.getmtime)
+                last_file = time_sorted_list[-1]
+                self.agent.load(checkpoint_path=last_file)
         # Environment
         self.env = env
         # Calculate
@@ -85,12 +92,11 @@ class StepRunner:
         runner_config = self.config["runner"]
         max_step_num = runner_config['max_step_num']
         steps = 0
-        config_loader = YamlConfig(root='./config')
         state = self.env.reset()
 
         while max_step_num >= 0:
             # Step runner는 self-play 아직 적용안함
-            if steps > runner_config['update_step']:
+            if steps >= runner_config['update_step']:
                 steps = 0
                 self.agent.update()
                 self.agent.save(checkpoint_path=os.path.join(runner_config['history_path'],
@@ -107,12 +113,13 @@ class StepRunner:
             actions = self.agent.select_action(state)
             state, reward, done, _ = self.env.step(actions)
             self.agent.batch_reward.append(reward)
-            self.agent.batch_done(done)
+            self.agent.batch_done.append(done)
 
-            self.save_epi_reward.append(reward)
+            self.save_epi_reward.append(torch.mean(reward).item())
+        np.savetxt(os.path.join(self.config['runner']['history_path'], '_epi_reward.txt'), self.save_epi_reward)
 
     def plot_result(self):
-        import matplotlib as plt
+        import matplotlib.pyplot as plt
         plt.plot(self.save_epi_reward)
         plt.show()
 
