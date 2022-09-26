@@ -63,7 +63,28 @@ class OhtBase(gym.Env):
         return img.unsqueeze(0)
 
     def on_received(self, buff: bytearray):
-        pass
+        request = self.msgBuilder.GetRequestMsg(buff)
+
+        ohtId = request.OhtId()
+        (prev_state, prev_action, reward, state, done) = self.get_transition(request)
+
+        if request.Type() == MsgType.MsgType.Step:
+            if prev_action >= 0:  # Reset 상황 제외.
+                a = torch.tensor([[prev_action]], device=device)
+                r = torch.tensor([reward], device=device)
+                self.memory.push(prev_state, a, state, r)
+                self.optimize_model()
+
+        if done:
+            self.episode_count += 1
+            if self.episode_count % TARGET_UPDATE == 0:
+                print("target model update " + str(self.episode_count))
+                self.model.load_state_dict(self.policy_model.state_dict())
+                self.save_model()
+
+            return self.msgBuilder.BuildReplyMessage(ohtId, MsgType.MsgType.DoneCheck, -1)
+        else:
+            return self.msgBuilder.BuildReplyMessage(ohtId, MsgType.MsgType.DoneCheck, self.select_action(state))
 
     # endregion
     # region Gym environment override

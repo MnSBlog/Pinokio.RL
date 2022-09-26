@@ -11,7 +11,7 @@ from agents.general_agent import GeneralAgent
 class GymRunner:
     def __init__(self, config: dict, env: gym.Env):
         self.config = config
-        algo_key = self.config['agent']['framework'] + '_' + self.config['agent']['name']
+        algo_name = config['agent']['framework'] + config['agent_name']
 
         # 상태변수 차원
         state_dim = env.observation_space.shape[0]
@@ -31,7 +31,7 @@ class GymRunner:
         self.config['agent']['mid_gamma']\
             = self.config['agent']['gamma'] ** int(self.config['runner']['batch_size'] / 2)
 
-        self.agent: GeneralAgent = AGENT_REGISTRY[algo_key](parameters=self.config['agent'],
+        self.agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self.config['agent'],
                                                             actor=actor, critic=critic)
 
         if self.config['runner']['pretrain']:

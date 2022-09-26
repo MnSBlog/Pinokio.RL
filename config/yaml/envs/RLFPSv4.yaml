@@ -23,7 +23,7 @@ envs:
   # --- Algorithm condition ---
   actions: "Discrete" # Discrete or Continuous
   multi_agent: False
-  self_play: True
+  self_play: False
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1
