@@ -1,0 +1,39 @@
+envs:
+  # --- Info ---
+  name: CombatStrategy
+  debug: False
+  # --- Defaults ---
+  port: 49999
+  agent_count: 3
+  enemy_count: 3
+  agent_type: [ 0, 0, 0, 0, 0 ]
+  first_weapon_type: [ 0, 0, 0, 0, 1 ] # 0: M4A1 / 1: Kar98k / 2: M59A
+  second_weapon_type: [ 0, 0, 0, 0, 1 ] # 0: M4A1 / 1: Kar98k / 2: M59A
+  # --- learning condition ---
+  mode: "Pause" # Pause or RealTime
+  period: 200
+  acceleration: 1.0
+  update_steps: 50
+  save_steps: 300
+  max_steps: -1 # -1: No limit
+  history_path: "./History"
+  trajectory_q_len: 3
+  # --- Algorithm condition ---
+  actions: "Discrete" # Discrete or Continuous
+  multi_agent: False
+  self_play: False
+  # --- curriculum learning ---
+  curriculum_learning: False
+  init_n_of_enemy: 1
+  next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)
+  # --- Feature parameters ---
+  global_resolution: 100
+  local_resolution: 30
+  init_height: -5
+  step_info_dim: 7
+  spatial_dim: 7
+  non_spatial_dim: 26
+  move_dim: 9
+  attack_dim: 7
+  view_dim: 3
+
