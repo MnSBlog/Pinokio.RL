@@ -1,0 +1,25 @@
+network:
+  # --- learning option ---
+  obs_stack: True # should not use Memory layer with this
+  use_memory_layer: "GRU" # RNN / LSTM / GRU / Raw
+  n_of_layer: 3
+  # - State definition -
+  # --- spatial features ---
+  spatial_feature:
+    use: False
+    dim: 0
+    backbone: 'resnet50'
+    freeze: False
+  # --- non-spatial features ---
+  non_spatial_feature:
+    use: False
+    dim: 0
+    freeze: False
+  # --- outputs ---
+  neck_in: 128
+  neck_out: 64
+  neck_activation: "ReLU"
+  n_of_actions:
+    - 2
+  # --- save / load ---
+  model_path: 'Networks'

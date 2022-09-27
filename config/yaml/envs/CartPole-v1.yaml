@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: CartPole
+  reward_range: [0, 1]

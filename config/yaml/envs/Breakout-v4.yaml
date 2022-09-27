@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: Breakout
+  reward_range: [-1, 1]

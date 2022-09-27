@@ -1,0 +1,28 @@
+network:
+  # --- learning option ---
+  memory_q_len: 16
+  use_memory_layer: "GRU" # RNN / LSTM / GRU / Raw
+  n_of_layer: 3
+  # - State definition -
+  # --- spatial features ---
+  spatial_feature:
+    use: True
+    dim_in: 3
+    dim_out: 124
+    backbone: 'resnet50'
+    freeze: False
+  # --- non-spatial features ---
+  non_spatial_feature:
+    use: True
+    dim_in: 3
+    dim_out: 3
+    extension: False
+    freeze: False
+  # --- outputs ---
+  neck_in: 128
+  neck_out: 32
+  neck_activation: "ReLU"
+  n_of_actions:
+    - 4
+  # --- save / load ---
+  model_path: 'Networks'
