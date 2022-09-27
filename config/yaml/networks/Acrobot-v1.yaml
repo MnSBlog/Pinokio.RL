@@ -1,0 +1,5 @@
+network:
+  # --- Defaults ---
+  name: Acrobot
+  # --- save / load ---
+  model_path: 'Networks'

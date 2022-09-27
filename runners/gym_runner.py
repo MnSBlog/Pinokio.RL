@@ -4,14 +4,14 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from agents.tf.actorcritic import Actor, Critic
-from agents.tf import REGISTRY as AgentRegistry
+from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
 
 
 class GymRunner:
     def __init__(self, config: dict, env: gym.Env):
         self.config = config
-        algo_key = self.config['agent']['framework'] + '_' + self.config['agent']['name']
+        algo_name = config['agent']['framework'] + config['agent_name']
 
         # 상태변수 차원
         state_dim = env.observation_space.shape[0]
@@ -31,8 +31,8 @@ class GymRunner:
         self.config['agent']['mid_gamma']\
             = self.config['agent']['gamma'] ** int(self.config['runner']['batch_size'] / 2)
 
-        self.agent: GeneralAgent = AgentRegistry[algo_key](parameters=self.config['agent'],
-                                                           actor=actor, critic=critic)
+        self.agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self.config['agent'],
+                                                            actor=actor, critic=critic)
 
         if self.config['runner']['pretrain']:
             try:
@@ -69,8 +69,18 @@ class GymRunner:
                 self.action = self.agent.select_action(tf.convert_to_tensor([self.obs], dtype=tf.float32))
                 # 다음 상태, 보상 관측
                 next_state, reward, done, _ = self.env.step(self.action)
-                reward = np.reshape(reward, [1, 1])
+                if rew_min > reward:
+                    print('reward min is updated: ', reward)
+                    rew_min = reward
+                    rew_gap = (rew_max - rew_min) / 2
+                    rew_numerator = (rew_max + rew_min) / 2
+                elif rew_max < reward:
+                    print('reward max is updated: ', reward)
+                    rew_max = reward
+                    rew_gap = (rew_max - rew_min) / 2
+                    rew_numerator = (rew_max + rew_min) / 2
                 # 학습용 보상 [-1, 1]로 fitting
+                reward = np.reshape(reward, [1, 1])
                 train_reward = (reward - rew_numerator) / rew_gap
                 self.agent.batch_reward.append(train_reward)
 

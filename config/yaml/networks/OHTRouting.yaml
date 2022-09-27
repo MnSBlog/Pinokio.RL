@@ -19,8 +19,6 @@ network:
   # --- outputs ---
   neck_input: 128
   n_of_actions:
-    - 9
-    - 7
-    - 3
+    - 2
   # --- save / load ---
   model_path: 'Networks'

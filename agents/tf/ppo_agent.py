@@ -1,14 +1,12 @@
-import numpy as np
-import tensorflow as tf
 from keras.optimizers import Adam
 from agents.tf.util_functions import *
 from agents.tf.actorcritic import Actor, Critic
 from agents.general_agent import PolicyAgent
 
 
-class PpoAgent(PolicyAgent):
+class PPO(PolicyAgent):
     def __init__(self, parameters: dict, actor: Actor, critic: Critic):
-        super(PpoAgent, self).__init__(parameters=parameters, actor=actor, critic=critic)
+        super(PPO, self).__init__(parameters=parameters, actor=actor, critic=critic)
         # Hyper-parameters
         self.gamma = self._config['gamma']
         self.gae_lambda = self._config['gae_lambda']
@@ -140,6 +138,6 @@ class PpoAgent(PolicyAgent):
         #     gae[k] = rewards[k] + self.gamma * rewards[k - 1] \
         #              + self.mid_gamma * (forward_val + rewards[len(rewards) - 1]) - v_values[k]
         #     forward_val = v_values[k]
-        #     n_step_targets[k] = gae[k] + v_values[k]
+        #     n_step_targets[k] = gae[k]
 
         return gae, n_step_targets

@@ -1,7 +1,7 @@
 envs:
   # --- Defaults ---
   name: Hopper
-  reward_range: [0.5, 1.5]
+  reward_range: [0, 0]
 # reward: health reward + forward reward - ctrl cost
 # health reward: default 1.0
 # forward reward: default forward_rew_weight 1.0 * (past coordi x - now coordi x)/dt

@@ -1,4 +1,4 @@
-import collections
+import collections.abc
 from copy import deepcopy
 import os
 import yaml
@@ -30,7 +30,7 @@ class YamlConfig:
 
     def recursive_dict_update(self, d, u):
         for k, v in u.items():
-            if isinstance(v, collections.Mapping):
+            if isinstance(v, collections.abc.Mapping):
                 d[k] = self.recursive_dict_update(d.get(k, {}), v)
             else:
                 d[k] = v

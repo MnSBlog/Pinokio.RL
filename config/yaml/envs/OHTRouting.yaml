@@ -1,0 +1,18 @@
+envs:
+  # --- Defaults ---
+  name: OHTRouting
+  reward_range: [-1, 1]
+  # --- Simulator arguments(only string) ---
+  env_config:
+    env_path: D:\MnS\Projects\LG\Pinokio.V2\PinokioRL\PinokioRL\bin\Debug\PinokioRL.exe
+    env_count: 1
+    args:
+      view: "true"
+      address: "127.0.0.1"
+      dbname: "smt_rl"
+      dbport: "3306"
+      id: "4405533d23558cc45985cddbb44c69ac7a465cb49f04f310e38b8c6b5b3fca37"
+      pw: "6be27cba149647039208f04a9f0bd5f0960035816c3089899037997cca8c1064"
+      zmqport: "5555"
+  # --- mix-up salt ---
+  iteration: 5

@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: Acrobot
+  reward_range: [-1, 0]

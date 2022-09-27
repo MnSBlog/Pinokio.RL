@@ -1,20 +1,18 @@
 runner:
-  # --- Defaults ---
-  max_episode_num: 10000
-  pretrain: False
-  render: False
-  # --- Learning Condition ---
-  batch_size: 32 # batch size
   # --- Operation options ---
   use_cuda: True # Use gpu by default unless it isn't available
   history_path: "./history"
-  best_model_root: "Bes"
+  best_model_root: "./history/BestAgent"
   condition_path: "./config/AlgoCondition.xlsx"
   off_pg: False
+  agents: ['PPO']
   logger: False # False or True(OpenAI Logger)
-  iteration: 0
   multi_agent: False
   self_play: False
+  max_step_num: 800
+  update_step: 50
+  save_per_update: 4
+  pretrain: True
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1

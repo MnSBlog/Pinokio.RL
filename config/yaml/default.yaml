@@ -1,5 +1,11 @@
 # --- Modules ---
+<<<<<<< HEAD
 runner_name: "episode" # path about episode / gym / ray_tune
 network_name: "DogFight-v1" # custom_network_path / torchvision.models(pre-trained)
 env_name: "DogFight-v1" # Environment name (include gym.env)
+=======
+runner_name: "StepRunner" # path about episode / gym / ray_tune
+network_name: "RLFPSv4" # custom_network_path / torchvision.models(pre-trained)
+env_name: "RLFPSv4" # Environment name (include gym.env)
+>>>>>>> 8bb0add5a694264079f7cdbe3732d9a7bb4b4514
 agent_name: "PPO" # Algorithm name

@@ -1,8 +1,8 @@
 import gym
 import os
+import runners.standard_runner as runner_instance
 from utils.yaml_config import YamlConfig
-from envs import REGISTRY as env_registry
-from runners.episode_runner import EpisodeRunner
+from envs import REGISTRY as ENV_REGISTRY
 from runners.gym_runner import GymRunner
 from ray.tune.registry import register_env
 
@@ -48,19 +48,16 @@ def save_folder_check(config):
 
 def main(args):
     if args['runner_name'] == 'ray_tune':
-        register_env(args['env_name'], env_registry[args['env_name']](**args['envs']))
+        register_env(args['env_name'], ENV_REGISTRY[args['env_name']](**args['envs']))
         raise NotImplementedError
     elif args['runner_name'] == 'gym':
         runner = GymRunner(config=args, env=gym.make(args['env_name']))
     else:
-        runner = EpisodeRunner(config=args['runners'], env=env_registry[args['env_name']](**args['envs']))
-
-    if args['network_name'] == args['env_name']:
-        test = 1
-    else:
-        raise NotImplementedError
+        env = ENV_REGISTRY[args['env_name']](**args['envs'])
+        runner = getattr(runner_instance,
+                         args['runner_name'])(config=args,
+                                              env=env)
     runner.run()
-
     runner.plot_result()
 
 

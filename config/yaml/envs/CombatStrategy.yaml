@@ -1,16 +1,14 @@
 envs:
   # --- Info ---
-  name: RLFPSv4
+  name: CombatStrategy
   debug: False
   # --- Defaults ---
   port: 49999
-  agent_count: 5
-  enemy_count: 5
+  agent_count: 3
+  enemy_count: 3
   agent_type: [ 0, 0, 0, 0, 0 ]
   first_weapon_type: [ 0, 0, 0, 0, 1 ] # 0: M4A1 / 1: Kar98k / 2: M59A
   second_weapon_type: [ 0, 0, 0, 0, 1 ] # 0: M4A1 / 1: Kar98k / 2: M59A
-  map_capacity: 3
-  map_type: [0, 0, 0] # 0: Container Map / 1: Training Map / 2: External Map / -1: Random
   # --- learning condition ---
   mode: "Pause" # Pause or RealTime
   period: 200
