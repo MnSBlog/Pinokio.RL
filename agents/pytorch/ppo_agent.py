@@ -49,9 +49,13 @@ class PPO(PolicyAgent):
             spatial_x = torch.tensor(spatial_x, dtype=torch.float).to(self.device)
             spatial_x = spatial_x.unsqueeze(dim=0)
 
+        if mask is not None and torch.is_tensor(mask) is False:
+            mask = torch.tensor(mask, dtype=torch.float).to(self.device)
+            mask = mask.unsqueeze(dim=0)
+
         with torch.no_grad():
             if mask is not None:
-                self.actor_old.set_mask(mask.to(self.device))
+                self.actor_old.set_mask(mask)
 
             state = self.actor_old.pre_forward(x1=spatial_x, x2=non_spatial_x)
             actions, action_logprobs = self.actor_old.act(state=state)

@@ -140,8 +140,17 @@ class GymRunner:
                 if len(memory_q['vector']) > 0:
                     memory_q['vector'].pop(0)
 
-                # Bug로 인한 done check
+                # Bug로 인한 done check 및 mask 작업
                 dead_line = spatial_obs[0, 189:196, :]
+                left_lim = dead_line[:, 8:13]
+                right_lim = dead_line[:, 146:151]
+                action_mask = None
+                if len(left_lim[left_lim != 0]) >= 20:
+                    action_mask = np.array([1, 1, 1, 0])
+                if len(right_lim[right_lim != 0]) >= 20:
+                    action_mask = np.array([1, 1, 0, 1])
+                next_state['action_mask'] = action_mask
+
                 countable = len(dead_line[dead_line != 0])
                 if countable > 170:
                     if done_checker < 0:
