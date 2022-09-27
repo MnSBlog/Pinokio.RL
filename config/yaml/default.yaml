@@ -1,5 +1,5 @@
 # --- Modules ---
-runner_name: "gym" # path about episode / gym / ray_tune
-network_name: "Pendulum-v1" # custom_network_path / torchvision.models(pre-trained)
-env_name: "Pendulum-v1" # Environment name (include gym.env)
+runner_name: "episode" # path about episode / gym / ray_tune
+network_name: "DogFight-v1" # custom_network_path / torchvision.models(pre-trained)
+env_name: "DogFight-v1" # Environment name (include gym.env)
 agent_name: "PPO" # Algorithm name
