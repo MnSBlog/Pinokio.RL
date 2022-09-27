@@ -5,8 +5,6 @@ from utils.yaml_config import YamlConfig
 from envs import REGISTRY as ENV_REGISTRY
 from runners.gym_runner import GymRunner
 from ray.tune.registry import register_env
-from stable_baselines3.common.env_util import make_atari_env
-from stable_baselines3.common.vec_env import VecFrameStack
 
 
 def load_config(form="yaml"):
