@@ -5,6 +5,8 @@ from utils.yaml_config import YamlConfig
 from envs import REGISTRY as ENV_REGISTRY
 from runners.gym_runner import GymRunner
 from ray.tune.registry import register_env
+from stable_baselines3.common.env_util import make_atari_env
+from stable_baselines3.common.vec_env import VecFrameStack
 
 
 def load_config(form="yaml"):
@@ -51,7 +53,10 @@ def main(args):
         register_env(args['env_name'], ENV_REGISTRY[args['env_name']](**args['envs']))
         raise NotImplementedError
     elif args['runner_name'] == 'gym':
-        runner = GymRunner(config=args, env=gym.make(args['env_name']))
+        from gym import envs
+        check = envs.registry
+        env = gym.make(args['env_name'], render_mode='human')
+        runner = GymRunner(config=args, env=env)
     else:
         env = ENV_REGISTRY[args['env_name']](**args['envs'])
         runner = getattr(runner_instance,
@@ -62,8 +67,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    from gym import envs
-    print(envs.registry.values())
     arguments = load_config()
     save_folder_check(arguments)
     main(args=arguments)

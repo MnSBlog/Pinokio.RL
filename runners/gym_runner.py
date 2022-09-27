@@ -1,11 +1,14 @@
 import os
 import gym
 import numpy as np
+import torch
+import torch.nn as nn
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from agents.tf.actorcritic import Actor, Critic
 from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
+from networks.network_generator import CustomTorchNetwork
 
 
 class GymRunner:
@@ -17,22 +20,30 @@ class GymRunner:
         state_dim = env.observation_space.shape[0]
         self.config['agent']['state_dim'] = state_dim
         # 행동 차원
-        self.action_dim = env.action_space.shape[0]
-        # 행동의 최대 크기
-        action_bound = env.action_space.high[0]
+        self.action_dim = env.action_space
 
         # 액터 신경망 및 크리틱 신경망 생성
-        actor = Actor(self.action_dim, action_bound)
-        critic = Critic()
-        actor.build(input_shape=(None, state_dim))
-        critic.build(input_shape=(None, state_dim))
+        if "tf" in config['agent']['framework']:
+            actor = Actor(self.action_dim.shape[0], self.action_dim.high[0])
+            critic = Critic()
+            actor.build(input_shape=(None, state_dim))
+            critic.build(input_shape=(None, state_dim))
+        else:
+            actor = CustomTorchNetwork(config['network'])
+            critic = nn.Sequential(
+                nn.Linear(config['network']['neck_in'], 64),
+                nn.ReLU(),
+                nn.Linear(64, 32),
+                nn.ReLU(),
+                nn.Linear(32, 1)
+            )
 
         # *****
-        self.config['agent']['mid_gamma']\
+        self.config['agent']['mid_gamma'] \
             = self.config['agent']['gamma'] ** int(self.config['runner']['batch_size'] / 2)
 
         self.agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self.config['agent'],
-                                                            actor=actor, critic=critic)
+                                                             actor=actor, critic=critic)
 
         if self.config['runner']['pretrain']:
             try:
@@ -48,7 +59,6 @@ class GymRunner:
         self.env = env
         self.save_epi_reward = []
 
-        self.obs = self.env.reset()
         self.action = None
         self.reward = 0
 
@@ -57,18 +67,42 @@ class GymRunner:
         rew_max = self.config['envs']['reward_range'][1]
         rew_gap = (rew_max - rew_min) / 2
         rew_numerator = (rew_max + rew_min) / 2
+        memory_len = self.config['network']['memory_q_len']
         # 에피소드마다 다음을 반복
         for ep in range(self.config['runner']['max_episode_num']):
             # 에피소드 초기화
             step, episode_reward, done = 0, 0, False
-            # 환경 초기화 및 초기 상태 관측
-            self.obs = self.env.reset()
+
+            # 환경 초기화 및 초기 상태 관측 및 큐
+            memory_q = {'matrix': [], 'vector': []}
+            for _ in range(0, memory_len):
+                obs = self.env.reset()
+                if isinstance(obs, tuple):
+                    spatial_obs = obs[0]
+                    spatial_obs = spatial_obs.transpose((2, 0, 1))
+                    memory_q['matrix'].append(spatial_obs)
+                    non_spatial_obs = np.array(list(obs[1].values()))
+                else:
+                    non_spatial_obs = obs
+                memory_q['vector'].append(non_spatial_obs)
+            matrix_obs = np.concatenate(memory_q['matrix'], axis=0)
+            vector_obs = np.concatenate(memory_q['vector'], axis=0)
+            state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
+
+            if len(memory_q['matrix']) > 0:
+                memory_q['matrix'].pop(0)
+            if len(memory_q['vector']) > 0:
+                memory_q['vector'].pop(0)
+
             while not done:
                 if self.config['runner']['render']:
                     self.env.render()
-                self.action = self.agent.select_action(tf.convert_to_tensor([self.obs], dtype=tf.float32))
+                self.action = self.agent.select_action(state)
+                if torch.is_tensor(self.action):
+                    self.action = self.action.squeeze(dim=0)
+                    self.action = self.action.item()
                 # 다음 상태, 보상 관측
-                next_state, reward, done, _ = self.env.step(self.action)
+                spatial_obs, reward, done, trunc, non_spatial_obs = self.env.step(self.action)
                 if rew_min > reward:
                     print('reward min is updated: ', reward)
                     rew_min = reward
@@ -83,14 +117,31 @@ class GymRunner:
                 reward = np.reshape(reward, [1, 1])
                 train_reward = (reward - rew_numerator) / rew_gap
                 self.agent.batch_reward.append(train_reward)
+                self.agent.batch_done.append(done)
 
                 step += 1
                 episode_reward += reward[0]
-                self.obs = next_state
+                
+                # shape에 따라 잘라야하네
+                spatial_obs = spatial_obs.transpose((2, 0, 1))
+                memory_q['matrix'].append(spatial_obs)
+                non_spatial_obs = np.array(list(non_spatial_obs.values()))
+                memory_q['vector'].append(non_spatial_obs)
+                
+                matrix_obs = np.concatenate(memory_q['matrix'], axis=0)
+                vector_obs = np.concatenate(memory_q['vector'], axis=0)
+                next_state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
+
+                if len(memory_q['matrix']) > 0:
+                    memory_q['matrix'].pop(0)
+                if len(memory_q['vector']) > 0:
+                    memory_q['vector'].pop(0)
+
                 if len(self.agent.batch_state) >= self.config['runner']['batch_size']:
                     # 학습 추출
                     self.agent.update(next_state=next_state, done=done)
 
+                state = next_state
             # 에피소드마다 결과 보상값 출력
             print('Episode: ', ep + 1, 'Steps: ', step, 'Reward: ', episode_reward)
             self.save_epi_reward.append(episode_reward)
@@ -103,7 +154,9 @@ class GymRunner:
                 self.agent.save(checkpoint_path=checkpoint_path)
 
         # 학습이 끝난 후, 누적 보상값 저장
-        np.savetxt(self.config['runner']['history_path'] + self.config['envs']['name'] + '_epi_reward.txt',
+        filename = self.config['runner']['history_path'] + self.config['envs']['name']
+        filename += 'stack-' + str(self.config['network']['memory_q_len']) + '_epi_reward.txt'
+        np.savetxt(filename,
                    self.save_epi_reward)
         print(self.save_epi_reward)
 

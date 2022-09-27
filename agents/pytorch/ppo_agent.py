@@ -31,7 +31,6 @@ class PPO(PolicyAgent):
         self.optimizer = getattr(torch.optim, parameters['optimizer'])(opt_arg)
         self.actor_old.load_state_dict(self.actor.state_dict())
         self.critic_old.load_state_dict(self.critic.state_dict())
-
         self.loss = getattr(nn, parameters['loss_function'])()
 
         self.device = device
@@ -41,15 +40,23 @@ class PPO(PolicyAgent):
         non_spatial_x = state['vector']
         mask = state['action_mask']
 
-        self.actor.set_mask(mask.to(self.device))
-        with torch.no_grad():
-            spatial_x = torch.FloatTensor(spatial_x).to(self.device)
-            non_spatial_x = torch.FloatTensor(non_spatial_x).to(self.device)
+        if torch.is_tensor(non_spatial_x) is False:
+            non_spatial_x = torch.tensor(non_spatial_x, dtype=torch.float).to(self.device)
+            non_spatial_x = non_spatial_x.unsqueeze(dim=0)
             non_spatial_x = non_spatial_x.unsqueeze(dim=2)
-            vec_state = self.actor.pre_forward(x1=spatial_x, x2=non_spatial_x)
-            actions, action_logprobs = self.actor.act(state=vec_state)
 
-            self.batch_state.append(vec_state)
+        if len(spatial_x) > 0 and torch.is_tensor(spatial_x) is False:
+            spatial_x = torch.tensor(spatial_x, dtype=torch.float).to(self.device)
+            spatial_x = spatial_x.unsqueeze(dim=0)
+
+        with torch.no_grad():
+            if mask is not None:
+                self.actor_old.set_mask(mask.to(self.device))
+
+            state = self.actor_old.pre_forward(x1=spatial_x, x2=non_spatial_x)
+            actions, action_logprobs = self.actor_old.act(state=state)
+
+            self.batch_state.append(state)
             self.batch_action.append(actions)
             self.batch_log_old_policy_pdf.append(action_logprobs)
 
@@ -57,19 +64,28 @@ class PPO(PolicyAgent):
 
     def update(self, next_state=None, done=None):
         # Monte Carlo estimate of returns
-        rewards = np.zeros((len(self.batch_reward), len(self.batch_reward[0])))
         discounted_reward = 0
-        batch_count = 0
-        for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
-            for idx in range(len(reward)):
-                if is_terminal[idx]:
+        if len(self.batch_reward[0]) == 1:
+            rewards = []
+            for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
+                if is_terminal:
                     discounted_reward = 0
-                discounted_reward = reward[idx] + (self.gamma * discounted_reward)
-                rewards[batch_count, idx] = discounted_reward
-            batch_count += 1
+                discounted_reward = reward + (self.gamma * discounted_reward)
+                rewards.insert(0, discounted_reward)
+        else:
+            rewards = np.zeros((len(self.batch_reward), len(self.batch_reward[0])))
+            batch_count = 0
+            for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
+                for idx in reversed(range(len(reward))):
+                    if is_terminal[idx]:
+                        discounted_reward = 0
+                    discounted_reward = reward[idx] + (self.gamma * discounted_reward)
+                    rewards[batch_count, idx] = discounted_reward
+                batch_count += 1
 
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        rewards = rewards.squeeze()
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
         # convert list to tensor
@@ -86,14 +102,17 @@ class PPO(PolicyAgent):
             state_values = torch.squeeze(state_values)
 
             (logprobs, dist_entropy) = rtn_evaluations[0]
-            old_logprobs_raw = old_logprobs[:, 0, :].squeeze()
-            for idx in range(1, len(rtn_evaluations)):
-                (logprob, entropy) = rtn_evaluations[idx]
-                old_logprob = old_logprobs[:, idx, :].squeeze()
+            if len(rtn_evaluations) > 1:
+                old_logprobs_raw = old_logprobs[:, 0, :].squeeze()
+                for idx in range(1, len(rtn_evaluations)):
+                    (logprob, entropy) = rtn_evaluations[idx]
+                    old_logprob = old_logprobs[:, idx, :].squeeze()
 
-                logprobs += logprob
-                dist_entropy += entropy
-                old_logprobs_raw += old_logprob
+                    logprobs += logprob
+                    dist_entropy += entropy
+                    old_logprobs_raw += old_logprob
+            else:
+                old_logprobs_raw = old_logprobs
             # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs_raw.detach())
 
@@ -118,6 +137,8 @@ class PPO(PolicyAgent):
         self.batch_clear()
 
     def save(self, checkpoint_path: str):
+        if ".pth" not in checkpoint_path:
+            checkpoint_path = checkpoint_path + '.pth'
         actor_path = checkpoint_path.replace(".pth", "actor.pth")
         critic_path = checkpoint_path.replace(".pth", "critic.pth")
         torch.save(self.actor_old.state_dict(), actor_path)

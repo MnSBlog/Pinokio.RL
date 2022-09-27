@@ -1,5 +1,5 @@
 # --- Modules ---
-runner_name: "StepRunner" # path about episode / gym / ray_tune
-network_name: "RLFPSv4" # custom_network_path / torchvision.models(pre-trained)
-env_name: "RLFPSv4" # Environment name (include gym.env)
+runner_name: "gym" # path about episode / gym / ray_tune
+network_name: "Breakout-v4" # custom_network_path / torchvision.models(pre-trained)
+env_name: "Breakout-v4" # Environment name (include gym.env)
 agent_name: "PPO" # Algorithm name

@@ -68,9 +68,9 @@ class StepRunner:
         critic = nn.Sequential(
             nn.Linear(config['network']['neck_input'] * 2, 64),
             nn.Tanh(),
-            nn.Linear(64, 64),
+            nn.Linear(64, 32),
             nn.Tanh(),
-            nn.Linear(64, 1)
+            nn.Linear(32, 1)
         )
         algo_name = config['agent']['framework'] + config['agent_name']
         # Algorithm(Agent)
