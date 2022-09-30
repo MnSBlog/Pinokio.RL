@@ -1,23 +1,28 @@
 network:
   # --- learning option ---
   obs_stack: True # should not use LSTM layer with this
-  n_of_obs_stack: 3
-  use_lstm: False
-  n_of_lstm_layer: 3
+  memory_q_len: 1
+  use_memory_layer: "Raw"
+  n_of_layer: 0
   # - State definition -
   # --- spatial features ---
   spatial_feature:
     use: True
-    dim: 7
+    dim_in: 8
+    dim_out: 128
     backbone: 'resnet50'
     freeze: False
   # --- non-spatial features ---
   non_spatial_feature:
     use: True
-    dim: 26
+    dim_in: 26
+    dim_out: 128
+    extension: True
     freeze: False
   # --- outputs ---
-  neck_input: 128
+  neck_in: 256
+  neck_out: 32
+  neck_activation: "ReLU"
   n_of_actions:
     - 9
     - 7

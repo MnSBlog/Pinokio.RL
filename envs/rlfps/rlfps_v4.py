@@ -18,12 +18,9 @@ class RLFPSv4(gym.Env):
         self.__communication_manager = CommunicationManager(self.__envConfig['port'])
         self.__self_play = self.__envConfig['self_play']
         self.__debug = self.__envConfig['debug']
-        self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__envConfig['agent_count']
-        self.__map_capacity = self.__envConfig['map_capacity']
-        self.__agents_of_map = self.__envConfig['agent_count']
-        if self.__envConfig['self_play']:
-            self.__agents_of_map += self.__envConfig['enemy_count']
-        self.__total_agent_count = self.__agents_of_map * self.__map_capacity
+        self.__agents_of_map = len(self.__envConfig['first_weapon_type'])
+        self.__total_agent_count = self.__agents_of_map * len(self.__envConfig['map_type'])
+        self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__agents_of_map
 
         if self.__debug:
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
@@ -33,7 +30,6 @@ class RLFPSv4(gym.Env):
     def initialize(self):
         self.__communication_manager.send_info(
             'Initialize:MapType"' + str(','.join(str(e) for e in self.__envConfig['map_type']))
-            + '"MapCapa"' + str(int(self.__envConfig['map_capacity']))
             + '"Pause"' + str(self.__pause_mode)
             + '"Period"' + str(self.__envConfig['period'])
             + '"Acceleration"' + str(self.__envConfig['acceleration'])
@@ -60,18 +56,16 @@ class RLFPSv4(gym.Env):
     ) -> Union[ObsType, Tuple[ObsType, dict]]:
 
         self_play = self.__envConfig['self_play']
-        n_of_current_agent = self.__envConfig['agent_count']
-        n_of_current_enemy = self.__envConfig['enemy_count']
         msg = 'Rebuild:"Selfplay"' + str(self_play) + \
               '"MaxStep"' + str(self.__envConfig['max_steps']) + \
-              '"AgentType"' + str(','.join(str(e) for e in self.__envConfig['agent_type'])) + \
+              '"AgentType"' + str(','.join(str(e) for e in (self.__envConfig['agent_type']
+                                                            + self.__envConfig['enemy_type']))) + \
               '"FirstWeaponType"' + str(','.join(str(e) for e in self.__envConfig['first_weapon_type'])) + \
               '"SecondWeaponType"' + str(','.join(str(e) for e in self.__envConfig['second_weapon_type'])) + \
-              '"NoA"' + str(n_of_current_agent) + \
-              '"NoE"' + str(n_of_current_enemy) + \
               '"GlRe"' + str(self.__envConfig['global_resolution']) + \
               '"LcRe"' + str(self.__envConfig['local_resolution']) + \
-              '"InitHeight"' + str(self.__envConfig['init_height']) + '"'
+              '"InitHeight"' + str(self.__envConfig['init_height']) + \
+              '"AlphaCount"' + str(len(self.__envConfig['agent_type'])) + '"'
         self.__communication_manager.send_info(msg)
         # To gathering spatial-feature
         state, _, _, _ = self.__get_observation()

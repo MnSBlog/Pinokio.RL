@@ -43,7 +43,7 @@ class PPO(PolicyAgent):
         if torch.is_tensor(non_spatial_x) is False:
             non_spatial_x = torch.tensor(non_spatial_x, dtype=torch.float).to(self.device)
             non_spatial_x = non_spatial_x.unsqueeze(dim=0)
-            non_spatial_x = non_spatial_x.unsqueeze(dim=2)
+        non_spatial_x = non_spatial_x.unsqueeze(dim=2)
 
         if len(spatial_x) > 0 and torch.is_tensor(spatial_x) is False:
             spatial_x = torch.tensor(spatial_x, dtype=torch.float).to(self.device)
@@ -55,9 +55,9 @@ class PPO(PolicyAgent):
 
         with torch.no_grad():
             if mask is not None:
-                self.actor_old.set_mask(mask)
+                self.actor_old.set_mask(mask.to(self.device))
 
-            state = self.actor_old.pre_forward(x1=spatial_x, x2=non_spatial_x)
+            state = self.actor_old.pre_forward(x1=spatial_x.to(self.device), x2=non_spatial_x.to(self.device))
             actions, action_logprobs = self.actor_old.act(state=state)
 
             self.batch_state.append(state)

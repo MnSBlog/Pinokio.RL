@@ -12,7 +12,7 @@ runner:
   max_step_num: 800
   update_step: 50
   save_per_update: 4
-  pretrain: True
+  pretrain: False
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1
