@@ -85,8 +85,10 @@ class RLFPSv4(gym.Env):
         step_batch_num = self.__envConfig['step_info_dim']
         agent_num = self.__agents_of_map
         begin = time.time()
-        character_info_shape = (total_agent_num, non_spatial_batch_num)
-        action_mask_shape = (total_agent_num, self.__envConfig['move_dim'] + self.__envConfig['attack_dim'] + self.__envConfig['view_dim'])
+        character_info_shape = (total_agent_num, self.__agents_of_map, non_spatial_batch_num)
+        action_mask_shape = (
+            total_agent_num,
+            self.__envConfig['move_dim'] + self.__envConfig['attack_dim'] + self.__envConfig['view_dim'])
         field_info_shape = (
             total_agent_num, spatial_batch_num, self.__envConfig['local_resolution'],
             self.__envConfig['local_resolution'])
@@ -110,7 +112,7 @@ class RLFPSv4(gym.Env):
         reward = self.__calculate_reward(deserialized_step_info_list)
         print("done & reward: ", (time.time() - begin) * 1000, "ms")
         state = {'matrix': deserialized_field_info_list,
-                 'vector': deserialized_char_info_list,
+                 'vector': deserialized_char_info_list.reshape([10, 180]),
                  'action_mask': deserialized_action_mask}
         return state, reward, done, None
 
@@ -121,8 +123,9 @@ class RLFPSv4(gym.Env):
             for j in range(feature_size):
                 ax[i, j].get_xaxis().set_visible(False)
                 ax[i, j].get_yaxis().set_visible(False)
-        subplot_num = 7
-        subplot_title_list = ['last_enemy_location', 'grenade_damage', 'treat_points', 'obj_id', 'movable', 'visual_field_of_map', 'char_index']
+        subplot_num = 8
+        subplot_title_list = ['char_index', 'visual_field_of_map', 'movable', 'obj_id', 'treat_points',
+                              'grenade_damage', 'visible_enemy_location', 'enemy_location']
         for i in range(subplot_num):
             ax[0, i].set_title(subplot_title_list[i], fontsize = 12)
         plt.tight_layout()

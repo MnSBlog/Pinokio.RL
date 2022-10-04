@@ -15,7 +15,7 @@ network:
   # --- non-spatial features ---
   non_spatial_feature:
     use: True
-    dim_in: 26
+    dim_in: 180
     dim_out: 128
     extension: True
     freeze: False
