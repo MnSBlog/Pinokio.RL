@@ -78,24 +78,25 @@ class GymRunner:
             # 환경 초기화 및 초기 상태 관측 및 큐
             memory_q = {'matrix': [], 'vector': []}
             for _ in range(0, memory_len):
-                obs = self.env.reset()
-                if isinstance(obs, tuple):
-                    spatial_obs = obs[0]
-                    spatial_obs = spatial_obs / 255
+                ret = self.env.reset()
+                state = ret[0]
+                if len(state.shape) > 1:
+                    spatial_obs = state / 255
                     spatial_obs = spatial_obs.transpose((2, 0, 1))
                     memory_q['matrix'].append(spatial_obs)
-                    non_spatial_obs = np.array(list(obs[1].values()))
                 else:
-                    non_spatial_obs = obs
-                memory_q['vector'].append(non_spatial_obs)
-            matrix_obs = np.concatenate(memory_q['matrix'], axis=0)
-            vector_obs = np.concatenate(memory_q['vector'], axis=0)
-            state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
+                    non_spatial_obs = state
+                    memory_q['vector'].append(non_spatial_obs)
 
+            matrix_obs, vector_obs = [], []
             if len(memory_q['matrix']) > 0:
+                matrix_obs = np.concatenate(memory_q['matrix'], axis=0)
                 memory_q['matrix'].pop(0)
+
             if len(memory_q['vector']) > 0:
+                vector_obs = np.concatenate(memory_q['vector'], axis=0)
                 memory_q['vector'].pop(0)
+            state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
 
             while not done:
                 if self.config['runner']['render']:
@@ -105,9 +106,7 @@ class GymRunner:
                     self.action = self.action.squeeze(dim=0)
                     self.action = self.action.item()
                 # 다음 상태, 보상 관측
-                spatial_obs, reward, done, trunc, info = self.env.step(self.action)
-                if trunc:
-                    test = 1
+                state, reward, done, trunc, info = self.env.step(self.action)
                 done |= trunc
                 if rew_min > reward:
                     print('reward min is updated: ', reward)
@@ -123,46 +122,46 @@ class GymRunner:
                 reward = np.reshape(reward, [1, 1])
                 train_reward = (reward - rew_numerator) / rew_gap
 
-                # shape에 따라 잘라야하네
-                spatial_obs = spatial_obs / 255
-                spatial_obs = spatial_obs.transpose((2, 0, 1))
-
-                memory_q['matrix'].append(spatial_obs)
-                non_spatial_obs = np.array(list(info.values()))
-                memory_q['vector'].append(non_spatial_obs)
-                
-                matrix_obs = np.concatenate(memory_q['matrix'], axis=0)
-                vector_obs = np.concatenate(memory_q['vector'], axis=0)
-                next_state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
+                if len(state.shape) > 1:
+                    spatial_obs = state / 255
+                    spatial_obs = spatial_obs.transpose((2, 0, 1))
+                    memory_q['matrix'].append(spatial_obs)
+                else:
+                    non_spatial_obs = state
+                    memory_q['vector'].append(non_spatial_obs)
 
                 if len(memory_q['matrix']) > 0:
+                    matrix_obs = np.concatenate(memory_q['matrix'], axis=0)
                     memory_q['matrix'].pop(0)
+
                 if len(memory_q['vector']) > 0:
+                    vector_obs = np.concatenate(memory_q['vector'], axis=0)
                     memory_q['vector'].pop(0)
+                next_state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
 
-                # Bug로 인한 done check 및 mask 작업
-                dead_line = spatial_obs[0, 189:196, :]
-                left_lim = dead_line[:, 8:13]
-                right_lim = dead_line[:, 146:151]
-                action_mask = None
-                if len(left_lim[left_lim != 0]) >= 20:
-                    action_mask = np.array([1, 1, 1, 0])
-                if len(right_lim[right_lim != 0]) >= 20:
-                    action_mask = np.array([1, 1, 0, 1])
-                next_state['action_mask'] = action_mask
-
-                countable = len(dead_line[dead_line != 0])
-                if countable > 170:
-                    if done_checker < 0:
-                        done_checker = 20
-                        done_lives = info['lives']
-
-                if done_checker > 0:
-                    if done is True or done_lives != info['lives']:
-                        done_checker = 0
-                    done_checker -= 1
-                    if done_checker == 0:
-                        done = True
+                # # Bug로 인한 done check 및 mask 작업
+                # dead_line = spatial_obs[0, 189:196, :]
+                # left_lim = dead_line[:, 8:13]
+                # right_lim = dead_line[:, 146:151]
+                # action_mask = None
+                # if len(left_lim[left_lim != 0]) >= 20:
+                #     action_mask = np.array([1, 1, 1, 0])
+                # if len(right_lim[right_lim != 0]) >= 20:
+                #     action_mask = np.array([1, 1, 0, 1])
+                # next_state['action_mask'] = action_mask
+                #
+                # countable = len(dead_line[dead_line != 0])
+                # if countable > 170:
+                #     if done_checker < 0:
+                #         done_checker = 20
+                #         done_lives = info['lives']
+                #
+                # if done_checker > 0:
+                #     if done is True or done_lives != info['lives']:
+                #         done_checker = 0
+                #     done_checker -= 1
+                #     if done_checker == 0:
+                #         done = True
 
                 self.agent.batch_reward.append(train_reward)
                 self.agent.batch_done.append(done)

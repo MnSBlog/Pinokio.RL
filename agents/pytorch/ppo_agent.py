@@ -57,7 +57,7 @@ class PPO(PolicyAgent):
             if mask is not None:
                 self.actor_old.set_mask(mask.to(self.device))
 
-            state = self.actor_old.pre_forward(x1=spatial_x.to(self.device), x2=non_spatial_x.to(self.device))
+            state = self.actor_old.pre_forward(x1=spatial_x, x2=non_spatial_x)
             actions, action_logprobs = self.actor_old.act(state=state)
 
             self.batch_state.append(state)

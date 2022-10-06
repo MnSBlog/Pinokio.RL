@@ -4,8 +4,8 @@ envs:
   debug: False
   # --- Defaults ---
   port: 49999
-  agent_type: [ 5, 5, 5, 5, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
-  enemy_type: [ -1, 5, 5, 5, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
+  agent_type: [ -1, -1, -1, -1, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
+  enemy_type: [ -1, -1, -1, -1, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
   # 0: Free 1: Malloc 2: Phore 4: Sema 4: Thread
   first_weapon_type: [ 0, 2, 0, 2, 0, 2, 0, 2, 0, 2 ] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
   second_weapon_type: [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A

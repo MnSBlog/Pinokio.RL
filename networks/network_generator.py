@@ -14,11 +14,10 @@ class CustomTorchNetwork(nn.Module):
     def __init__(self, config):
         super(CustomTorchNetwork, self).__init__()
         networks = dict()
-        config['spatial_feature']['dim_in'] = config['spatial_feature']['dim_in'] * config['memory_q_len']
-        config['non_spatial_feature']['dim_in'] = config['non_spatial_feature']['dim_in'] * config['memory_q_len']
 
         # Spatial feature network 정의
         if config['spatial_feature']['use']:
+            config['spatial_feature']['dim_in'] = config['spatial_feature']['dim_in'] * config['memory_q_len']
             spatial_processor = make_sequential(in_channels=config['spatial_feature']['dim_in'],
                                                 out_channels=config['spatial_feature']['dim_in'] // 2,
                                                 kernel_size=(2, 2), stride=(1, 1))
@@ -34,6 +33,7 @@ class CustomTorchNetwork(nn.Module):
 
         # non-spatial feature network 정의
         if config['non_spatial_feature']['use']:
+            config['non_spatial_feature']['dim_in'] = config['non_spatial_feature']['dim_in'] * config['memory_q_len']
             if config['non_spatial_feature']['extension']:
                 vector_processor = nn.Sequential(
                     nn.Conv1d(in_channels=config['non_spatial_feature']['dim_in'],
@@ -75,12 +75,18 @@ class CustomTorchNetwork(nn.Module):
         self.action_mask = []
 
     def pre_forward(self, x1, x2):
+        cat_alter = []
         if 'spatial_feature' in self.networks:
             x1 = self.networks['spatial_feature'](x1)
+            cat_alter.append(x1)
         if 'non_spatial_feature' in self.networks:
             x2 = self.networks['non_spatial_feature'](x2)
         x2 = x2.squeeze(dim=2)
-        state = torch.cat([x1, x2], dim=1)
+        cat_alter.append(x2)
+        if len(cat_alter) == 2:
+            state = torch.cat(cat_alter, dim=1)
+        else:
+            state = cat_alter.pop()
         return state
 
     def forward(self, x):
