@@ -65,7 +65,8 @@ class RLFPSv4(gym.Env):
               '"GlRe"' + str(self.__envConfig['global_resolution']) + \
               '"LcRe"' + str(self.__envConfig['local_resolution']) + \
               '"InitHeight"' + str(self.__envConfig['init_height']) + \
-              '"AlphaCount"' + str(len(self.__envConfig['agent_type'])) + '"'
+              '"AlphaCount"' + str(len(self.__envConfig['agent_type'])) + \
+              '"Physics"' + str(','.join(str(e) for e in self.__envConfig['kinematics'].values())) + '"'
         self.__communication_manager.send_info(msg)
         # To gathering spatial-feature
         state, _, _, _ = self.__get_observation()
@@ -111,8 +112,9 @@ class RLFPSv4(gym.Env):
         done = torch.tensor(deserialized_step_info_list[:, 0], dtype=torch.bool)
         reward = self.__calculate_reward(deserialized_step_info_list)
         print("done & reward: ", (time.time() - begin) * 1000, "ms")
+        vector_shape = deserialized_char_info_list.shape
         state = {'matrix': deserialized_field_info_list,
-                 'vector': deserialized_char_info_list.reshape([10, 180]),
+                 'vector': deserialized_char_info_list.reshape([vector_shape[0], vector_shape[1] * vector_shape[2]]),
                  'action_mask': deserialized_action_mask}
         return state, reward, done, None
 

@@ -9,7 +9,16 @@ envs:
   # 0: Free 1: Malloc 2: Phore 4: Sema 4: Thread
   first_weapon_type: [ 0, 2, 0, 2, 0, 2, 0, 2, 0, 2 ] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
   second_weapon_type: [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
-  map_type: [0] # 0: Container Map / 1: Training Map / 2: External Map / -1: Random
+  map_type: [1] # 0: Container Map / 1: Training Map / 2: External Map / -1: Random
+  # --- Character Kinematics ---
+  kinematics:
+    x_speed: 220.0 # 220.0 Left/Right sight rotation speed
+    y_speed: 100.0 # 100.0 Up/Ddown sight rotation speed
+    learn_speed: 360.0 # 360.0 Learn speed
+    rotate_speed: 180.0 # 180.0 Body rotation speed
+    move_speed: 3.0 # 3.0 Walk speed
+    view_angle: 180.0 # 180.0 Sight angle/range
+    view_radius: 20.0 # 20.0 Sight distance
   # --- learning condition ---
   mode: "RealTime" # Pause or RealTime
   period: 200
