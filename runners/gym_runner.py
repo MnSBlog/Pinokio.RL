@@ -58,45 +58,32 @@ class GymRunner:
 
         self.env = env
         self.save_epi_reward = []
+        self.reward_info = {'mu': [0], 'max': [0], 'min': [0], 'episode': [0], 'memory': []}
 
         self.action = None
         self.reward = 0
+        self.memory_q = {'matrix': [], 'vector': []}
+
+        self.rew_min = self.config['envs']['reward_range'][0]
+        self.rew_max = self.config['envs']['reward_range'][1]
+        self.rew_gap = (self.rew_max - self.rew_min) / 2
+        self.rew_numerator = (self.rew_max + self.rew_min) / 2
 
     def run(self):
-        rew_min = self.config['envs']['reward_range'][0]
-        rew_max = self.config['envs']['reward_range'][1]
-        rew_gap = (rew_max - rew_min) / 2
-        rew_numerator = (rew_max + rew_min) / 2
         memory_len = self.config['network']['memory_q_len']
+        fig, ax = plt.subplots(nrows=1, ncols=1)
         # 에피소드마다 다음을 반복
-        for ep in range(self.config['runner']['max_episode_num']):
-            done_checker = -1
-            done_lives = 0
+        for ep in range(1, self.config['runner']['max_episode_num'] + 1):
             # 에피소드 초기화
             step, episode_reward, done = 0, 0, False
-
+            self.memory_q = {'matrix': [], 'vector': []}
             # 환경 초기화 및 초기 상태 관측 및 큐
-            memory_q = {'matrix': [], 'vector': []}
             for _ in range(0, memory_len):
                 ret = self.env.reset()
                 state = ret[0]
-                if len(state.shape) > 1:
-                    spatial_obs = state / 255
-                    spatial_obs = spatial_obs.transpose((2, 0, 1))
-                    memory_q['matrix'].append(spatial_obs)
-                else:
-                    non_spatial_obs = state
-                    memory_q['vector'].append(non_spatial_obs)
+                self.__insert_q(state)
 
-            matrix_obs, vector_obs = [], []
-            if len(memory_q['matrix']) > 0:
-                matrix_obs = np.concatenate(memory_q['matrix'], axis=0)
-                memory_q['matrix'].pop(0)
-
-            if len(memory_q['vector']) > 0:
-                vector_obs = np.concatenate(memory_q['vector'], axis=0)
-                memory_q['vector'].pop(0)
-            state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
+            state = self.__update_memory()
 
             while not done:
                 if self.config['runner']['render']:
@@ -107,73 +94,20 @@ class GymRunner:
                     self.action = self.action.item()
                 # 다음 상태, 보상 관측
                 state, reward, done, trunc, info = self.env.step(self.action)
-                done |= trunc
-                if rew_min > reward:
-                    print('reward min is updated: ', reward)
-                    rew_min = reward
-                    rew_gap = (rew_max - rew_min) / 2
-                    rew_numerator = (rew_max + rew_min) / 2
-                elif rew_max < reward:
-                    print('reward max is updated: ', reward)
-                    rew_max = reward
-                    rew_gap = (rew_max - rew_min) / 2
-                    rew_numerator = (rew_max + rew_min) / 2
-                # 학습용 보상 [-1, 1]로 fitting
-                reward = np.reshape(reward, [1, 1])
-                train_reward = (reward - rew_numerator) / rew_gap
+                state = self.__update_memory(state)
 
-                if len(state.shape) > 1:
-                    spatial_obs = state / 255
-                    spatial_obs = spatial_obs.transpose((2, 0, 1))
-                    memory_q['matrix'].append(spatial_obs)
-                else:
-                    non_spatial_obs = state
-                    memory_q['vector'].append(non_spatial_obs)
-
-                if len(memory_q['matrix']) > 0:
-                    matrix_obs = np.concatenate(memory_q['matrix'], axis=0)
-                    memory_q['matrix'].pop(0)
-
-                if len(memory_q['vector']) > 0:
-                    vector_obs = np.concatenate(memory_q['vector'], axis=0)
-                    memory_q['vector'].pop(0)
-                next_state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
-
-                # # Bug로 인한 done check 및 mask 작업
-                # dead_line = spatial_obs[0, 189:196, :]
-                # left_lim = dead_line[:, 8:13]
-                # right_lim = dead_line[:, 146:151]
-                # action_mask = None
-                # if len(left_lim[left_lim != 0]) >= 20:
-                #     action_mask = np.array([1, 1, 1, 0])
-                # if len(right_lim[right_lim != 0]) >= 20:
-                #     action_mask = np.array([1, 1, 0, 1])
-                # next_state['action_mask'] = action_mask
-                #
-                # countable = len(dead_line[dead_line != 0])
-                # if countable > 170:
-                #     if done_checker < 0:
-                #         done_checker = 20
-                #         done_lives = info['lives']
-                #
-                # if done_checker > 0:
-                #     if done is True or done_lives != info['lives']:
-                #         done_checker = 0
-                #     done_checker -= 1
-                #     if done_checker == 0:
-                #         done = True
-
+                train_reward = self.__fit_reward(reward)
                 self.agent.batch_reward.append(train_reward)
                 self.agent.batch_done.append(done)
                 step += 1
-                episode_reward += reward[0]
-                state = next_state
+                episode_reward += reward
 
                 if len(self.agent.batch_state) >= self.config['runner']['batch_size']:
                     # 학습 추출
-                    self.agent.update(next_state=next_state, done=done)
+                    self.agent.update(next_state=state, done=done)
             # 에피소드마다 결과 보상값 출력
-            print('Episode: ', ep + 1, 'Steps: ', step, 'Reward: ', episode_reward)
+            print('Episode: ', ep, 'Steps: ', step, 'Reward: ', episode_reward)
+            self.reward_info['memory'].append(episode_reward)
             self.save_epi_reward.append(episode_reward)
 
             # 에피소드 10번마다 신경망 파라미터를 파일에 저장
@@ -183,12 +117,68 @@ class GymRunner:
                                                time.strftime('%Y-%m-%d-%H-%M-%S'))
                 self.agent.save(checkpoint_path=checkpoint_path)
 
+                self.reward_info['mu'].append(sum(self.reward_info['memory']) / len(self.reward_info['memory']))
+                self.reward_info['max'].append(max(self.reward_info['memory']))
+                self.reward_info['min'].append(min(self.reward_info['memory']))
+                self.reward_info['episode'].append(ep)
+                self.reward_info['memory'].clear()
+
+                plt.clf()
+                ax.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
+                ax.fill_between(self.reward_info['episode'],
+                                self.reward_info['min'], self.reward_info['max'], alpha=0.2)
+                plt.ylim([0, 550])
+                title = self.config['env_name'] + "-mem_len-" + str(memory_len) + ".png"
+                plt.savefig("figures/" + title)
+
         # 학습이 끝난 후, 누적 보상값 저장
         filename = self.config['runner']['history_path'] + self.config['envs']['name']
         filename += 'stack-' + str(self.config['network']['memory_q_len']) + '_epi_reward.txt'
         np.savetxt(filename, self.save_epi_reward)
+        self.env.close()
         print(self.save_epi_reward)
 
     def plot_result(self):
         plt.plot(self.save_epi_reward)
         plt.show()
+        plt.clf()
+
+    def __insert_q(self, state):
+        if len(state.shape) > 1:
+            self.memory_q['matrix'].append(state)
+        else:
+            self.memory_q['vector'].append(state)
+
+    def __update_memory(self, state=None):
+        matrix_obs, vector_obs = [], []
+
+        if state is not None:
+            self.__insert_q(state)
+
+        if len(self.memory_q['matrix']) > 0:
+            matrix_obs = np.concatenate(self.memory_q['matrix'], axis=0)
+            self.memory_q['matrix'].pop(0)
+
+        if len(self.memory_q['vector']) > 0:
+            vector_obs = np.concatenate(self.memory_q['vector'], axis=0)
+            self.memory_q['vector'].pop(0)
+
+        state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
+        return state
+
+    def __fit_reward(self, rew):
+        if self.rew_min > rew:
+            print('reward min is updated: ', rew)
+            self.rew_min = rew
+            self.rew_gap = (self.rew_max - self.rew_min) / 2
+            self.rew_numerator = (self.rew_max + self.rew_min) / 2
+        elif self.rew_max < rew:
+            print('reward max is updated: ', rew)
+            self.rew_max = rew
+            self.rew_gap = (self.rew_max - self.rew_min) / 2
+            self.rew_numerator = (self.rew_max + self.rew_min) / 2
+        # 학습용 보상 [-1, 1]로 fitting
+        rew = np.reshape(rew, [1, 1])
+        train_reward = (rew - self.rew_numerator) / self.rew_gap
+
+        return train_reward

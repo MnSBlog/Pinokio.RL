@@ -1,6 +1,6 @@
 runner:
   # --- Defaults ---
-  max_episode_num: 1000
+  max_episode_num: 3000
   pretrain: False
   render: True
   # --- Learning Condition ---

@@ -38,12 +38,16 @@ class YamlConfig:
 
     def get_config(self, filenames: list):
         for file_path in filenames:
-            with open(os.path.join(self.root_path, file_path + '.yaml'), 'r') as f:
-                try:
-                    sub_dict = yaml.load(f, Loader=yaml.FullLoader)
-                except yaml.YAMLError as exc:
-                    assert False, "{}.yaml error: {}".format('sc2', exc)
-                temp_config = sub_dict
-                self.final_config_dict = self.recursive_dict_update(self.final_config_dict, temp_config)
+            sub_dict = self.get_dict(os.path.join(self.root_path, file_path + '.yaml'))
+            self.final_config_dict = self.recursive_dict_update(self.final_config_dict, sub_dict)
 
         return self.final_config_dict
+
+    @staticmethod
+    def get_dict(path):
+        with open(path, 'r') as f:
+            try:
+                sub_dict = yaml.load(f, Loader=yaml.FullLoader)
+            except yaml.YAMLError as exc:
+                assert False, "{}.yaml error: {}".format('sc2', exc)
+        return sub_dict
