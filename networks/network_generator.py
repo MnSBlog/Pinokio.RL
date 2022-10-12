@@ -17,19 +17,35 @@ class CustomTorchNetwork(nn.Module):
 
         # Spatial feature network 정의
         if config['spatial_feature']['use']:
-            config['spatial_feature']['dim_in'] = config['spatial_feature']['dim_in'] * config['memory_q_len']
-            spatial_processor = make_sequential(in_channels=config['spatial_feature']['dim_in'],
-                                                out_channels=config['spatial_feature']['dim_in'] // 2,
-                                                kernel_size=(2, 2), stride=(1, 1))
+            if config['spatial_feature']['backbone'] != '':
+                config['spatial_feature']['dim_in'] = config['spatial_feature']['dim_in'] * config['memory_q_len']
+                spatial_processor = make_sequential(in_channels=config['spatial_feature']['dim_in'],
+                                                    out_channels=config['spatial_feature']['dim_in'] // 2,
+                                                    kernel_size=(2, 2), stride=(1, 1))
 
-            spatial_processor.append(make_sequential(in_channels=config['spatial_feature']['dim_in'] // 2,
-                                                     out_channels=3,
-                                                     kernel_size=(2, 2), stride=(1, 1)))
-            backbone = getattr(models, config['spatial_feature']['backbone'])(weights=None)
-            num_ftrs = backbone.fc.in_features
-            backbone.fc = nn.Linear(num_ftrs, config['spatial_feature']['dim_out'])
-            spatial_processor.append(backbone)
-            networks['spatial_feature'] = spatial_processor
+                spatial_processor.append(make_sequential(in_channels=config['spatial_feature']['dim_in'] // 2,
+                                                         out_channels=3,
+                                                         kernel_size=(2, 2), stride=(1, 1)))
+                backbone = getattr(models, config['spatial_feature']['backbone'])(weights=None)
+                num_ftrs = backbone.fc.in_features
+                backbone.fc = nn.Linear(num_ftrs, config['spatial_feature']['dim_out'])
+                spatial_processor.append(backbone)
+                networks['spatial_feature'] = spatial_processor
+            else:
+                networks['spatial_feature'] = nn.Sequential(
+                    make_sequential(in_channels=config['spatial_feature']['dim_in'],
+                                    out_channels=32,
+                                    kernel_size=(8, 8), stride=(4, 4)),
+                    make_sequential(in_channels=32,
+                                    out_channels=64,
+                                    kernel_size=(4, 4), stride=(2, 2)),
+                    make_sequential(in_channels=64,
+                                    out_channels=64,
+                                    kernel_size=(3, 3), stride=(1, 1)),
+                    nn.Flatten(),
+                    nn.Linear(64 * 7 * 7, config['spatial_feature']['dim_out']),
+                    nn.ReLU()
+                )
 
         # non-spatial feature network 정의
         if config['non_spatial_feature']['use']:
@@ -47,9 +63,21 @@ class CustomTorchNetwork(nn.Module):
 
         # neck 부분
         config['neck_in'] = config['spatial_feature']['dim_out'] + config['non_spatial_feature']['dim_out']
+        if config['use_memory_layer'] == "Raw":
+            input_layer = nn.Sequential(
+                nn.Linear(config['neck_in'], config['neck_out']),
+                getattr(nn, config['neck_activation'])()
+            )
+            self.init_h_state = None
+            self.recurrent = False
+        else:
+            input_layer = getattr(nn, config['use_memory_layer'])(config['neck_in'], config['neck_out'], 1,
+                                                                  batch_first=True)
+            self.init_h_state = self.get_initial_h_state(input_layer.num_layers,
+                                                         input_layer.hidden_size)
+            self.recurrent = True
+        networks['input_layer'] = input_layer
         neck = nn.Sequential(
-            nn.Linear(config['neck_in'], config['neck_out']),
-            getattr(nn, config['neck_activation'])(),
             nn.Linear(config['neck_out'], config['neck_out'] // 2),
             getattr(nn, config['neck_activation'])(),
         )
@@ -89,20 +117,25 @@ class CustomTorchNetwork(nn.Module):
             state = cat_alter.pop()
         return state
 
-    def forward(self, x):
-        state = self.networks['neck'](x)
+    def forward(self, x, h=None):
+        if self.recurrent:
+            self.networks['input_layer'].flatten_parameters()
+            state, h = self.networks['input_layer'](x, h)
+        else:
+            state = self.networks['input_layer'](x)
+        state = self.networks['neck'](state.data)
         outputs = []
         dim = len(state.shape) - 1
         for index in range(self.n_of_heads):
             key = "head" + str(index)
             outputs.append(self.networks[key](state))
 
-        return torch.cat(outputs, dim=dim)
+        return torch.cat(outputs, dim=dim), h
 
-    def act(self, state):
+    def act(self, state, hidden=None):
         rtn_action = []
         rtn_logprob = []
-        outputs = self.forward(x=state)
+        outputs, hidden = self.forward(x=state, h=hidden)
         last = 0
         for idx, output_dim in enumerate(self.outputs_dim):
             if len(self.action_mask) > 0:
@@ -114,11 +147,11 @@ class CustomTorchNetwork(nn.Module):
             rtn_logprob.append(action_logprob.detach())
             last = output_dim
 
-        return torch.stack(rtn_action, dim=0), torch.stack(rtn_logprob, dim=0)
+        return torch.stack(rtn_action, dim=0), torch.stack(rtn_logprob, dim=0), hidden
 
-    def evaluate(self, state, actions):
+    def evaluate(self, state, actions, hidden=None):
         rtn_evaluations = []
-        outputs = self.forward(x=state)
+        outputs, _ = self.forward(x=state, h=hidden)
         last = 0
         for idx, output_dim in enumerate(self.outputs_dim):
             if len(self.outputs_dim) != 1:
@@ -142,5 +175,15 @@ class CustomTorchNetwork(nn.Module):
                 self.action_mask.append(mask[:, last:last + output_dim])
                 last = output_dim
 
-# 측정에서 모델 나오기까지의 시간
-# AI 모델을 커스텀마이징 수준: 오픈포즈 스켈레톤, 디노이징 리컨스트럭션은
+    @staticmethod
+    def get_initial_h_state(num_layers, hidden_size):
+        h_0 = torch.zeros((
+            num_layers,
+            hidden_size),
+            dtype=torch.float)
+
+        c_0 = torch.zeros((
+            num_layers,
+            hidden_size),
+            dtype=torch.float)
+        return h_0, c_0

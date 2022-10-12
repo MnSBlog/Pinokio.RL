@@ -6,7 +6,7 @@ from agents.pytorch.utilities import get_device
 from agents.general_agent import PolicyAgent
 
 
-class PPO(PolicyAgent):
+class TD3(PolicyAgent):
     def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
         device = get_device("auto")
         super(PPO, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
@@ -65,7 +65,7 @@ class PPO(PolicyAgent):
 
             self.batch_state.append(state)
             self.batch_action.append(actions)
-            self.batch_hidden_state.append(next_hidden)
+            self.batch_hidden_state(next_hidden)
             self.batch_log_old_policy_pdf.append(action_logprobs)
 
             self.hidden_state = next_hidden

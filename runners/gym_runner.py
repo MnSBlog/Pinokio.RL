@@ -71,7 +71,7 @@ class GymRunner:
 
     def run(self):
         memory_len = self.config['network']['memory_q_len']
-        fig, ax = plt.subplots(nrows=1, ncols=1)
+        fig = plt.figure()
         # 에피소드마다 다음을 반복
         for ep in range(1, self.config['runner']['max_episode_num'] + 1):
             # 에피소드 초기화
@@ -84,7 +84,6 @@ class GymRunner:
                 self.__insert_q(state)
 
             state = self.__update_memory()
-
             while not done:
                 if self.config['runner']['render']:
                     self.env.render()
@@ -94,6 +93,7 @@ class GymRunner:
                     self.action = self.action.item()
                 # 다음 상태, 보상 관측
                 state, reward, done, trunc, info = self.env.step(self.action)
+                done |= trunc
                 state = self.__update_memory(state)
 
                 train_reward = self.__fit_reward(reward)
@@ -117,16 +117,19 @@ class GymRunner:
                                                time.strftime('%Y-%m-%d-%H-%M-%S'))
                 self.agent.save(checkpoint_path=checkpoint_path)
 
-                self.reward_info['mu'].append(sum(self.reward_info['memory']) / len(self.reward_info['memory']))
-                self.reward_info['max'].append(max(self.reward_info['memory']))
-                self.reward_info['min'].append(min(self.reward_info['memory']))
+                mu = np.mean(self.reward_info['memory'])
+                sigma = np.std(self.reward_info['memory'])
+
+                self.reward_info['mu'].append(mu)
+                self.reward_info['max'].append(mu + (2 * sigma))
+                self.reward_info['min'].append(mu - (2 * sigma))
                 self.reward_info['episode'].append(ep)
                 self.reward_info['memory'].clear()
 
                 plt.clf()
-                ax.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
-                ax.fill_between(self.reward_info['episode'],
-                                self.reward_info['min'], self.reward_info['max'], alpha=0.2)
+                plt.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
+                plt.fill_between(self.reward_info['episode'],
+                                 self.reward_info['min'], self.reward_info['max'], alpha=0.2)
                 plt.ylim([0, 550])
                 title = self.config['env_name'] + "-mem_len-" + str(memory_len) + ".png"
                 plt.savefig("figures/" + title)
