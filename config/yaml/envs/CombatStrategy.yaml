@@ -4,11 +4,11 @@ envs:
   debug: False
   # --- Defaults ---
   port: 49999
-  agent_count: 3
-  enemy_count: 3
-  agent_type: [ 0, 0, 0, 0, 0 ]
-  first_weapon_type: [ 0, 0, 0, 0, 1 ] # 0: M4A1 / 1: Kar98k / 2: M59A
-  second_weapon_type: [ 0, 0, 0, 0, 1 ] # 0: M4A1 / 1: Kar98k / 2: M59A
+  agent_count: 1
+  enemy_count: 1
+  agent_type: 0
+  first_weapon_type: 0
+  second_weapon_type: 1
   # --- learning condition ---
   mode: "Pause" # Pause or RealTime
   period: 200
@@ -30,10 +30,12 @@ envs:
   global_resolution: 100
   local_resolution: 30
   init_height: -5
-  step_info_dim: 7
-  spatial_dim: 7
-  non_spatial_dim: 26
-  move_dim: 9
-  attack_dim: 7
-  view_dim: 3
+  step_info_dim: 12
+  spatial_dim: 3
+  non_spatial_dim: 13
+  speed_dim: 3
+  pitch_dim: 3
+  roll_dim: 3
+  attack_dim: 3
+
 
