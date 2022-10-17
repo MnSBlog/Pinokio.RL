@@ -4,18 +4,26 @@ envs:
   debug: False
   # --- Defaults ---
   port: 49999
-  agent_count: 5
-  enemy_count: 5
-  agent_type: [ 0, 0, 0, 0, 0 ]
-  first_weapon_type: [ 0, 0, 0, 0, 1 ] # 0: M4A1 / 1: Kar98k / 2: M59A
-  second_weapon_type: [ 0, 0, 0, 0, 1 ] # 0: M4A1 / 1: Kar98k / 2: M59A
-  map_capacity: 3
-  map_type: [0, 0, 0] # 0: Container Map / 1: Training Map / 2: External Map / -1: Random
+  agent_type: [ -1, -1, -1, -1, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
+  enemy_type: [ -1, -1, -1, -1, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
+  # 0: Free 1: Malloc 2: Phore 4: Sema 4: Thread
+  first_weapon_type: [ 0, 2, 0, 2, 0, 2, 0, 2, 0, 2 ] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
+  second_weapon_type: [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
+  map_type: [1, 0] # 0: Container Map / 1: Training Map / 2: External Map / -1: Random
+  # --- Character Kinematics ---
+  kinematics:
+    x_speed: 220.0 # 220.0 Left/Right sight rotation speed
+    y_speed: 100.0 # 100.0 Up/Ddown sight rotation speed
+    learn_speed: 360.0 # 360.0 Learn speed
+    rotate_speed: 180.0 # 180.0 Body rotation speed
+    move_speed: 3.0 # 3.0 Walk speed
+    view_angle: 180.0 # 180.0 Sight angle/range
+    view_radius: 20.0 # 20.0 Sight distance
   # --- learning condition ---
-  mode: "Pause" # Pause or RealTime
+  mode: "RealTime" # Pause or RealTime
   period: 200
   acceleration: 1.0
-  update_steps: 50
+  update_steps: 100
   save_steps: 300
   max_steps: -1 # -1: No limit
   history_path: "./History"
@@ -32,10 +40,10 @@ envs:
   global_resolution: 100
   local_resolution: 30
   init_height: -5
-  step_info_dim: 7
-  spatial_dim: 7
-  non_spatial_dim: 26
+  step_info_dim: 12
+  spatial_dim: 8
+  non_spatial_dim: 18
+  game_result_dim: 8
   move_dim: 9
   attack_dim: 7
   view_dim: 3
-

@@ -18,12 +18,9 @@ class RLFPSv4(gym.Env):
         self.__communication_manager = CommunicationManager(self.__envConfig['port'])
         self.__self_play = self.__envConfig['self_play']
         self.__debug = self.__envConfig['debug']
-        self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__envConfig['agent_count']
-        self.__map_capacity = self.__envConfig['map_capacity']
-        self.__agents_of_map = self.__envConfig['agent_count']
-        if self.__envConfig['self_play']:
-            self.__agents_of_map += self.__envConfig['enemy_count']
-        self.__total_agent_count = self.__agents_of_map * self.__map_capacity
+        self.__agents_of_map = len(self.__envConfig['first_weapon_type'])
+        self.__total_agent_count = self.__agents_of_map * len(self.__envConfig['map_type'])
+        self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__agents_of_map
 
         if self.__debug:
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
@@ -33,7 +30,6 @@ class RLFPSv4(gym.Env):
     def initialize(self):
         self.__communication_manager.send_info(
             'Initialize:MapType"' + str(','.join(str(e) for e in self.__envConfig['map_type']))
-            + '"MapCapa"' + str(int(self.__envConfig['map_capacity']))
             + '"Pause"' + str(self.__pause_mode)
             + '"Period"' + str(self.__envConfig['period'])
             + '"Acceleration"' + str(self.__envConfig['acceleration'])
@@ -60,18 +56,17 @@ class RLFPSv4(gym.Env):
     ) -> Union[ObsType, Tuple[ObsType, dict]]:
 
         self_play = self.__envConfig['self_play']
-        n_of_current_agent = self.__envConfig['agent_count']
-        n_of_current_enemy = self.__envConfig['enemy_count']
         msg = 'Rebuild:"Selfplay"' + str(self_play) + \
               '"MaxStep"' + str(self.__envConfig['max_steps']) + \
-              '"AgentType"' + str(','.join(str(e) for e in self.__envConfig['agent_type'])) + \
+              '"AgentType"' + str(','.join(str(e) for e in (self.__envConfig['agent_type']
+                                                            + self.__envConfig['enemy_type']))) + \
               '"FirstWeaponType"' + str(','.join(str(e) for e in self.__envConfig['first_weapon_type'])) + \
               '"SecondWeaponType"' + str(','.join(str(e) for e in self.__envConfig['second_weapon_type'])) + \
-              '"NoA"' + str(n_of_current_agent) + \
-              '"NoE"' + str(n_of_current_enemy) + \
               '"GlRe"' + str(self.__envConfig['global_resolution']) + \
               '"LcRe"' + str(self.__envConfig['local_resolution']) + \
-              '"InitHeight"' + str(self.__envConfig['init_height']) + '"'
+              '"InitHeight"' + str(self.__envConfig['init_height']) + \
+              '"AlphaCount"' + str(len(self.__envConfig['agent_type'])) + \
+              '"Physics"' + str(','.join(str(e) for e in self.__envConfig['kinematics'].values())) + '"'
         self.__communication_manager.send_info(msg)
         # To gathering spatial-feature
         state, _, _, _ = self.__get_observation()
@@ -91,8 +86,10 @@ class RLFPSv4(gym.Env):
         step_batch_num = self.__envConfig['step_info_dim']
         agent_num = self.__agents_of_map
         begin = time.time()
-        character_info_shape = (total_agent_num, non_spatial_batch_num)
-        action_mask_shape = (total_agent_num, self.__envConfig['move_dim'] + self.__envConfig['attack_dim'] + self.__envConfig['view_dim'])
+        character_info_shape = (total_agent_num, self.__agents_of_map, non_spatial_batch_num)
+        action_mask_shape = (
+            total_agent_num,
+            self.__envConfig['move_dim'] + self.__envConfig['attack_dim'] + self.__envConfig['view_dim'])
         field_info_shape = (
             total_agent_num, spatial_batch_num, self.__envConfig['local_resolution'],
             self.__envConfig['local_resolution'])
@@ -115,8 +112,9 @@ class RLFPSv4(gym.Env):
         done = torch.tensor(deserialized_step_info_list[:, 0], dtype=torch.bool)
         reward = self.__calculate_reward(deserialized_step_info_list)
         print("done & reward: ", (time.time() - begin) * 1000, "ms")
+        vector_shape = deserialized_char_info_list.shape
         state = {'matrix': deserialized_field_info_list,
-                 'vector': deserialized_char_info_list,
+                 'vector': deserialized_char_info_list.reshape([vector_shape[0], vector_shape[1] * vector_shape[2]]),
                  'action_mask': deserialized_action_mask}
         return state, reward, done, None
 
@@ -127,8 +125,9 @@ class RLFPSv4(gym.Env):
             for j in range(feature_size):
                 ax[i, j].get_xaxis().set_visible(False)
                 ax[i, j].get_yaxis().set_visible(False)
-        subplot_num = 7
-        subplot_title_list = ['last_enemy_location', 'grenade_damage', 'treat_points', 'obj_id', 'movable', 'visual_field_of_map', 'char_index']
+        subplot_num = 8
+        subplot_title_list = ['char_index', 'visual_field_of_map', 'movable', 'obj_id', 'treat_points',
+                              'grenade_damage', 'visible_enemy_location', 'enemy_location']
         for i in range(subplot_num):
             ax[0, i].set_title(subplot_title_list[i], fontsize = 12)
         plt.tight_layout()

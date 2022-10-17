@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: Swimmer
+  reward_range: [-1, 0]

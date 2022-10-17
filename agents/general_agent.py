@@ -10,6 +10,7 @@ class GeneralAgent:
         self.batch_action = []
         self.batch_reward = []
         self.batch_next_state = []
+        self.batch_hidden_state = []
         self.batch_done = []
         self.batch_log_old_policy_pdf = []
         self.batch_clear()
@@ -33,6 +34,7 @@ class GeneralAgent:
         self.batch_next_state = []
         self.batch_done = []
         self.batch_log_old_policy_pdf = []
+        self.batch_hidden_state = []
 
 
 class PolicyAgent(GeneralAgent):

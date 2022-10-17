@@ -6,7 +6,7 @@ from agents.pytorch.utilities import get_device
 from agents.general_agent import PolicyAgent
 
 
-class PPO(PolicyAgent):
+class TD3(PolicyAgent):
     def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
         device = get_device("auto")
         super(PPO, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
@@ -34,8 +34,9 @@ class PPO(PolicyAgent):
         self.loss = getattr(nn, parameters['loss_function'])()
         self.device = device
         self.hidden_state = copy.deepcopy(self.actor.init_h_state)
-        if self.actor.recurrent:
-            self.hidden_state = self.hidden_state.to(self.device)
+        h_0, c_0 = self.hidden_state
+        h_0, c_0 = h_0.to(self.device), c_0.to(self.device)
+        self.hidden_state = (h_0, c_0)
 
     def select_action(self, state):
         spatial_x = state['matrix']
@@ -45,15 +46,11 @@ class PPO(PolicyAgent):
         if torch.is_tensor(non_spatial_x) is False:
             non_spatial_x = torch.tensor(non_spatial_x, dtype=torch.float).to(self.device)
             non_spatial_x = non_spatial_x.unsqueeze(dim=0)
-        else:
-            non_spatial_x = non_spatial_x.to(self.device)
         non_spatial_x = non_spatial_x.unsqueeze(dim=2)
 
         if len(spatial_x) > 0 and torch.is_tensor(spatial_x) is False:
             spatial_x = torch.tensor(spatial_x, dtype=torch.float).to(self.device)
             spatial_x = spatial_x.unsqueeze(dim=0)
-        else:
-            spatial_x = spatial_x.to(self.device)
 
         if mask is not None and torch.is_tensor(mask) is False:
             mask = torch.tensor(mask, dtype=torch.float).to(self.device)
@@ -64,13 +61,11 @@ class PPO(PolicyAgent):
                 self.actor_old.set_mask(mask.to(self.device))
 
             state = self.actor_old.pre_forward(x1=spatial_x, x2=non_spatial_x)
-            if self.actor_old.recurrent:
-                state = state.unsqueeze(dim=0)
             actions, action_logprobs, next_hidden = self.actor_old.act(state=state, hidden=self.hidden_state)
 
             self.batch_state.append(state)
             self.batch_action.append(actions)
-            self.batch_hidden_state.append(next_hidden)
+            self.batch_hidden_state(next_hidden)
             self.batch_log_old_policy_pdf.append(action_logprobs)
 
             self.hidden_state = next_hidden
@@ -109,7 +104,7 @@ class PPO(PolicyAgent):
         old_logprobs = torch.squeeze(torch.stack(self.batch_log_old_policy_pdf, dim=0)).detach().to(self.device)
         old_hiddens = None
         if self.actor.recurrent:
-            old_hiddens = torch.squeeze(torch.stack(self.batch_hidden_state, dim=1)).detach().to(self.device)
+            old_hiddens = torch.squeeze(torch.stack(self.batch_hidden_state, dim=0)).detach().to(self.device)
         # Optimize policy for K epochs
         for _ in range(self.epochs):
             # Evaluating old actions and values
