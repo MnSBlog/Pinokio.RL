@@ -61,26 +61,28 @@ def main(args):
     exp_cond = copy.deepcopy(args)
     for env_name in exp_cond['env_name']:
         for mem_len in exp_cond['network']['memory_q_len']:
-            args['env_name'] = env_name
-            args = update_config(config=args, key='envs', name=env_name)
-            args['network']['memory_q_len'] = mem_len
-            save_folder_check(args)
+            for layer_type in exp_cond['network']['use_memory_layer']:
+                args['env_name'] = env_name
+                args = update_config(config=args, key='envs', name=env_name)
+                args['network']['memory_q_len'] = mem_len
+                args['network']['use_memory_layer'] = layer_type
+                save_folder_check(args)
 
-            if args['runner_name'] == 'ray_tune':
-                register_env(args['env_name'], ENV_REGISTRY[args['env_name']](**args['envs']))
-                raise NotImplementedError
-            elif args['runner_name'] == 'gym':
-                from gym import envs
-                check = envs.registry
-                env = gym.make(args['env_name'], render_mode='human')
-                runner = GymRunner(config=copy.deepcopy(args), env=env)
-            else:
-                env = ENV_REGISTRY[args['env_name']](**args['envs'])
-                runner = getattr(runner_instance,
-                                 args['runner_name'])(config=args,
-                                                      env=env)
-            runner.run()
-            # runner.plot_result()
+                if args['runner_name'] == 'ray_tune':
+                    register_env(args['env_name'], ENV_REGISTRY[args['env_name']](**args['envs']))
+                    raise NotImplementedError
+                elif args['runner_name'] == 'gym':
+                    from gym import envs
+                    check = envs.registry
+                    env = gym.make(args['env_name'], render_mode='human')
+                    runner = GymRunner(config=copy.deepcopy(args), env=env)
+                else:
+                    env = ENV_REGISTRY[args['env_name']](**args['envs'])
+                    runner = getattr(runner_instance,
+                                     args['runner_name'])(config=args,
+                                                          env=env)
+                runner.run()
+                # runner.plot_result()
 
 
 if __name__ == '__main__':

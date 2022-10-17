@@ -71,8 +71,8 @@ class CustomTorchNetwork(nn.Module):
             self.init_h_state = None
             self.recurrent = False
         else:
-            input_layer = getattr(nn, config['use_memory_layer'])(config['neck_in'], config['neck_out'], 1,
-                                                                  batch_first=True)
+            input_layer = getattr(nn, config['use_memory_layer'])(config['neck_in'], config['neck_out'],
+                                                                  config['memory_layer_len'], batch_first=True)
             self.init_h_state = self.get_initial_h_state(input_layer.num_layers,
                                                          input_layer.hidden_size)
             self.recurrent = True
@@ -151,6 +151,8 @@ class CustomTorchNetwork(nn.Module):
 
     def evaluate(self, state, actions, hidden=None):
         rtn_evaluations = []
+        if self.recurrent:
+            state = torch.unsqueeze(state, dim=1)
         outputs, _ = self.forward(x=state, h=hidden)
         last = 0
         for idx, output_dim in enumerate(self.outputs_dim):
@@ -179,11 +181,12 @@ class CustomTorchNetwork(nn.Module):
     def get_initial_h_state(num_layers, hidden_size):
         h_0 = torch.zeros((
             num_layers,
+            1,
             hidden_size),
             dtype=torch.float)
 
-        c_0 = torch.zeros((
-            num_layers,
-            hidden_size),
-            dtype=torch.float)
-        return h_0, c_0
+        # c_0 = torch.zeros((
+        #     num_layers,
+        #     hidden_size),
+        #     dtype=torch.float)
+        return h_0

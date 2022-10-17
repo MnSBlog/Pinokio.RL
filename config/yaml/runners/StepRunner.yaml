@@ -10,7 +10,7 @@ runner:
   multi_agent: False
   self_play: False
   max_step_num: 800
-  update_step: 50
+  update_step: 800
   save_per_update: 4
   pretrain: False
   # --- curriculum learning ---

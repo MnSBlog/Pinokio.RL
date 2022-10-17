@@ -71,6 +71,7 @@ class GymRunner:
 
     def run(self):
         memory_len = self.config['network']['memory_q_len']
+        network_type = '-' + self.config['network']['use_memory_layer']
         fig = plt.figure()
         # 에피소드마다 다음을 반복
         for ep in range(1, self.config['runner']['max_episode_num'] + 1):
@@ -131,7 +132,7 @@ class GymRunner:
                 plt.fill_between(self.reward_info['episode'],
                                  self.reward_info['min'], self.reward_info['max'], alpha=0.2)
                 plt.ylim([0, 550])
-                title = self.config['env_name'] + "-mem_len-" + str(memory_len) + ".png"
+                title = self.config['env_name'] + network_type + "-mem_len-" + str(memory_len) + ".png"
                 plt.savefig("figures/" + title)
 
         # 학습이 끝난 후, 누적 보상값 저장
