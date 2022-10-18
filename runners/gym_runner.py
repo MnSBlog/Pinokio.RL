@@ -17,13 +17,14 @@ class GymRunner:
         algo_name = config['agent']['framework'] + config['agent_name']
 
         # 상태변수 차원
-        state_dim = env.observation_space.shape[0]
+        # state_dim = config['network']['actor']['non_spatial_feature']['dim_in']
+        state_dim = 17
         self.config['agent']['state_dim'] = state_dim
-        # 행동 차원
-        self.action_dim = env.action_space
 
         # 액터 신경망 및 크리틱 신경망 생성
         if "tf" in config['agent']['framework']:
+            # 행동 차원
+            self.action_dim = env.action_space
             actor = Actor(self.action_dim.shape[0], self.action_dim.high[0])
             critic = Critic()
             actor.build(input_shape=(None, state_dim))
@@ -73,9 +74,9 @@ class GymRunner:
             step, episode_reward, done = 0, 0, False
             self.memory_q = {'matrix': [], 'vector': []}
             # 환경 초기화 및 초기 상태 관측 및 큐
+            ret = self.env.reset()
+            state = ret[0]
             for _ in range(0, memory_len):
-                ret = self.env.reset()
-                state = ret[0]
                 self.__insert_q(state)
 
             state = self.__update_memory()
@@ -84,12 +85,13 @@ class GymRunner:
                     self.env.render()
                 self.action = self.agent.select_action(state)
                 if torch.is_tensor(self.action):
-                    self.action = self.action.squeeze(dim=0)
-                    self.action = self.action.item()
+                    self.action = self.action.squeeze()
+                    if self.action.shape[0] == 1:
+                        self.action = self.action.item()
                 # 다음 상태, 보상 관측
                 state, reward, done, trunc, info = self.env.step(self.action)
                 done |= trunc
-                state = self.__update_memory(state)
+                state = self.__update_memory(state[0])
 
                 train_reward = self.__fit_reward(reward)
                 self.agent.batch_reward.append(train_reward)

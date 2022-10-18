@@ -5,9 +5,10 @@ import zmq
 class ZmqServer:
     def __init__(self, port: int, func):
         self._port = port
+        self.send_done = True
         self._callback = func
         context = zmq.Context()
-        self.socket = context.socket(zmq.SocketType.REP)
+        self.socket = context.socket(zmq.REP)
         addr = "tcp//127.0.0.1:" + str(self._port)
         print("Server Start : " + addr)
 
@@ -15,14 +16,15 @@ class ZmqServer:
 
     def listen(self):
         while True:
-            msg = self.socket.recv()
-            reply = self._callback(msg)
-            time.sleep(0.01)
-            if reply is not None:
-                self.send(reply)
+            if self.send_done:
+                msg = self.socket.recv()
+                self.send_done = False
+                self._callback(msg)
+            time.sleep(0.001)
 
     def send(self, reply):
         self.socket.send(reply)
+        self.send_done = True
 
 
 class ZmqClient:
