@@ -85,31 +85,24 @@ class MaskArray(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         return o == 0
 
-def Start(builder): builder.StartObject(3)
-def MaskArrayStart(builder):
-    """This method is deprecated. Please switch to Start."""
-    return Start(builder)
-def AddName(builder, name): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
-def MaskArrayAddName(builder, name):
-    """This method is deprecated. Please switch to AddName."""
-    return AddName(builder, name)
-def AddShape(builder, shape): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0)
-def MaskArrayAddShape(builder, shape):
-    """This method is deprecated. Please switch to AddShape."""
-    return AddShape(builder, shape)
-def StartShapeVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def MaskArrayStartShapeVector(builder, numElems):
-    """This method is deprecated. Please switch to Start."""
-    return StartShapeVector(builder, numElems)
-def AddData(builder, data): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0)
-def MaskArrayAddData(builder, data):
-    """This method is deprecated. Please switch to AddData."""
-    return AddData(builder, data)
-def StartDataVector(builder, numElems): return builder.StartVector(1, numElems, 1)
-def MaskArrayStartDataVector(builder, numElems):
-    """This method is deprecated. Please switch to Start."""
-    return StartDataVector(builder, numElems)
-def End(builder): return builder.EndObject()
-def MaskArrayEnd(builder):
-    """This method is deprecated. Please switch to End."""
-    return End(builder)
+def MaskArrayStart(builder): builder.StartObject(3)
+def Start(builder):
+    return MaskArrayStart(builder)
+def MaskArrayAddName(builder, name): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+def AddName(builder, name):
+    return MaskArrayAddName(builder, name)
+def MaskArrayAddShape(builder, shape): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0)
+def AddShape(builder, shape):
+    return MaskArrayAddShape(builder, shape)
+def MaskArrayStartShapeVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def StartShapeVector(builder, numElems):
+    return MaskArrayStartShapeVector(builder, numElems)
+def MaskArrayAddData(builder, data): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0)
+def AddData(builder, data):
+    return MaskArrayAddData(builder, data)
+def MaskArrayStartDataVector(builder, numElems): return builder.StartVector(1, numElems, 1)
+def StartDataVector(builder, numElems):
+    return MaskArrayStartDataVector(builder, numElems)
+def MaskArrayEnd(builder): return builder.EndObject()
+def End(builder):
+    return MaskArrayEnd(builder)

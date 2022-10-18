@@ -6,9 +6,9 @@ envs:
   port: 49999
   agent_count: 1
   enemy_count: 1
-  agent_type: 0
-  first_weapon_type: 0
-  second_weapon_type: 1
+  agent_type: [-1]
+  first_weapon_type: [1]
+  second_weapon_type: [1]
   # --- learning condition ---
   mode: "Pause" # Pause or RealTime
   period: 200
@@ -33,9 +33,8 @@ envs:
   step_info_dim: 12
   spatial_dim: 3
   non_spatial_dim: 13
+  stick_dim: 5
   speed_dim: 3
-  pitch_dim: 3
-  roll_dim: 3
   attack_dim: 3
 
 

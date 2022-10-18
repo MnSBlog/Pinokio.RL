@@ -1,25 +1,28 @@
 import time
 import zmq
-
+from Batch.FlatData import FlatData
 
 class ZmqServer:
     def __init__(self, port: int, func):
         self._port = port
         self._callback = func
-
-    def listen(self):
         context = zmq.Context()
-        socket = context.socket(zmq.SocketType.REP)
+        self.socket = context.socket(zmq.SocketType.REP)
+    def listen(self):
         addr = "tcp//127.0.0.1:" + str(self._port)
         print("Server Start : " + addr)
 
-        socket.bind("tcp://*:%s" % self._port)
+        self.socket.bind("tcp://*:%s" % self._port)
 
         while True:
-            msg = socket.recv()
-            reply = self._callback(msg)
+            msg = self.socket.recv()
+            flat_data = FlatData.GetRootAsFlatData(msg)
+            print(flat_data.Info(0).DataAsNumpy())
+            self._callback(msg)
             time.sleep(0.01)
-            socket.send(reply)
+
+    def send(self):
+        self.socket.send()
 
 
 class ZmqClient:
@@ -30,5 +33,6 @@ class ZmqClient:
 
     def send(self, msg):
         self._socket.send(msg)
+        print(msg)
         reply = self._socket.recv()
         return reply

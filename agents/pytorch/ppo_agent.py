@@ -53,7 +53,8 @@ class PPO(PolicyAgent):
             spatial_x = torch.tensor(spatial_x, dtype=torch.float).to(self.device)
             spatial_x = spatial_x.unsqueeze(dim=0)
         else:
-            spatial_x = spatial_x.to(self.device)
+            if len(spatial_x) > 0:
+                spatial_x = spatial_x.to(self.device)
 
         if mask is not None and torch.is_tensor(mask) is False:
             mask = torch.tensor(mask, dtype=torch.float).to(self.device)

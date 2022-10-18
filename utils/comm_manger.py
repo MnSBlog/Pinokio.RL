@@ -65,10 +65,11 @@ class CommunicationManager:
         msg = FlatData.GetRootAsFlatData(data)
         total_info_list_numpy = np.zeros(info_shape)
         map_num = total_agent_num // agent_num
+        a = np.array([1])
         for map_id in range(map_num):
-            data_array = msg.Info(map_id)
-            data_shape = data_array.ShapeAsNumpy()
-            float_data = data_array.DataAsNumpy()
+            data_array = a
+            data_shape = a
+            float_data = a
             total_info_list_numpy[map_id * agent_num:(map_id + 1) * agent_num, :] = float_data.reshape(data_shape)
         return torch.tensor(total_info_list_numpy, dtype=torch.float)
 
@@ -76,14 +77,15 @@ class CommunicationManager:
         total_agent_num = mask_shape[0]
         msg = FlatData.GetRootAsFlatData(data)
         total_mask_numpy = np.ones(mask_shape)
-        if msg.MaskIsNone() is False:
-            map_num = total_agent_num // agent_num
-            for map_id in range(map_num):
-                mask_array = msg.Mask(map_id)
-                mask_shape = mask_array.ShapeAsNumpy()
-                mask_data = mask_array.DataAsNumpy()
-                total_mask_numpy[map_id * agent_num:(map_id + 1) * agent_num, :] = mask_data.reshape(mask_shape)
-        return torch.tensor(total_mask_numpy, dtype=torch.float)
+        # if msg.MaskIsNone() is False:
+        #     map_num = total_agent_num // agent_num
+        #     for map_id in range(map_num):
+        #         mask_array = msg.Mask(map_id)
+        #         mask_shape = mask_array.ShapeAsNumpy()
+        #         mask_data = mask_array.DataAsNumpy()
+        #         total_mask_numpy[map_id * agent_num:(map_id + 1) * agent_num, :] = mask_data.reshape(mask_shape)
+        # return torch.tensor(total_mask_numpy, dtype=torch.float)
+        return None
 
     def send_info(self, msg: str):
         if isinstance(msg, str):

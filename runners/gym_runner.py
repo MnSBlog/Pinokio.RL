@@ -122,8 +122,8 @@ class GymRunner:
                 sigma = np.std(self.reward_info['memory'])
 
                 self.reward_info['mu'].append(mu)
-                self.reward_info['max'].append(mu + (2 * sigma))
-                self.reward_info['min'].append(mu - (2 * sigma))
+                self.reward_info['max'].append(mu + (1 * sigma))
+                self.reward_info['min'].append(mu - (1 * sigma))
                 self.reward_info['episode'].append(ep)
                 self.reward_info['memory'].clear()
 

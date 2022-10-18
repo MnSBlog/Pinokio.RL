@@ -74,27 +74,21 @@ class FlatData(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         return o == 0
 
-def Start(builder): builder.StartObject(2)
-def FlatDataStart(builder):
-    """This method is deprecated. Please switch to Start."""
-    return Start(builder)
-def AddInfo(builder, info): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(info), 0)
-def FlatDataAddInfo(builder, info):
-    """This method is deprecated. Please switch to AddInfo."""
-    return AddInfo(builder, info)
-def StartInfoVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def FlatDataStartInfoVector(builder, numElems):
-    """This method is deprecated. Please switch to Start."""
-    return StartInfoVector(builder, numElems)
-def AddMask(builder, mask): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(mask), 0)
-def FlatDataAddMask(builder, mask):
-    """This method is deprecated. Please switch to AddMask."""
-    return AddMask(builder, mask)
-def StartMaskVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def FlatDataStartMaskVector(builder, numElems):
-    """This method is deprecated. Please switch to Start."""
-    return StartMaskVector(builder, numElems)
-def End(builder): return builder.EndObject()
-def FlatDataEnd(builder):
-    """This method is deprecated. Please switch to End."""
-    return End(builder)
+def FlatDataStart(builder): builder.StartObject(2)
+def Start(builder):
+    return FlatDataStart(builder)
+def FlatDataAddInfo(builder, info): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(info), 0)
+def AddInfo(builder, info):
+    return FlatDataAddInfo(builder, info)
+def FlatDataStartInfoVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def StartInfoVector(builder, numElems):
+    return FlatDataStartInfoVector(builder, numElems)
+def FlatDataAddMask(builder, mask): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(mask), 0)
+def AddMask(builder, mask):
+    return FlatDataAddMask(builder, mask)
+def FlatDataStartMaskVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def StartMaskVector(builder, numElems):
+    return FlatDataStartMaskVector(builder, numElems)
+def FlatDataEnd(builder): return builder.EndObject()
+def End(builder):
+    return FlatDataEnd(builder)

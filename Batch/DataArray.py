@@ -85,31 +85,24 @@ class DataArray(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         return o == 0
 
-def Start(builder): builder.StartObject(3)
-def DataArrayStart(builder):
-    """This method is deprecated. Please switch to Start."""
-    return Start(builder)
-def AddName(builder, name): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
-def DataArrayAddName(builder, name):
-    """This method is deprecated. Please switch to AddName."""
-    return AddName(builder, name)
-def AddShape(builder, shape): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0)
-def DataArrayAddShape(builder, shape):
-    """This method is deprecated. Please switch to AddShape."""
-    return AddShape(builder, shape)
-def StartShapeVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def DataArrayStartShapeVector(builder, numElems):
-    """This method is deprecated. Please switch to Start."""
-    return StartShapeVector(builder, numElems)
-def AddData(builder, data): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0)
-def DataArrayAddData(builder, data):
-    """This method is deprecated. Please switch to AddData."""
-    return AddData(builder, data)
-def StartDataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
-def DataArrayStartDataVector(builder, numElems):
-    """This method is deprecated. Please switch to Start."""
-    return StartDataVector(builder, numElems)
-def End(builder): return builder.EndObject()
-def DataArrayEnd(builder):
-    """This method is deprecated. Please switch to End."""
-    return End(builder)
+def DataArrayStart(builder): builder.StartObject(3)
+def Start(builder):
+    return DataArrayStart(builder)
+def DataArrayAddName(builder, name): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+def AddName(builder, name):
+    return DataArrayAddName(builder, name)
+def DataArrayAddShape(builder, shape): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0)
+def AddShape(builder, shape):
+    return DataArrayAddShape(builder, shape)
+def DataArrayStartShapeVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def StartShapeVector(builder, numElems):
+    return DataArrayStartShapeVector(builder, numElems)
+def DataArrayAddData(builder, data): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0)
+def AddData(builder, data):
+    return DataArrayAddData(builder, data)
+def DataArrayStartDataVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def StartDataVector(builder, numElems):
+    return DataArrayStartDataVector(builder, numElems)
+def DataArrayEnd(builder): return builder.EndObject()
+def End(builder):
+    return DataArrayEnd(builder)
