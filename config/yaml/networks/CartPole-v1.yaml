@@ -1,7 +1,7 @@
 network:
   # --- learning option ---
   obs_stack: True # should not use Memory layer with this
-  use_memory_layer: ["Raw", "GRU"] # Raw / LSTM / GRU
+  use_memory_layer: ["Raw"] # Raw / LSTM / GRU
   memory_q_len: [1, 3]
   memory_layer_len: 3
   # - State definition -
