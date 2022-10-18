@@ -1,3 +1,4 @@
+import copy
 import time
 import gym
 import torch
@@ -16,11 +17,9 @@ class PathFindSim(gym.Env):
     def __init__(self, env_config):
         self.__envConfig = env_config
         self.__zmq_server = ZmqServer(self.__envConfig['port'], func=self.on_receive)
-        self.__period = self.__envConfig['period']
         self.__state = None
-        self.observation_space = np.array(self.__envConfig['observation_space'])
-        self.action_space = self.__envConfig['action_space']
         self.initialize()
+
     def initialize(self):
         t = threading.Thread(target=self.__zmq_server.listen)
         t.start()
@@ -31,37 +30,35 @@ class PathFindSim(gym.Env):
 
     def step(self, action: torch.tensor = None):
         # Send action list
-
-        # 받아온 액션을 넘겨준다.
         action_buffer = CommunicationManager.serialize_action("Action", action.cpu())
         self.__zmq_server.send(action_buffer)
         return self.__get_observation()
 
     def reset(
-        self,
-        *,
-        seed: Optional[int] = None,
-        return_info: bool = False,
-        options: Optional[dict] = None,
+            self,
+            *,
+            seed: Optional[int] = None,
+            return_info: bool = False,
+            options: Optional[dict] = None,
     ) -> Union[ObsType, Tuple[ObsType, dict]]:
 
         # To gathering spatial-feature
         state, _, _, _, _ = self.__get_observation()
+
         return state
 
     def __get_observation(self):
-        while True:
-            print(self.__state)
-            if self.__state is not None:
-                reward = self.__calculate_reward()
-                temp = self.__state
-                done = torch.tensor(True, dtype=torch.bool)
-                trunc = False
-                self.__state = None
+        while self.__state is None:
+            time.sleep(0.001)
 
-                return temp[0], reward, done, trunc, None
+        reward = self.__calculate_reward()
+        state = copy.deepcopy(self.__state[0])
+        mask = copy.deepcopy(self.__state[1])
+        done = torch.tensor(False, dtype=torch.bool)
+        trunc = False
+        self.__state = None
 
-
+        return (state.squeeze(), mask), reward, done, trunc, None
 
     def __calculate_reward(self):
         # reward += 1 * step_result[:, 1]  # team win
@@ -81,4 +78,3 @@ class PathFindSim(gym.Env):
 
     def close(self):
         pass
-

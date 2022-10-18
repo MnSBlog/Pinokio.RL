@@ -43,7 +43,7 @@ class CommunicationManager:
     def deserialize_info(data):
         msg = FlatData.GetRootAsFlatData(data)
 
-        data_array = msg.Info()
+        data_array = msg.Info(0)
         data_name = data_array.Name()
         data_shape = data_array.ShapeAsNumpy()
         float_data = data_array.DataAsNumpy()
@@ -51,7 +51,7 @@ class CommunicationManager:
 
         total_mask = None
         if msg.MaskIsNone() is False:  # mask 있을 때
-            mask_array = msg.Mask()
+            mask_array = msg.Mask(0)
             mask_shape = mask_array.ShapeAsNumpy()
             mask_data = mask_array.DataAsNumpy()
             total_mask = torch.tensor(mask_data.reshape(mask_shape), dtype=torch.float)

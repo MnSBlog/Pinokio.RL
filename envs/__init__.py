@@ -9,7 +9,8 @@ import gym
 def get_env_fn(env, **kwargs) -> gym.Env:
     return env(kwargs)
 
+
 REGISTRY = {'RLFPSv4': partial(get_env_fn, env=RLFPSv4),
-			'CombatStrategy': partial(get_env_fn, env=CombatStrategy),
-			'OHTRouting': partial(get_env_fn, env=OhtBase),
-			'PathFindSim': partial(get_env_fn, env=PathFindSim)}
+            'CombatStrategy': partial(get_env_fn, env=CombatStrategy),
+            'OHTRouting': partial(get_env_fn, env=OhtBase),
+            'PathFindSim-v1': partial(get_env_fn, env=PathFindSim)}
