@@ -39,27 +39,8 @@ class PPO(PolicyAgent):
             self.hidden_state = self.hidden_state.to(self.device)
 
     def select_action(self, state):
-        spatial_x = state['matrix']
-        non_spatial_x = state['vector']
-        mask = state['action_mask']
-
-        if torch.is_tensor(non_spatial_x) is False:
-            non_spatial_x = torch.tensor(non_spatial_x, dtype=torch.float).to(self.device)
-            non_spatial_x = non_spatial_x.unsqueeze(dim=0)
-        else:
-            non_spatial_x = non_spatial_x.to(self.device)
-        non_spatial_x = non_spatial_x.unsqueeze(dim=2)
-
-        if len(spatial_x) > 0 and torch.is_tensor(spatial_x) is False:
-            spatial_x = torch.tensor(spatial_x, dtype=torch.float).to(self.device)
-            spatial_x = spatial_x.unsqueeze(dim=0)
-        else:
-            if len(spatial_x) > 0:
-                spatial_x = spatial_x.to(self.device)
-
-        if mask is not None and torch.is_tensor(mask) is False:
-            mask = torch.tensor(mask, dtype=torch.float).to(self.device)
-            mask = mask.unsqueeze(dim=0)        with torch.no_grad():
+        state = self.convert_to_torch(state)
+        with torch.no_grad():
             if state['action_mask'] is not None:
                 self.actor_old.set_mask(state['action_mask'])
 
