@@ -1,4 +1,3 @@
-import cv2
 import gym
 import torch
 import subprocess

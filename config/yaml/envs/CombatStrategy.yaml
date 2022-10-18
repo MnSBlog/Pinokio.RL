@@ -30,9 +30,9 @@ envs:
   global_resolution: 100
   local_resolution: 30
   init_height: -5
-  step_info_dim: 12
+  step_info_dim: 13
   spatial_dim: 3
-  non_spatial_dim: 13
+  non_spatial_dim: 10
   stick_dim: 5
   speed_dim: 3
   attack_dim: 3
