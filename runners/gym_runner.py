@@ -29,14 +29,8 @@ class GymRunner:
             actor.build(input_shape=(None, state_dim))
             critic.build(input_shape=(None, state_dim))
         else:
-            actor = CustomTorchNetwork(config['network'])
-            critic = nn.Sequential(
-                nn.Linear(config['network']['neck_in'], 64),
-                nn.ReLU(),
-                nn.Linear(64, 32),
-                nn.ReLU(),
-                nn.Linear(32, 1)
-            )
+            actor = CustomTorchNetwork(config['network']['actor'])
+            critic = CustomTorchNetwork(config['network']['critic'])
 
         # *****
         self.config['agent']['mid_gamma'] \
@@ -70,8 +64,8 @@ class GymRunner:
         self.rew_numerator = (self.rew_max + self.rew_min) / 2
 
     def run(self):
-        memory_len = self.config['network']['memory_q_len']
-        network_type = '-' + self.config['network']['use_memory_layer']
+        memory_len = self.config['network']['actor']['memory_q_len']
+        network_type = '-' + self.config['network']['actor']['use_memory_layer']
         fig = plt.figure()
         # 에피소드마다 다음을 반복
         for ep in range(1, self.config['runner']['max_episode_num'] + 1):
@@ -103,7 +97,7 @@ class GymRunner:
                 step += 1
                 episode_reward += reward
 
-                if len(self.agent.batch_state) >= self.config['runner']['batch_size']:
+                if len(self.agent.batch_reward) >= self.config['runner']['batch_size']:
                     # 학습 추출
                     self.agent.update(next_state=state, done=done)
             # 에피소드마다 결과 보상값 출력
@@ -148,10 +142,13 @@ class GymRunner:
         plt.clf()
 
     def __insert_q(self, state):
-        if len(state.shape) > 1:
-            self.memory_q['matrix'].append(state)
+        if isinstance(state, dict):
+            pass
         else:
-            self.memory_q['vector'].append(state)
+            if len(state.shape) > 1:
+                self.memory_q['matrix'].append(state)
+            else:
+                self.memory_q['vector'].append(state)
 
     def __update_memory(self, state=None):
         matrix_obs, vector_obs = [], []

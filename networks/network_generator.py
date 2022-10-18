@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from torch.distributions import Categorical
 
 
 def make_sequential(in_channels, out_channels, *args, **kwargs):
@@ -89,10 +88,15 @@ class CustomTorchNetwork(nn.Module):
             if isinstance(action_dim, int):
                 key = "head" + str(index)
                 self.outputs_dim.append(action_dim)
-                networks[key] = nn.Sequential(
-                    nn.Linear(config['neck_out'] // 2, action_dim),
-                    nn.Softmax(dim=-1)
-                )
+                if config['action_mode'] == "Discrete":
+                    networks[key] = nn.Sequential(
+                        nn.Linear(config['neck_out'] // 2, action_dim),
+                        nn.Softmax(dim=-1)
+                    )
+                else:
+                    networks[key] = nn.Sequential(
+                        nn.Linear(config['neck_out'] // 2, action_dim),
+                    )
             else:
                 # 연속 액션은 아직 미구현
                 raise NotImplementedError
@@ -118,64 +122,24 @@ class CustomTorchNetwork(nn.Module):
         return state
 
     def forward(self, x, h=None):
+        spatial_x = x['matrix']
+        non_spatial_x = x['vector']
+
         if self.recurrent:
             self.networks['input_layer'].flatten_parameters()
-            state, h = self.networks['input_layer'](x, h)
+            x, h = self.networks['input_layer'](x, h)
+            x = x.unsqueeze(dim=0)
         else:
-            state = self.networks['input_layer'](x)
-        state = self.networks['neck'](state.data)
+            x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
+            x = self.networks['input_layer'](x)
+        x = self.networks['neck'](x.data)
         outputs = []
-        dim = len(state.shape) - 1
+        dim = len(x.shape) - 1
         for index in range(self.n_of_heads):
             key = "head" + str(index)
-            outputs.append(self.networks[key](state))
+            outputs.append(self.networks[key](x))
 
         return torch.cat(outputs, dim=dim), h
-
-    def act(self, state, hidden=None):
-        rtn_action = []
-        rtn_logprob = []
-        outputs, hidden = self.forward(x=state, h=hidden)
-        last = 0
-        for idx, output_dim in enumerate(self.outputs_dim):
-            if len(self.action_mask) > 0:
-                outputs[:, last:last + output_dim] *= self.action_mask[idx]
-            dist = Categorical(outputs[:, last:last + output_dim])
-            action = dist.sample()
-            action_logprob = dist.log_prob(action)
-            rtn_action.append(action.detach())
-            rtn_logprob.append(action_logprob.detach())
-            last = output_dim
-
-        return torch.stack(rtn_action, dim=0), torch.stack(rtn_logprob, dim=0), hidden
-
-    def evaluate(self, state, actions, hidden=None):
-        rtn_evaluations = []
-        if self.recurrent:
-            state = torch.unsqueeze(state, dim=1)
-        outputs, _ = self.forward(x=state, h=hidden)
-        last = 0
-        for idx, output_dim in enumerate(self.outputs_dim):
-            if len(self.outputs_dim) != 1:
-                action = actions[:, idx, :].squeeze()
-                dist = Categorical(outputs[:, :, last:last + output_dim])
-            else:
-                action = actions
-                dist = Categorical(outputs)
-            action_logprobs = dist.log_prob(action)
-            dist_entropy = dist.entropy()
-            rtn_evaluations.append((action_logprobs, dist_entropy))
-            last = output_dim
-
-        return rtn_evaluations
-
-    def set_mask(self, mask):
-        if mask is not None:
-            self.action_mask = []
-            last = 0
-            for output_dim in self.outputs_dim:
-                self.action_mask.append(mask[:, last:last + output_dim])
-                last = output_dim
 
     @staticmethod
     def get_initial_h_state(num_layers, hidden_size):
