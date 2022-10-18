@@ -6,20 +6,23 @@ class ZmqServer:
     def __init__(self, port: int, func):
         self._port = port
         self._callback = func
-
-    def listen(self):
         context = zmq.Context()
-        socket = context.socket(zmq.SocketType.REP)
+        self.socket = context.socket(zmq.SocketType.REP)
         addr = "tcp//127.0.0.1:" + str(self._port)
         print("Server Start : " + addr)
 
-        socket.bind("tcp://*:%s" % self._port)
+        self.socket.bind("tcp://*:%s" % self._port)
 
+    def listen(self):
         while True:
-            msg = socket.recv()
+            msg = self.socket.recv()
             reply = self._callback(msg)
             time.sleep(0.01)
-            socket.send(reply)
+            if reply is not None:
+                self.send(reply)
+
+    def send(self, reply):
+        self.socket.send(reply)
 
 
 class ZmqClient:

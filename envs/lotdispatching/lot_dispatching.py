@@ -4,51 +4,30 @@ import torch
 import numpy as np
 from typing import Optional, Union, Tuple
 
-from gym.core import ObsType
 from matplotlib import pyplot as plt
-from utils.comm_manger import CommunicationManager
-from utils.zero_mq import ZmqClient
+from utils.zero_mq import ZmqServer
 
 
-class RLFPSv4(gym.Env):
+
+class SMTLotDispatching(gym.Env):
     def __init__(self, env_config):
-        self.__version = 4
         self.__envConfig = env_config
-        self.__pause_mode = self.__envConfig['mode'] == "Pause"
-        self.__period = self.__envConfig['period']
-        self.__zmq_client = ZmqClient(self.__envConfig['port'])
-        self.__self_play = self.__envConfig['self_play']
-        self.__debug = self.__envConfig['debug']
-        self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__envConfig['agent_count']
-        self.__map_capacity = self.__envConfig['map_capacity']
-        self.__agents_of_map = self.__envConfig['agent_count']
-        if self.__envConfig['self_play']:
-            self.__agents_of_map += self.__envConfig['enemy_count']
-        self.__total_agent_count = self.__agents_of_map * self.__map_capacity
+        self.__zmq_server = ZmqServer(self.__envConfig['port'], func=)
 
-        if self.__debug:
-            self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
 
         self.initialize()
 
     def initialize(self):
-        self.__zmq_client.send(
-            'Initialize:MapType"' + str(','.join(str(e) for e in self.__envConfig['map_type']))
-            + '"MapCapa"' + str(int(self.__envConfig['map_capacity']))
-            + '"Pause"' + str(self.__pause_mode)
-            + '"Period"' + str(self.__envConfig['period'])
-            + '"Acceleration"' + str(self.__envConfig['acceleration'])
-            + '"')
 
     def step(self, action: Optional[list] = None):
         # Send action list
         begin = time.time()
-        action_buffer = CommunicationManager.serialize_action(action.cpu(), self.__agents_of_map)
-        self.__zmq_client.send("Action")
+        action_buffer = self.__zmq_server.serialize_action_list(action.cpu(), self.__agents_of_map)
+        self.__zmq_server.send_info("Action")
         print("Action serializing: ", (time.time() - begin) * 1000, "ms")
 
         begin = time.time()
-        self.__zmq_client.send(action_buffer)
+        self.__zmq_server.send_info(action_buffer)
         print("Action interation: ", (time.time() - begin) * 1000, "ms")
         return self.__get_observation()
 
@@ -73,28 +52,43 @@ class RLFPSv4(gym.Env):
               '"GlRe"' + str(self.__envConfig['global_resolution']) + \
               '"LcRe"' + str(self.__envConfig['local_resolution']) + \
               '"InitHeight"' + str(self.__envConfig['init_height']) + '"'
-        self.__zmq_client.send(msg)
+        self.__zmq_server.send_info(msg)
         # To gathering spatial-feature
         state, _, _, _ = self.__get_observation()
         return state
 
     def __get_observation(self):
         begin = time.time()
-        character_info_list = self.__zmq_client.send(
+        character_info_list = self.__zmq_server.send_info(
             'CharacterInfo: "' + str(self.__envConfig['non_spatial_dim']) + '"')
-        field_info_list = self.__zmq_client.send(
+        field_info_list = self.__zmq_server.send_info(
             'FieldInfo: "' + str(self.__envConfig['spatial_dim']) + '"')
-        step_results = self.__zmq_client.send('Step: "' + str(self.__envConfig['step_info_dim']) + '"')
+        step_results = self.__zmq_server.send_info('Step: "' + str(self.__envConfig['step_info_dim']) + '"')
         print("Getting information: ", (time.time() - begin) * 1000, "ms")
-
-        name, deserialized_char_info_list, deserialized_action_mask = CommunicationManager.deserialize_info(
-            character_info_list)
-
-        deserialized_field_info_list = CommunicationManager.deserialize_info(field_info_list)
+        total_agent_num = self.__total_agent_count
+        non_spatial_batch_num = self.__envConfig['non_spatial_dim']
+        spatial_batch_num = self.__envConfig['spatial_dim']
+        step_batch_num = self.__envConfig['step_info_dim']
+        agent_num = self.__agents_of_map
+        begin = time.time()
+        character_info_shape = (total_agent_num, non_spatial_batch_num)
+        action_mask_shape = (total_agent_num, self.__envConfig['move_dim'] + self.__envConfig['attack_dim'] + self.__envConfig['view_dim'])
+        field_info_shape = (
+            total_agent_num, spatial_batch_num, self.__envConfig['local_resolution'],
+            self.__envConfig['local_resolution'])
+        step_info_shape = (total_agent_num, step_batch_num)
+        deserialized_char_info_list = self.__zmq_server.deserialize_info(character_info_list, agent_num,
+                                                                         character_info_shape)
+        deserialized_action_mask = self.__zmq_server.deserialize_action_mask(character_info_list, agent_num,
+                                                                             action_mask_shape)
+        deserialized_field_info_list = self.__zmq_server.deserialize_info(field_info_list,
+                                                                          agent_num,
+                                                                          field_info_shape)
         # feature 시각화 함수 실행
         if self.__debug:
             self.__display_multi_features(deserialized_field_info_list)
-        deserialized_step_info_list = CommunicationManager.deserialize_info(step_results)
+        deserialized_step_info_list = self.__zmq_server.deserialize_info(step_results, agent_num,
+                                                                         step_info_shape)
         print("Deserializing: ", (time.time() - begin) * 1000, "ms")
 
         begin = time.time()
