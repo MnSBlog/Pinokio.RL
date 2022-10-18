@@ -7,7 +7,10 @@ from typing import Optional, Union, Tuple
 from gym.core import ObsType
 from matplotlib import pyplot as plt
 from utils.comm_manger import CommunicationManager
+import threading
 from utils.zero_mq import ZmqServer
+from Batch.FlatData import FlatData
+
 
 class CombatStrategy(gym.Env):
     def __init__(self, env_config):
@@ -19,36 +22,35 @@ class CombatStrategy(gym.Env):
         self.__self_play = self.__envConfig['self_play']
         self.__debug = self.__envConfig['debug']
         self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__envConfig['agent_count']
-        self.__map_capacity = self.__envConfig['map_capacity']
+        #self.__map_capacity = self.__envConfig['map_capacity']
         self.__agents_of_map = self.__envConfig['agent_count']
-        self.server = ZmqServer(self._envConfig['port'], self.on_received)
+        self.server = ZmqServer(self.__envConfig['port'], self.on_received)
+        self.state_buffer = None
         if self.__envConfig['self_play']:
             self.__agents_of_map += self.__envConfig['enemy_count']
-        self.__total_agent_count = self.__agents_of_map * self.__map_capacity
-
+       #self.__total_agent_count = self.__agents_of_map * self.__map_capacity
         if self.__debug:
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
 
         self.initialize()
 
     def initialize(self):
-        self.__communication_manager.send_info(
-            'Initialize:MapType"' + str(','.join(str(e) for e in self.__envConfig['map_type']))
-            + '"MapCapa"' + str(int(self.__envConfig['map_capacity']))
-            + '"Pause"' + str(self.__pause_mode)
-            + '"Period"' + str(self.__envConfig['period'])
-            + '"Acceleration"' + str(self.__envConfig['acceleration'])
-            + '"')
+       # self.__communication_manager.send_info(
+       #    'Initialize:MapType"' + str(','.join(str(e) for e in self.__envConfig['map_type']))
+        #    + '"Pause"' + str(self.__pause_mode)
+         #   + '"Period"' + str(self.__envConfig['period'])
+          #  + '"Acceleration"' + str(self.__envConfig['acceleration'])
+           # + '"')
+        t = threading.Thread(target=self.server.listen)
+        t.start()
 
     def step(self, action: Optional[list] = None):
         # Send action list
         begin = time.time()
         action_buffer = self.__communication_manager.serialize_action_list(action.cpu(), self.__agents_of_map)
-        self.__communication_manager.send_info("Action")
+        self.server.send(action_buffer)
         print("Action serializing: ", (time.time() - begin) * 1000, "ms")
-
         begin = time.time()
-        self.__communication_manager.send_info(action_buffer)
         print("Action interation: ", (time.time() - begin) * 1000, "ms")
         return self.__get_observation()
 
@@ -63,63 +65,34 @@ class CombatStrategy(gym.Env):
         self_play = self.__envConfig['self_play']
         n_of_current_agent = self.__envConfig['agent_count']
         n_of_current_enemy = self.__envConfig['enemy_count']
-        msg = 'Rebuild:"Selfplay"' + str(self_play) + \
-              '"MaxStep"' + str(self.__envConfig['max_steps']) + \
-              '"AgentType"' + str(','.join(str(e) for e in self.__envConfig['agent_type'])) + \
-              '"FirstWeaponType"' + str(','.join(str(e) for e in self.__envConfig['first_weapon_type'])) + \
-              '"SecondWeaponType"' + str(','.join(str(e) for e in self.__envConfig['second_weapon_type'])) + \
-              '"NoA"' + str(n_of_current_agent) + \
-              '"NoE"' + str(n_of_current_enemy) + \
-              '"GlRe"' + str(self.__envConfig['global_resolution']) + \
-              '"LcRe"' + str(self.__envConfig['local_resolution']) + \
-              '"InitHeight"' + str(self.__envConfig['init_height']) + '"'
-        self.__communication_manager.send_info(msg)
         # To gathering spatial-feature
         state, _, _, _ = self.__get_observation()
         return state
 
     def __get_observation(self):
         begin = time.time()
-        character_info_list = self.__communication_manager.send_info(
-            'CharacterInfo: "' + str(self.__envConfig['non_spatial_dim']) + '"')
-        field_info_list = self.__communication_manager.send_info(
-            'FieldInfo: "' + str(self.__envConfig['spatial_dim']) + '"')
-        step_results = self.__communication_manager.send_info('Step: "' + str(self.__envConfig['step_info_dim']) + '"')
         print("Getting information: ", (time.time() - begin) * 1000, "ms")
-        total_agent_num = self.__total_agent_count
+        total_agent_num = 1
         non_spatial_batch_num = self.__envConfig['non_spatial_dim']
         spatial_batch_num = self.__envConfig['spatial_dim']
         step_batch_num = self.__envConfig['step_info_dim']
         agent_num = self.__agents_of_map
         begin = time.time()
         character_info_shape = (total_agent_num, non_spatial_batch_num)
-        action_mask_shape = (total_agent_num, self.__envConfig['move_dim'] + self.__envConfig['attack_dim'] + self.__envConfig['view_dim'])
+        action_mask_shape = (total_agent_num, self.__envConfig['stick_dim'] + self.__envConfig['speed_dim'] + self.__envConfig['attack_dim'])
         field_info_shape = (
             total_agent_num, spatial_batch_num, self.__envConfig['local_resolution'],
             self.__envConfig['local_resolution'])
         step_info_shape = (total_agent_num, step_batch_num)
-        deserialized_char_info_list = self.__communication_manager.deserialize_info(character_info_list, agent_num,
-                                                                                    character_info_shape)
-        deserialized_action_mask = self.__communication_manager.deserialize_action_mask(character_info_list, agent_num,
-                                                                                        action_mask_shape)
-        deserialized_field_info_list = self.__communication_manager.deserialize_info(field_info_list,
-                                                                                     agent_num,
-                                                                                     field_info_shape)
         # feature 시각화 함수 실행
         if self.__debug:
-            self.__display_multi_features(deserialized_field_info_list)
-        deserialized_step_info_list = self.__communication_manager.deserialize_info(step_results, agent_num,
-                                                                                    step_info_shape)
+            pass
         print("Deserializing: ", (time.time() - begin) * 1000, "ms")
-
         begin = time.time()
-        done = torch.tensor(deserialized_step_info_list[:, 0], dtype=torch.bool)
-        reward = self.__calculate_reward(deserialized_step_info_list)
-        print("done & reward: ", (time.time() - begin) * 1000, "ms")
-        state = {'matrix': deserialized_field_info_list,
-                 'vector': deserialized_char_info_list,
-                 'action_mask': deserialized_action_mask}
-        return state, reward, done, None
+        while self.state_buffer is not None:
+            state_result = self.state_buffer
+            self.state_buffer = None
+            return state_result
 
     def __initialize_feature_display(self, batch_size, feature_size):
         figure, ax = plt.subplots(batch_size, feature_size, figsize=(15, 15))
@@ -168,3 +141,42 @@ class CombatStrategy(gym.Env):
 
     def close(self):
         pass
+
+    def deserialize(self, data):
+        msg = FlatData.GetRootAsFlatData(data)
+        data_array = msg.Info(0)
+        np_data = data_array.DataAsNumpy()
+        data_data = np_data[:10]
+        data_shape = data_array.ShapeAsNumpy()
+
+        mask_array = None
+        if msg.Mask != None:
+            mask_array = msg.Mask(0)
+            mask_shape = mask_array.ShapeAsNumpy()
+            mask_data = mask_array.DataAsNumpy()
+            mask_result = torch.tensor(mask_data.reshape(mask_shape), dtype=torch.float)
+
+        step_data = np_data[10:22]
+        step_batch_num = self.__envConfig['step_info_dim']
+        step_shape = [1, step_batch_num]
+
+        return torch.tensor(np_data.reshape(data_shape), dtype=torch.float), mask_result, torch.tensor(step_data.reshape(step_shape), dtype=torch.float)
+        #(tensor or np) 등 real state
+
+    def on_received(self, message):
+         origin_data, origin_mask, origin_step = self.deserialize(message) # reset에 할당해서 state전달
+         done = torch.tensor(origin_step[:, 0], dtype=torch.bool)
+         reward = self.__calculate_reward(origin_step)
+         state = {'vector': origin_data,
+                  'action_mask': origin_mask}
+         self.state_buffer = (state, reward, done, None)
+         # get action
+         # cal_reword
+         # buffer insert (얘는 지가 몇번째 step인지 모름) / update or save는 runner에서(step수를 runner가 알기 때문)
+         # serialize action
+
+
+
+
+
+
