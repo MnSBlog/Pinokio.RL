@@ -1,0 +1,45 @@
+envs:
+  # --- Info ---
+  name: PathFindSim
+  debug: False
+  # --- Defaults ---
+  port: 49999
+  agent_type: [ -1, -1, -1, -1, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
+  enemy_type: [ -1, -1, -1, -1, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
+
+  # --- learning condition ---
+  mode: "RealTime" # Pause or RealTime
+  period: 200
+  acceleration: 1.0
+  update_steps: 100
+  save_steps: 300
+  max_steps: -1 # -1: No limit
+  history_path: "./History"
+  trajectory_q_len: 3
+  # --- Algorithm condition ---
+  actions: "Discrete" # Discrete or Continuous
+  multi_agent: False
+  self_play: False
+  # --- curriculum learning ---
+  curriculum_learning: False
+  init_n_of_enemy: 1
+  next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)
+  # --- Feature parameters ---
+  observation_space: [17]
+  action_space: 16
+  throttle_dim: 9
+  stick_dim: 3
+  rudder_dim: 4
+
+
+
+  global_resolution: 100
+  local_resolution: 30
+  init_height: -5
+  step_info_dim: 12
+  spatial_dim: 8
+  non_spatial_dim: 18
+  game_result_dim: 8
+  move_dim: 9
+  attack_dim: 7
+  view_dim: 3
