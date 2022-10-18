@@ -6,7 +6,8 @@ class GeneralAgent:
         self._config = parameters
         self.exconfig = dict()
         # 배치 설정
-        self.batch_state = []
+        self.batch_state_vector = []
+        self.batch_state_matrix = []
         self.batch_action = []
         self.batch_reward = []
         self.batch_next_state = []
@@ -27,8 +28,15 @@ class GeneralAgent:
     def load(self, checkpoint_path: str):
         raise NotImplementedError
 
+    def set_mask(self, mask):
+        raise NotImplementedError
+
+    def evaluate(self, state, actions, hidden=None):
+        raise NotImplementedError
+
     def batch_clear(self):
-        self.batch_state = []
+        self.batch_state_vector = []
+        self.batch_state_matrix = []
         self.batch_action = []
         self.batch_reward = []
         self.batch_next_state = []
@@ -54,3 +62,9 @@ class PolicyAgent(GeneralAgent):
 
     def load(self, checkpoint_path: str):
         return super(PolicyAgent, self).load(checkpoint_path=checkpoint_path)
+
+    def set_mask(self, mask):
+        return super(PolicyAgent, self).set_mask(mask=mask)
+
+    def evaluate(self, state, actions, hidden=None):
+        return super(PolicyAgent, self).evaluate(state=state, actions=actions, hidden=hidden)
