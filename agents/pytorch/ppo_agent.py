@@ -121,14 +121,24 @@ class PPO(PolicyAgent):
 
             (logprobs, dist_entropy) = rtn_evaluations[0]
             if len(rtn_evaluations) > 1:
-                old_logprobs_raw = old_logprobs[:, 0, :].squeeze()
-                for idx in range(1, len(rtn_evaluations)):
-                    (logprob, entropy) = rtn_evaluations[idx]
-                    old_logprob = old_logprobs[:, idx, :].squeeze()
+                if len(old_logprobs.shape) > 2:
+                    old_logprobs_raw = old_logprobs[:, 0, :].squeeze()
+                    for idx in range(1, len(rtn_evaluations)):
+                        (logprob, entropy) = rtn_evaluations[idx]
+                        old_logprob = old_logprobs[:, idx, :].squeeze()
 
-                    logprobs += logprob
-                    dist_entropy += entropy
-                    old_logprobs_raw += old_logprob
+                        logprobs += logprob
+                        dist_entropy += entropy
+                        old_logprobs_raw += old_logprob
+                else:
+                    old_logprobs_raw = old_logprobs[:, 0]
+                    for idx in range(1, len(rtn_evaluations)):
+                        (logprob, entropy) = rtn_evaluations[idx]
+                        old_logprob = old_logprobs[:, idx]
+
+                        logprobs += logprob
+                        dist_entropy += entropy
+                        old_logprobs_raw += old_logprob
             else:
                 old_logprobs_raw = old_logprobs
             # Finding the ratio (pi_theta / pi_theta__old)
@@ -160,8 +170,12 @@ class PPO(PolicyAgent):
         last = 0
         for idx, output_dim in enumerate(self.actor.outputs_dim):
             if len(self.actor.outputs_dim) != 1:
-                action = actions[:, idx, :].squeeze()
-                dist = Categorical(outputs[:, :, last:last + output_dim])
+                if len(actions.shape) > 2:
+                    action = actions[:, idx, :].squeeze()
+                    dist = Categorical(outputs[:, :, last:last + output_dim])
+                else:
+                    action = actions[:, idx]
+                    dist = Categorical(outputs[:, last:last + output_dim])
             else:
                 action = actions
                 dist = Categorical(outputs)

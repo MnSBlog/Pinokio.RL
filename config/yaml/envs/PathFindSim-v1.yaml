@@ -1,0 +1,5 @@
+envs:
+  # --- Defaults ---
+  name: PathFindSim
+  reward_range: [0, 1]
+  port: 5555

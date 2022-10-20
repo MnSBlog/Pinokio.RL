@@ -1,3 +1,4 @@
+import copy
 import time
 import gym
 import torch
@@ -18,14 +19,13 @@ class CombatStrategy(gym.Env):
         self.__envConfig = env_config
         self.__pause_mode = self.__envConfig['mode'] == "Pause"
         self.__period = self.__envConfig['period']
-        self.__communication_manager = CommunicationManager(self.__envConfig['port'])
         self.__self_play = self.__envConfig['self_play']
         self.__debug = self.__envConfig['debug']
         self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__envConfig['agent_count']
         #self.__map_capacity = self.__envConfig['map_capacity']
         self.__agents_of_map = self.__envConfig['agent_count']
         self.server = ZmqServer(self.__envConfig['port'], self.on_received)
-        self.state_buffer = None
+        self.state_buffer = (None, None, None, None, None)
         if self.__envConfig['self_play']:
             self.__agents_of_map += self.__envConfig['enemy_count']
        #self.__total_agent_count = self.__agents_of_map * self.__map_capacity
@@ -44,10 +44,10 @@ class CombatStrategy(gym.Env):
         t = threading.Thread(target=self.server.listen)
         t.start()
 
-    def step(self, action: Optional[list] = None):
+    def step(self, action: torch.tensor = None):
         # Send action list
         begin = time.time()
-        action_buffer = self.__communication_manager.serialize_action_list(action.cpu(), self.__agents_of_map)
+        action_buffer = CommunicationManager.serialize_action("Action", action.cpu())
         self.server.send(action_buffer)
         print("Action serializing: ", (time.time() - begin) * 1000, "ms")
         begin = time.time()
@@ -66,33 +66,19 @@ class CombatStrategy(gym.Env):
         n_of_current_agent = self.__envConfig['agent_count']
         n_of_current_enemy = self.__envConfig['enemy_count']
         # To gathering spatial-feature
-        state, _, _, _ = self.__get_observation()
+        state, _, _ = self.__get_observation()
+        action_dum = CommunicationManager.serialize_action("Action", torch.zeros(3, 1).cpu())
+        self.server.send(action_dum)
         return state
 
     def __get_observation(self):
-        begin = time.time()
-        print("Getting information: ", (time.time() - begin) * 1000, "ms")
-        total_agent_num = 1
-        non_spatial_batch_num = self.__envConfig['non_spatial_dim']
-        spatial_batch_num = self.__envConfig['spatial_dim']
-        step_batch_num = self.__envConfig['step_info_dim']
-        agent_num = self.__agents_of_map
-        begin = time.time()
-        character_info_shape = (total_agent_num, non_spatial_batch_num)
-        action_mask_shape = (total_agent_num, self.__envConfig['stick_dim'] + self.__envConfig['speed_dim'] + self.__envConfig['attack_dim'])
-        field_info_shape = (
-            total_agent_num, spatial_batch_num, self.__envConfig['local_resolution'],
-            self.__envConfig['local_resolution'])
-        step_info_shape = (total_agent_num, step_batch_num)
         # feature 시각화 함수 실행
-        if self.__debug:
-            pass
-        print("Deserializing: ", (time.time() - begin) * 1000, "ms")
-        begin = time.time()
-        while self.state_buffer is not None:
-            state_result = self.state_buffer
-            self.state_buffer = None
-            return state_result
+        while self.state_buffer[0] is None:
+            time.sleep(0.001)
+
+        state, reward, done, _, _ = copy.deepcopy(self.state_buffer)
+        self.state_buffer = (None, None, None, None, None)
+        return state, reward, done
 
     def __initialize_feature_display(self, batch_size, feature_size):
         figure, ax = plt.subplots(batch_size, feature_size, figsize=(15, 15))
@@ -124,12 +110,12 @@ class CombatStrategy(gym.Env):
 
     def __calculate_reward(self, step_result):
         reward = torch.zeros(len(step_result))
-        reward += 1 * step_result[:, 1]  # team win
-        reward += 1 * step_result[:, 2]  # kill score
-        reward -= 1 * step_result[:, 3]  # dead score
-        # reward += 1 * step_result[:, 4]  # damage score
-        # reward -= 1 * step_result[:, 5]  # hitted score
-        reward += 1 * step_result[:, 6]  # healthy ratio
+        reward += 1 * step_result[1]  # targetting
+        reward += 1 * step_result[4]  # playtime
+        reward += 1 * step_result[8]  # damage score
+        # reward += 1 * step_result[:, 4]  #
+        reward -= 1 * step_result[10]  # hitted score
+        reward -= 1 * step_result[6]  # deathcount
         return reward
 
 
@@ -145,8 +131,8 @@ class CombatStrategy(gym.Env):
     def deserialize(self, data):
         msg = FlatData.GetRootAsFlatData(data)
         data_array = msg.Info(0)
-        np_data = data_array.DataAsNumpy()
-        data_data = np_data[:10]
+        step_array = msg.Info(1)
+        data_data = data_array.DataAsNumpy()
         data_shape = data_array.ShapeAsNumpy()
 
         mask_array = None
@@ -156,24 +142,22 @@ class CombatStrategy(gym.Env):
             mask_data = mask_array.DataAsNumpy()
             mask_result = torch.tensor(mask_data.reshape(mask_shape), dtype=torch.float)
 
-        step_data = np_data[10:22]
-        step_batch_num = self.__envConfig['step_info_dim']
-        step_shape = [1, step_batch_num]
+        step_data = step_array.DataAsNumpy()
+        step_shape = step_array.ShapeAsNumpy()
 
-        return torch.tensor(np_data.reshape(data_shape), dtype=torch.float), mask_result, torch.tensor(step_data.reshape(step_shape), dtype=torch.float)
+        return torch.tensor(data_data.reshape(data_shape), dtype=torch.float), mask_result, torch.tensor(step_data.reshape(step_shape), dtype=torch.float)
         #(tensor or np) 등 real state
 
     def on_received(self, message):
          origin_data, origin_mask, origin_step = self.deserialize(message) # reset에 할당해서 state전달
-         done = torch.tensor(origin_step[:, 0], dtype=torch.bool)
+         done = torch.tensor(origin_step, dtype=torch.bool)
          reward = self.__calculate_reward(origin_step)
-         state = {'vector': origin_data,
-                  'action_mask': origin_mask}
-         self.state_buffer = (state, reward, done, None)
-         # get action
-         # cal_reword
-         # buffer insert (얘는 지가 몇번째 step인지 모름) / update or save는 runner에서(step수를 runner가 알기 때문)
-         # serialize action
+         state = {'matrix': [],
+                  'vector':  origin_data.unsqueeze(dim=0),
+                  'action_mask': origin_mask.unsqueeze(dim=0)}
+         self.state_buffer = (state, reward, done, False, None)
+         # msg = "get_observation"
+         # self.server.send(msg.encode())
 
 
 
