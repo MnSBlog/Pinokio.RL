@@ -79,6 +79,8 @@ class CustomTorchNetwork(nn.Module):
         neck = nn.Sequential(
             nn.Linear(config['neck_out'], config['neck_out'] // 2),
             getattr(nn, config['neck_activation'])(),
+            nn.Linear(config['neck_out'] // 2, config['neck_out'] // 4),
+            getattr(nn, config['neck_activation'])(),
         )
         networks['neck'] = neck
 
@@ -90,12 +92,12 @@ class CustomTorchNetwork(nn.Module):
                 self.outputs_dim.append(action_dim)
                 if config['action_mode'] == "Discrete":
                     networks[key] = nn.Sequential(
-                        nn.Linear(config['neck_out'] // 2, action_dim),
+                        nn.Linear(config['neck_out'] // 4, action_dim),
                         nn.Softmax(dim=-1)
                     )
                 else:
                     networks[key] = nn.Sequential(
-                        nn.Linear(config['neck_out'] // 2, action_dim),
+                        nn.Linear(config['neck_out'] // 4, action_dim),
                     )
             else:
                 # 연속 액션은 아직 미구현

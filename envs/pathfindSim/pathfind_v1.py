@@ -6,7 +6,6 @@ from typing import Optional, Union, Tuple
 
 from gym.core import ObsType
 from matplotlib import pyplot as plt
-from utils.pf_Interface import pf_comm_manger
 
 
 class PathFindSim(gym.Env):

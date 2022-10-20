@@ -73,13 +73,13 @@ def main(args):
                     register_env(args['env_name'], ENV_REGISTRY[args['env_name']](**args['envs']))
                     raise NotImplementedError
                 elif args['runner_name'] == 'gym':
-                    env = ENV_REGISTRY[args['env_name']](**args['envs'])
-                    runner = GymRunner(config=copy.deepcopy(args), env=env)
-
-                    # from gym import envs
-                    # check = envs.registry
-                    # env = gym.make(args['env_name'], render_mode='human')
+                    # env = ENV_REGISTRY[args['env_name']](**args['envs'])
                     # runner = GymRunner(config=copy.deepcopy(args), env=env)
+
+                    from gym import envs
+                    check = envs.registry
+                    env = gym.make(args['env_name'], render_mode='human')
+                    runner = GymRunner(config=copy.deepcopy(args), env=env)
                 else:
                     env = ENV_REGISTRY[args['env_name']](**args['envs'])
                     runner = getattr(runner_instance,
