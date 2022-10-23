@@ -49,9 +49,7 @@ class CombatStrategy(gym.Env):
         begin = time.time()
         action_buffer = CommunicationManager.serialize_action("Action", action.cpu())
         self.server.send(action_buffer)
-        print("Action serializing: ", (time.time() - begin) * 1000, "ms")
         begin = time.time()
-        print("Action interation: ", (time.time() - begin) * 1000, "ms")
         return self.__get_observation()
 
     def reset(
@@ -67,8 +65,6 @@ class CombatStrategy(gym.Env):
         n_of_current_enemy = self.__envConfig['enemy_count']
         # To gathering spatial-feature
         state, _, _ = self.__get_observation()
-        action_dum = CommunicationManager.serialize_action("Action", torch.zeros(3, 1).cpu())
-        self.server.send(action_dum)
         return state
 
     def __get_observation(self):
@@ -109,15 +105,17 @@ class CombatStrategy(gym.Env):
         self.__plots = (fig, ax)
 
     def __calculate_reward(self, step_result):
-        reward = torch.zeros(len(step_result))
-        reward += 1 * step_result[1]  # targetting
-        reward += 1 * step_result[4]  # playtime
-        reward += 1 * step_result[8]  # damage score
+        reward = torch.zeros(1, 1)
+        reward += (step_result[2] + step_result[3]) % 2  # on radar on screen 1
+        reward += 5*step_result[1]  # targetting 5
+        reward += 10*step_result[8]  # on damage 10
+        reward += 20*step_result[5]  # kill 20
         # reward += 1 * step_result[:, 4]  #
-        reward -= 1 * step_result[10]  # hitted score
-        reward -= 1 * step_result[6]  # deathcount
+        reward -= (-1)*(step_result[3]-1)  # just radar -1
+        reward -= 5*step_result[7]  # targeted -5
+        reward -= 10*step_result[10]  # get damage -10
+        reward -= (-20)*(step_result[6]-1)  # death -20
         return reward
-
 
     def render(self, mode="human", **kwargs):
         return
@@ -150,14 +148,12 @@ class CombatStrategy(gym.Env):
 
     def on_received(self, message):
          origin_data, origin_mask, origin_step = self.deserialize(message) # reset에 할당해서 state전달
-         done = torch.tensor(origin_step, dtype=torch.bool)
+         done = torch.tensor(origin_step[0], dtype=torch.bool)
          reward = self.__calculate_reward(origin_step)
          state = {'matrix': [],
                   'vector':  origin_data.unsqueeze(dim=0),
                   'action_mask': origin_mask.unsqueeze(dim=0)}
          self.state_buffer = (state, reward, done, False, None)
-         # msg = "get_observation"
-         # self.server.send(msg.encode())
 
 
 
