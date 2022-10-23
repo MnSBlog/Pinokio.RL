@@ -2,8 +2,8 @@ network:
   actor:
     # --- learning option ---
     obs_stack: False # should not use Memory layer with this
-    use_memory_layer: [ "Raw" ] # Raw / LSTM / GRU
-    memory_q_len: [ 16 ]
+    use_memory_layer: "Raw" # Raw / LSTM / GRU
+    memory_q_len: 16
     memory_layer_len: 3
     # - State definition -
     # --- spatial features ---
@@ -35,6 +35,7 @@ network:
   critic:
     # --- learning option ---
     use_memory_layer: "Raw"
+    memory_q_len: 16
     memory_layer_len: 1
     # - State definition -
     # --- spatial features ---

@@ -19,8 +19,6 @@ def load_config(form="yaml"):
     for key, value in config.items():
         if isinstance(key, str):
             key = key.replace('_name', 's')
-            if key == "envs":
-                continue
             module_path = os.path.join(key, value)
             module_list.append(module_path)
     config["config_root"] = "./config"

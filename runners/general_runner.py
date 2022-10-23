@@ -1,6 +1,7 @@
 import os
 import gym
 import time
+import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from agents.tf.actorcritic import Actor, Critic
@@ -8,7 +9,7 @@ from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
 from networks.network_generator import CustomTorchNetwork
 
-
+## Design patter을 다시 생각해서 할 것
 class GeneralRunner:
     def __init__(self, config: dict, env: gym.Env):
         self._config = config
@@ -45,6 +46,7 @@ class GeneralRunner:
         self.rew_numerator = (self.rew_max + self.rew_min) / 2
 
         fig = plt.figure()
+        self.torch_state = False
 
     def run(self):
         pass
@@ -73,7 +75,11 @@ class GeneralRunner:
 
     def _insert_q(self, state):
         if isinstance(state, dict):
-            pass
+            self.torch_state = True
+            if len(state['matrix']) > 0:
+                self.memory_q['matrix'].append(state['matrix'])
+            if len(state['vector']) > 0:
+                self.memory_q['vector'].append(state['vector'])
         else:
             if len(state.shape) > 1:
                 state = np.expand_dims(state[:, :, 0], axis=0)
@@ -87,13 +93,22 @@ class GeneralRunner:
         if state is not None:
             self._insert_q(state)
 
-        if len(self.memory_q['matrix']) > 0:
-            matrix_obs = np.concatenate(self.memory_q['matrix'], axis=0)
-            self.memory_q['matrix'].pop(0)
+        if self.torch_state:
+            if len(self.memory_q['matrix']) > 0:
+                matrix_obs = torch.cat(self.memory_q['matrix'], dim=1).detach()
+                self.memory_q['matrix'].pop(0)
 
-        if len(self.memory_q['vector']) > 0:
-            vector_obs = np.concatenate(self.memory_q['vector'], axis=0)
-            self.memory_q['vector'].pop(0)
+            if len(self.memory_q['vector']) > 0:
+                vector_obs = torch.cat(self.memory_q['vector'], dim=1).detach()
+                self.memory_q['vector'].pop(0)
+        else:
+            if len(self.memory_q['matrix']) > 0:
+                matrix_obs = np.concatenate(self.memory_q['matrix'], axis=0)
+                self.memory_q['matrix'].pop(0)
+
+            if len(self.memory_q['vector']) > 0:
+                vector_obs = np.concatenate(self.memory_q['vector'], axis=0)
+                self.memory_q['vector'].pop(0)
 
         state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
         return state

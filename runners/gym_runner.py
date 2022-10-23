@@ -61,7 +61,7 @@ class GymRunner(GeneralRunner):
 
         # 학습이 끝난 후, 누적 보상값 저장
         self._save_reward_log()
-        self.env.close()
+        self._env.close()
 
 
 class ParallelGymRunner:
