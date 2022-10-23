@@ -1,10 +1,10 @@
 import copy
 import gym
 import os
-import runners.standard_runner as runner_instance
+import runners.standard_runner as std_runner
+import runners.gym_runner as gym_runner
 from utils.yaml_config import YamlConfig
 from envs import REGISTRY as ENV_REGISTRY
-from runners.gym_runner import GymRunner
 from ray.tune.registry import register_env
 
 
@@ -28,10 +28,6 @@ def load_config(form="yaml"):
     config = config_loader.config_copy(
         config_loader.get_config(filenames=module_list)
     )
-
-    # config['network']['model_path'] = os.path.join(config['runner']['history_path'],
-    #                                                config['envs']['name'],
-    #                                                config['network']['model_path'])
 
     return config
 
@@ -57,38 +53,44 @@ def save_folder_check(config):
     config['runner']['history_path'] = os.path.join(root, config['agent_name'])
 
 
-def main(args):
-    exp_cond = copy.deepcopy(args)
-    for env_name in exp_cond['env_name']:
-        for mem_len in exp_cond['network']['actor']['memory_q_len']:
-            for layer_type in exp_cond['network']['actor']['use_memory_layer']:
-                args['env_name'] = env_name
-                args = update_config(config=args, key='envs', name=env_name)
-                args['network']['actor']['memory_q_len'] = mem_len
-                args['network']['critic']['memory_q_len'] = mem_len
-                args['network']['actor']['use_memory_layer'] = layer_type
-                save_folder_check(args)
+def check_parallel(config):
+    parallel = False
+    if isinstance(config['env_name'], list):
+        parallel = True
+    if isinstance(config['network']['actor']['memory_q_len'], list):
+        parallel = True
+    if isinstance(config['network']['actor']['use_memory_layer'], list):
+        parallel = True
+    return parallel
 
-                if args['runner_name'] == 'ray_tune':
-                    register_env(args['env_name'], ENV_REGISTRY[args['env_name']](**args['envs']))
-                    raise NotImplementedError
-                elif args['runner_name'] == 'gym':
-                    # env = ENV_REGISTRY[args['env_name']](**args['envs'])
-                    # runner = GymRunner(config=copy.deepcopy(args), env=env)
 
-                    from gym import envs
-                    check = envs.registry
-                    env = gym.make(args['env_name'], render_mode='human')
-                    runner = GymRunner(config=copy.deepcopy(args), env=env)
-                else:
-                    env = ENV_REGISTRY[args['env_name']](**args['envs'])
-                    runner = getattr(runner_instance,
-                                     args['runner_name'])(config=args,
-                                                          env=env)
-                runner.run()
-                # runner.plot_result()
+def main(args, parallel):
+    if parallel:
+        args['runner_name'] = "Parallel" + args['runner_name']
+        if "Gym" in args['runner_name']:
+            runner = getattr(gym_runner,
+                             args['runner_name'])(config=args)
+        else:
+            raise NotImplementedError
+    else:
+        save_folder_check(args)
+
+        if "Ray" in args['runner_name']:
+            register_env(args['env_name'], ENV_REGISTRY[args['env_name']](**args['envs']))
+            raise NotImplementedError
+        elif "Gym" in args['runner_name']:
+            from gym import envs
+            check = envs.registry
+            env = gym.make(args['env_name'], render_mode='human')
+            runner = gym_runner.GymRunner(config=copy.deepcopy(args), env=env)
+        else:
+            env = ENV_REGISTRY[args['env_name']](**args['envs'])
+            runner = getattr(std_runner,
+                             args['runner_name'])(config=args,
+                                                  env=env)
+    runner.run()
 
 
 if __name__ == '__main__':
     arguments = load_config()
-    main(args=arguments)
+    main(args=arguments, parallel=check_parallel(arguments))

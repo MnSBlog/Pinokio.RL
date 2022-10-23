@@ -163,9 +163,3 @@ def plot_result(self):
     plt.clf()
 
 
-    def plot_result(self):
-        import matplotlib.pyplot as plt
-        plt.plot(self.save_epi_reward)
-        plt.show()
-
-
