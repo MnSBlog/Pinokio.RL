@@ -54,7 +54,7 @@ class GymRunner(GeneralRunner):
             self.reward_info['memory'].append(episode_reward)
             self.save_epi_reward.append(episode_reward)
 
-            # 에피소드 10번마다 신경망 파라미터를 파일에 저장
+            # 업데이트 특정값 신경망 파라미터를 파일에 저장
             if ep % 100 == 0:
                 self._save_agent()
                 self._draw_reward_plot(now_ep=ep, y_lim=[])
@@ -62,11 +62,6 @@ class GymRunner(GeneralRunner):
         # 학습이 끝난 후, 누적 보상값 저장
         self._save_reward_log()
         self.env.close()
-
-    def plot_result(self):
-        plt.plot(self.save_epi_reward)
-        plt.show()
-        plt.clf()
 
 
 class ParallelGymRunner:

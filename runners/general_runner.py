@@ -50,7 +50,9 @@ class GeneralRunner:
         pass
 
     def plot_result(self):
-        pass
+        plt.plot(self.save_epi_reward)
+        plt.show()
+        plt.clf()
 
     def _fit_reward(self, rew):
         if self.rew_min > rew:
