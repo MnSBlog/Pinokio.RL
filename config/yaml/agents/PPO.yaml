@@ -10,6 +10,7 @@ agent:
   epochs: 20 # evaluation epochs
   ratio_clipping: 0.05 # probability limitation
   std_bound: [0.01, 1.0] # std. bound
+  # --- Only Tensorflow ---
   state_dim: 0 # You have to set this value (e.g. env.observation_space.shape[0])
   # - Model configuration -
   optimizer: 'Adam'

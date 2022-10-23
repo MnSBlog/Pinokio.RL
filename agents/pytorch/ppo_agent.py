@@ -20,9 +20,6 @@ class PPO(PolicyAgent):
         self.critic_lr = self._config['critic_lr']
         self.epochs = self._config['epochs']
         self.ratio_clipping = self._config['ratio_clipping']
-        # 표준편차의 최솟값과 최대값 설정
-        self.std_bound = self._config['std_bound']
-        self.state_dim = self._config['state_dim']
         # Optimizer
         opt_arg = [
             {'params': self.actor.parameters(), 'lr': self.actor_lr},
