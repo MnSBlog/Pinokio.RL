@@ -102,7 +102,7 @@ class PPO(PolicyAgent):
         # convert list to tensor
         part_matrix = None
         if 'spatial_feature' in self.actor.networks:
-            part_matrix = torch.squeeze(torch.stack(self.batch_state_matrix, dim=0)).detach().to(self.device)
+            part_matrix = torch.cat(self.batch_state_matrix, dim=0).detach().to(self.device)
         part_vector = torch.cat(self.batch_state_vector, dim=0).detach().to(self.device)
 
         old_states = {'matrix': part_matrix, 'vector': part_vector}

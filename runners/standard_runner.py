@@ -178,38 +178,3 @@ class StepRunner:
 
         return train_reward
 
-    def plot_result(self):
-        plt.plot(self.save_epi_reward)
-        plt.show()
-        plt.clf()
-
-    def __insert_q(self, state):
-        if isinstance(state, dict):
-            if len(state['matrix']) > 0:
-                self.memory_q['matrix'].append(state['matrix'])
-            if len(state['vector']) > 0:
-                self.memory_q['vector'].append(state['vector'])
-        else:
-            if len(state.shape) > 1:
-                self.memory_q['matrix'].append(state)
-            else:
-                self.memory_q['vector'].append(state)
-
-    def __update_memory(self, state=None):
-        matrix_obs, vector_obs = [], []
-
-        if state is not None:
-            self.__insert_q(state)
-
-        if len(self.memory_q['matrix']) > 0:
-            matrix_obs = torch.cat(self.memory_q['matrix'], dim=1).detach()
-            self.memory_q['matrix'].pop(0)
-
-        if len(self.memory_q['vector']) > 0:
-            vector_obs = torch.cat(self.memory_q['vector'], dim=1).detach()
-            self.memory_q['vector'].pop(0)
-
-        state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
-        return state
-
-

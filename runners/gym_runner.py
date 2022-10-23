@@ -1,9 +1,8 @@
+import copy
 import os
 import gym
 import numpy as np
 import torch
-import torch.nn as nn
-import tensorflow as tf
 import matplotlib.pyplot as plt
 from agents.tf.actorcritic import Actor, Critic
 from agents import REGISTRY as AGENT_REGISTRY
@@ -64,8 +63,12 @@ class GymRunner:
         self.rew_gap = (self.rew_max - self.rew_min) / 2
         self.rew_numerator = (self.rew_max + self.rew_min) / 2
 
+        if os.path.exists(os.path.join('./figures', config['env_name'])) is False:
+            os.mkdir(os.path.join('./figures', config['env_name']))
+
     def run(self):
         memory_len = self.config['network']['actor']['memory_q_len']
+        layer_len = self.config['network']['actor']['memory_layer_len']
         network_type = '-' + self.config['network']['actor']['use_memory_layer']
         fig = plt.figure()
         # 에피소드마다 다음을 반복
@@ -76,7 +79,7 @@ class GymRunner:
             # 환경 초기화 및 초기 상태 관측 및 큐
             ret = self.env.reset()
             state = ret[0]
-            for _ in range(0, memory_len):
+            for _ in range(memory_len):
                 self.__insert_q(state)
 
             state = self.__update_memory()
@@ -86,12 +89,12 @@ class GymRunner:
                 self.action = self.agent.select_action(state)
                 if torch.is_tensor(self.action):
                     self.action = self.action.squeeze()
-                    if self.action.shape[0] == 1:
+                    if len(self.action.shape) == 0:
                         self.action = self.action.item()
                 # 다음 상태, 보상 관측
                 state, reward, done, trunc, info = self.env.step(self.action)
                 done |= trunc
-                state = self.__update_memory(state[0])
+                state = self.__update_memory(state)
 
                 train_reward = self.__fit_reward(reward)
                 self.agent.batch_reward.append(train_reward)
@@ -108,10 +111,11 @@ class GymRunner:
             self.save_epi_reward.append(episode_reward)
 
             # 에피소드 10번마다 신경망 파라미터를 파일에 저장
-            if ep % 10 == 0:
+            if ep % 100 == 0:
                 import time
-                checkpoint_path = os.path.join(self.config['runner']['history_path'],
-                                               time.strftime('%Y-%m-%d-%H-%M-%S'))
+                save_name = network_type + "-mem_len-" + str(memory_len) + "-layer_len-" + str(
+                    layer_len) + time.strftime('%Y-%m-%d-%H-%M-%S')
+                checkpoint_path = os.path.join(self.config['runner']['history_path'], save_name)
                 self.agent.save(checkpoint_path=checkpoint_path)
 
                 mu = np.mean(self.reward_info['memory'])
@@ -127,16 +131,14 @@ class GymRunner:
                 plt.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
                 plt.fill_between(self.reward_info['episode'],
                                  self.reward_info['min'], self.reward_info['max'], alpha=0.2)
-                plt.ylim([0, 550])
-                title = self.config['env_name'] + network_type + "-mem_len-" + str(memory_len) + ".png"
-                plt.savefig("figures/" + title)
+                title = network_type + "-mem_len-" + str(memory_len) + "-layer_len-" + str(layer_len) + ".png"
+                plt.savefig(os.path.join('./figures', self.config['env_name'], title))
 
         # 학습이 끝난 후, 누적 보상값 저장
         filename = self.config['runner']['history_path'] + self.config['envs']['name']
-        filename += 'stack-' + str(self.config['network']['memory_q_len']) + '_epi_reward.txt'
+        filename += network_type + "-mem_len-" + str(memory_len) + "-layer_len-" + str(layer_len) + '_epi_reward.txt'
         np.savetxt(filename, self.save_epi_reward)
         self.env.close()
-        print(self.save_epi_reward)
 
     def plot_result(self):
         plt.plot(self.save_epi_reward)
@@ -148,6 +150,7 @@ class GymRunner:
             pass
         else:
             if len(state.shape) > 1:
+                state = np.expand_dims(state[:, :, 0], axis=0)
                 self.memory_q['matrix'].append(state)
             else:
                 self.memory_q['vector'].append(state)
@@ -185,3 +188,69 @@ class GymRunner:
         train_reward = (rew - self.rew_numerator) / self.rew_gap
 
         return train_reward
+
+
+class ParallelGymRunner:
+    def __init__(self, config: dict):
+        env_names = self.get_element(config['env_name'])
+        q_cases = self.get_element(config['network']['actor']['memory_q_len'])
+        layer_cases = self.get_element(config['network']['actor']['use_memory_layer'])
+
+        self.worker_count = len(env_names) * len(q_cases) * len(layer_cases)
+        self.env_names = env_names
+        self.q_cases = q_cases
+        self.layer_cases = layer_cases
+        self.config = config
+
+    def run(self):
+        from multiprocessing import Pool
+        pool = Pool(self.worker_count)
+        args = []
+        for env_name in self.env_names:
+            sub_config = copy.deepcopy(self.config)
+            sub_config['runner']['history_path'] = os.path.join("./history", env_name)
+            if os.path.exists(sub_config['runner']['history_path']) is False:
+                os.mkdir(sub_config['runner']['history_path'])
+
+            sub_config['runner']['history_path'] = os.path.join(sub_config['runner']['history_path'],
+                                                                sub_config['agent_name'])
+            if os.path.exists(sub_config['runner']['history_path']) is False:
+                os.mkdir(sub_config['runner']['history_path'])
+
+            for q_len in self.q_cases:
+                for layer_len in self.layer_cases:
+                    sub_config['env_name'] = env_name
+                    sub_config = self.update_config(config=sub_config, key='envs', name=env_name)
+                    sub_config['network']['actor']['memory_q_len'] = q_len
+                    sub_config['network']['critic']['memory_q_len'] = q_len
+                    sub_config['network']['actor']['use_memory_layer'] = layer_len
+                    args.append(sub_config)
+
+        pool.map(self.sub_runner_start, args)
+
+    @staticmethod
+    def update_config(config, key, name):
+        from utils.yaml_config import YamlConfig
+        root = os.path.join("./config/yaml/", key)
+        name = name + '.yaml'
+        sub_dict = YamlConfig.get_dict(os.path.join(root, name))
+        config[key] = sub_dict[key]
+        return copy.deepcopy(config)
+
+    @staticmethod
+    def sub_runner_start(config: dict):
+        if config['runner']['render']:
+            env = gym.make(config['env_name'], render_mode='human')
+        else:
+            env = gym.make(config['env_name'])
+        sub_runner = GymRunner(config=config, env=env)
+        sub_runner.run()
+
+    @staticmethod
+    def get_element(target):
+        rtn_list = []
+        if isinstance(target, list):
+            return target
+        else:
+            rtn_list.append(target)
+            return rtn_list
