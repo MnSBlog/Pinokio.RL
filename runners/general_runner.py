@@ -1,3 +1,4 @@
+import copy
 import os
 import gym
 import time
@@ -8,6 +9,7 @@ from agents.tf.actorcritic import Actor, Critic
 from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
 from networks.network_generator import CustomTorchNetwork
+
 
 ## Design patter을 다시 생각해서 할 것
 class GeneralRunner:
@@ -157,8 +159,8 @@ class GeneralRunner:
             if os.listdir(self._config['runner']['history_path']):
                 name_list = os.listdir(self._config['runner']['history_path'])
                 if prefix_option:
-                    prefix = self.network_type + "-mem_len-"\
-                             + str(self.memory_len)\
+                    prefix = self.network_type + "-mem_len-" \
+                             + str(self.memory_len) \
                              + "-layer_len-" + str(self.layer_len)
                     name_list = [file for file in name_list if prefix in file]
 
@@ -182,3 +184,31 @@ class GeneralRunner:
         actor.build(input_shape=(None, state_dim))
         critic.build(input_shape=(None, state_dim))
         return actor, critic
+
+    def __load_torch_models(self):
+        actor = CustomTorchNetwork(self._config['network']['actor'])
+        self._config['network']['critic'] = self.__make_critic_config(self._config['network']['actor'])
+        critic = CustomTorchNetwork(self._config['network']['critic'])
+        return actor, critic
+
+    def __load_networks(self, framework='tf'):
+        if "tf" in framework:
+            return self.__load_tf_models()
+        else:
+            return self.__load_torch_models()
+
+    @staticmethod
+    def __make_critic_config(actor_config):
+        neck_in = 64
+        critic_config = copy.deepcopy(actor_config)
+        if critic_config['spatial_feature']['use'] and critic_config['non_spatial_feature']['use']:
+            critic_config['spatial_feature']['dim_out'] = neck_in // 2
+            critic_config['non_spatial_feature']['dim_out'] = neck_in // 2
+        else:
+            if critic_config['spatial_feature']['use']:
+                critic_config['spatial_feature']['dim_out'] = neck_in
+            else:
+                critic_config['non_spatial_feature']['dim_out'] = neck_in
+        critic_config['n_of_actions'] = [1]
+        critic_config['action_mode'] = "Continuous"
+        return critic_config
