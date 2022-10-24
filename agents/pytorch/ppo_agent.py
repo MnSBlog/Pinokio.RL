@@ -20,9 +20,6 @@ class PPO(PolicyAgent):
         self.critic_lr = self._config['critic_lr']
         self.epochs = self._config['epochs']
         self.ratio_clipping = self._config['ratio_clipping']
-        # 표준편차의 최솟값과 최대값 설정
-        self.std_bound = self._config['std_bound']
-        self.state_dim = self._config['state_dim']
         # Optimizer
         opt_arg = [
             {'params': self.actor.parameters(), 'lr': self.actor_lr},
@@ -102,7 +99,7 @@ class PPO(PolicyAgent):
         # convert list to tensor
         part_matrix = None
         if 'spatial_feature' in self.actor.networks:
-            part_matrix = torch.squeeze(torch.stack(self.batch_state_matrix, dim=0)).detach().to(self.device)
+            part_matrix = torch.cat(self.batch_state_matrix, dim=0).detach().to(self.device)
         part_vector = torch.cat(self.batch_state_vector, dim=0).detach().to(self.device)
 
         old_states = {'matrix': part_matrix, 'vector': part_vector}

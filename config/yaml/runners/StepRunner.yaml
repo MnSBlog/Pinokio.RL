@@ -9,10 +9,10 @@ runner:
   logger: False # False or True(OpenAI Logger)
   multi_agent: False
   self_play: False
-  max_step_num: 800
-  update_step: 800
+  max_step_num: 100000000
+  update_step: 600
   save_per_update: 4
-  pretrain: False
+  pretrain: True
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1

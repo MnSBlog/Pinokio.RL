@@ -7,8 +7,6 @@ from typing import Optional, Union, Tuple
 import threading
 
 from gym.core import ObsType
-from matplotlib import pyplot as plt
-from pyviz_comms import Comm
 from utils.zero_mq import ZmqServer
 from utils.comm_manger import CommunicationManager
 

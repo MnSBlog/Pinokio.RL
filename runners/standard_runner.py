@@ -1,17 +1,7 @@
 import os
-import random
 import gym
-import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-import matplotlib.pyplot as plt
-import time
-from networks.network_generator import CustomTorchNetwork
-from agents import REGISTRY as AGENT_REGISTRY
-from agents.general_agent import GeneralAgent
-from utils.yaml_config import YamlConfig
-
+from runners.general_runner import GeneralRunner
 
 
 def select_algorithm(args):
@@ -36,74 +26,50 @@ def select_algorithm(args):
     return args
 
 
-class EpisodeRunner:
+class StepRunner(GeneralRunner):
     def __init__(self, config: dict, env: gym.Env):
-        config = select_algorithm(config)
+        super(StepRunner, self).__init__(config, env)
 
-        self.config = config
-        self.net = net
-        self.env = env
-
-        self.env.reset()
+        if os.path.exists(os.path.join('./figures', config['env_name'])) is False:
+            os.mkdir(os.path.join('./figures', config['env_name']))
 
     def run(self):
-        iteration = self.config["iteration"]
-        episode_count = 0
-        config_loader = YamlConfig(root='./config')
-        while iteration > 0:
-            episode_count += 1
-            agent_name = random.choice(self.config['agents'])
-            config = config_loader.config_copy(
-                config_loader.get_config(filenames='agents//' + agent_name))
-            agent_config = config['agent']
-            #agent: GeneralAgent = agent_registry[agent_name](**agent_config)
-            network: nn.Module = self.net
-            while True:
-                agent_config
-
-
-class StepRunner:
-    def __init__(self, config: dict, env: gym.Env):
-        self.config = select_algorithm(config)
-        # Networks
-        actor = CustomTorchNetwork(config['network']['actor'])
-        critic = CustomTorchNetwork(config['network']['critic'])
-        algo_name = config['agent']['framework'] + config['agent_name']
-        # Algorithm(Agent)
-        self.agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self.config['agent'],
-                                                             actor=actor, critic=critic)
-        if self.config['runner']['pretrain']:
-            if os.listdir(self.config['runner']['history_path']):
-                name_list = os.listdir(self.config['runner']['history_path'])
-                full_list = [os.path.join(self.config['runner']['history_path'], name) for name in name_list]
-                time_sorted_list = sorted(full_list, key=os.path.getmtime)
-                last_file = time_sorted_list[-1]
-                self.agent.load(checkpoint_path=last_file)
-        # Environment
-        self.env = env
-        # Calculate
-        self.save_epi_reward = []
-        self.reward_info = {'mu': [0], 'max': [0], 'min': [0], 'episode': [0], 'memory': []}
-
-    def run(self):
-        runner_config = self.config["runner"]
+        runner_config = self._config["runner"]
         max_step_num = runner_config['max_step_num']
         steps = 0
-        ep = 0
-        episode_reward = 0
-        fig = plt.figure()
-        network_type = '-' + self.config['network']['actor']['use_memory_layer']
-        state = self.env.reset()
+        updates = 1
+        update_reward = 0
+        update_fit_reward = 0
+        
+        init_state = self._env.reset()
+        for _ in range(self.memory_len):
+            self._insert_q(init_state)
+        state = self._update_memory()
 
         while max_step_num >= 0:
+            steps += 1
+            max_step_num -= 1
+            actions = self._agent.select_action(state)
+            next_state, reward, done = self._env.step(actions)
+            state = self._update_memory(next_state)
+
+            train_reward = self._fit_reward(reward)
+            self._agent.batch_reward.append(train_reward)
+            self._agent.batch_done.append(done)
+            update_fit_reward += train_reward
+            update_reward += reward
+
             # Step runner는 self-play 아직 적용안함
             if steps >= runner_config['update_step']:
+                # 업데이트마다 결과 보상값 출력
+                print('Update: ', updates, 'Steps: ', runner_config['max_step_num'] - max_step_num,
+                      'Reward: ', update_reward,  'fit_Reward: ', update_fit_reward)
+                self.reward_info['memory'].append(float(update_reward))
+                update_reward = 0
+                update_fit_reward = 0
                 steps = 0
-                ep = 0
-                episode_reward = 0
-                self.agent.update()
-                self.agent.save(checkpoint_path=os.path.join(runner_config['history_path'],
-                                                             time.strftime('%Y-%m-%d_%H-%M-%S') + '.pth'))
+                updates += 1
+                self._agent.update()
                 if runner_config['self_play']:
                     # agent_name = random.choice(self.config['agents'])
                     # config = config_loader.config_copy(
@@ -111,61 +77,8 @@ class StepRunner:
                     # agent_config = config['agent']
                     raise NotImplementedError
 
-            steps += 1
-            ep += 1
-            max_step_num -= 1
-            actions = self.agent.select_action(state)
-            state, reward, done = self.env.step(actions)
-            self.agent.batch_reward.append(reward)
-            self.agent.batch_done.append(done)
-
-            self.save_epi_reward.append(torch.mean(reward).item())
-        np.savetxt(os.path.join(self.config['runner']['history_path'], '_epi_reward.txt'), self.save_epi_reward)
-        # 에피소드마다 결과 보상값 출력
-        print('Episode: ', ep, 'Steps: ', steps, 'Reward: ', episode_reward)
-        self.reward_info['memory'].append(episode_reward)
-        self.save_epi_reward.append(episode_reward)
-
-        # 에피소드 100번마다 신경망 파라미터를 파일에 저장
-        if ep % 100 == 0:
-            checkpoint_path = os.path.join(self.config['runner']['history_path'],
-                                           time.strftime('%Y-%m-%d-%H-%M-%S'))
-            self.agent.save(checkpoint_path=checkpoint_path)
-
-            mu = np.mean(self.reward_info['memory'])
-            sigma = np.std(self.reward_info['memory'])
-
-            self.reward_info['mu'].append(mu)
-            self.reward_info['max'].append(mu + (0.5 * sigma))
-            self.reward_info['min'].append(mu - (0.5 * sigma))
-            self.reward_info['episode'].append(ep)
-            self.reward_info['memory'].clear()
-
-            plt.clf()
-            plt.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
-            plt.fill_between(self.reward_info['episode'],
-                             self.reward_info['min'], self.reward_info['max'], alpha=0.2)
-            plt.ylim([0, 550])
-            title = self.config['env_name'] + network_type + "-mem_len-" + ".png"
-            plt.savefig("figures/" + title)
-
-        # 학습이 끝난 후, 누적 보상값 저장
-        filename = self.config['runner']['history_path'] + self.config['envs']['name']
-        filename += 'stack-' + str(self.config['network']['memory_q_len']) + '_epi_reward.txt'
-        np.savetxt(filename, self.save_epi_reward)
-        self.env.close()
-        print(self.save_epi_reward)
-
-
-def plot_result(self):
-    plt.plot(self.save_epi_reward)
-    plt.show()
-    plt.clf()
-
-
-    def plot_result(self):
-        import matplotlib.pyplot as plt
-        plt.plot(self.save_epi_reward)
-        plt.show()
-
+            # 업데이트 특정값 신경망 파라미터를 파일에 저장
+            if updates % 50 == 0:
+                self._save_agent()
+                self._draw_reward_plot(now_ep=updates, y_lim=[])
 
