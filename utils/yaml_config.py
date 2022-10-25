@@ -1,6 +1,8 @@
 import collections.abc
 from copy import deepcopy
 import os
+
+import pandas as pd
 import yaml
 
 
@@ -51,3 +53,25 @@ class YamlConfig:
             except yaml.YAMLError as exc:
                 assert False, "{}.yaml error: {}".format('sc2', exc)
         return sub_dict
+
+    @staticmethod
+    def select_algorithm(self, args):
+        config = args['runner']
+        if config["self_play"]:
+            algo_condition = pd.read_excel(config["condition_path"], engine='openpyxl')
+            algo_condition = algo_condition.query('Select.str.contains("' + 'Use' + '")')
+            algo_condition = algo_condition.query(
+                '`' + config["env_config"]["actions"] + ' Actions`.str.contains("Yes")')
+            algo_condition = algo_condition.query('Frameworks.str.contains("' + config["framework"] + '")')
+            if config["env_config"]["multi_agent"]:
+                algo_condition = algo_condition.query('Multi-Agent.str.contains("Yes")')
+
+            config["agents"] = algo_condition['Algorithm'].to_list()
+
+            for algorithm in config["agents"]:
+                algorithm_path = config["history_path"].replace(args['agent_name'], algorithm)
+                if os.path.exists(algorithm_path) is False:
+                    os.mkdir(algorithm_path)
+
+        args['runner'] = config
+        return args

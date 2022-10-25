@@ -47,15 +47,15 @@ class CustomTorchNetwork(nn.Module):
                 networks['spatial_feature'] = nn.Sequential(
                     make_sequential(in_channels=config['spatial_feature']['dim_in'],
                                     out_channels=32,
-                                    kernel_size=(8, 8), stride=(4, 4)),
+                                    kernel_size=(4, 4), stride=(2, 2)),
                     make_sequential(in_channels=32,
                                     out_channels=64,
-                                    kernel_size=(4, 4), stride=(2, 2)),
+                                    kernel_size=(2, 2), stride=(1, 1)),
                     make_sequential(in_channels=64,
                                     out_channels=64,
-                                    kernel_size=(3, 3), stride=(1, 1)),
+                                    kernel_size=(2, 2), stride=(1, 1)),
                     nn.Flatten(),
-                    nn.Linear(64 * 352, config['spatial_feature']['dim_out']),
+                    nn.Linear(64 * 144, config['spatial_feature']['dim_out']),
                     nn.ReLU()
                 )
 
@@ -78,7 +78,7 @@ class CustomTorchNetwork(nn.Module):
         config['neck_out'] = 16
         if config['use_memory_layer'] == "Raw":
             input_layer = nn.Sequential(
-                nn.Linear(config['neck_in'], config['neck_out']),
+                nn.Linear(config['neck_in'], config['neck_in'] // 2),
                 getattr(nn, config['neck_activation'])()
             )
             self.init_h_state = None
@@ -94,6 +94,7 @@ class CustomTorchNetwork(nn.Module):
                                    out_channel=config['neck_out'],
                                    activation=config['neck_activation'])
         networks['neck'] = neck
+        # 민구 추가
 
         # action 부분
         self.outputs_dim = []

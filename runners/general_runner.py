@@ -20,8 +20,7 @@ class GeneralRunner:
         if "tf" in config['agent']['framework']:
             actor, critic = self.__load_tf_models()
         else:
-            actor = CustomTorchNetwork(config['network']['actor'])
-            critic = CustomTorchNetwork(config['network']['critic'])
+            actor, critic = self.__load_torch_models()
 
         # RL algorithm 생성
         algo_name = config['agent']['framework'] + config['agent_name']
