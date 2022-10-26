@@ -73,7 +73,7 @@ class PPO(PolicyAgent):
     def update(self, next_state=None, done=None):
         # Monte Carlo estimate of returns
 
-        if isinstance(self.batch_reward[0], torch.Tensor):
+        if max(self.batch_reward[0].shape) > 1:
             discounted_reward = torch.zeros(self.batch_reward[0].shape[1])
             rewards = np.zeros((len(self.batch_reward), self.batch_reward[0].shape[1]))
             batch_count = 0

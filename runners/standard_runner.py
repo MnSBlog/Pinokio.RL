@@ -110,8 +110,9 @@ class IntrinsicParallelRunner(GeneralRunner):
             state = self._update_memory(next_state)
 
             train_reward = self._fit_reward(reward)
-            self._agent.batch_reward.append(train_reward)
-            self._agent.batch_done.append(done)
+            for idx in range(map_count):
+                self._agent.batch_reward.append(train_reward[idx])
+                self._agent.batch_done.append(done[idx])
             update_fit_reward += train_reward
             update_reward += reward
 
