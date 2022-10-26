@@ -38,14 +38,10 @@ class RLFPSv4(gym.Env):
 
     def step(self, action: Optional[list] = None):
         # Send action list
-        begin = time.time()
         action_buffer = CommunicationManager.serialize_action("Action", action.cpu())
         self.__zmq_client.send("Action")
-        print("Action serializing: ", (time.time() - begin) * 1000, "ms")
 
-        begin = time.time()
         self.__zmq_client.send(action_buffer)
-        print("Action interation: ", (time.time() - begin) * 1000, "ms")
         return self.__get_observation()
 
     def reset(
@@ -105,13 +101,20 @@ class RLFPSv4(gym.Env):
         self.__plots = (figure, ax)
         for i in range(batch_size):
             for j in range(feature_size):
-                ax[i, j].get_xaxis().set_visible(False)
-                ax[i, j].get_yaxis().set_visible(False)
+                if len(ax.shape) > 1:
+                    ax[i, j].get_xaxis().set_visible(False)
+                    ax[i, j].get_yaxis().set_visible(False)
+                else:
+                    ax[j].get_xaxis().set_visible(False)
+                    ax[j].get_yaxis().set_visible(False)
         subplot_num = 8
         subplot_title_list = ['char_index', 'visual_field_of_map', 'movable', 'obj_id', 'treat_points',
                               'grenade_damage', 'visible_enemy_location', 'enemy_location']
         for i in range(subplot_num):
-            ax[0, i].set_title(subplot_title_list[i], fontsize = 12)
+            if len(ax.shape) > 1:
+                ax[0, i].set_title(subplot_title_list[i], fontsize=12)
+            else:
+                ax[i].set_title(subplot_title_list[i], fontsize=12)
         plt.tight_layout()
         plt.show(block=False)
         figure.canvas.flush_events()
@@ -119,11 +122,16 @@ class RLFPSv4(gym.Env):
 
     def __display_multi_features(self, spatial_data):
         (fig, ax) = self.__plots
-        batch_size = len(spatial_data)
-        feature_size = len(spatial_data[0])
-        for i in range(batch_size):
-            for j in range(feature_size):
-                ax[i, j].imshow(np.array(spatial_data[i, j, :, :]))
+        map_count = len(spatial_data)
+        batch_size = len(spatial_data[0])
+        feature_size = len(spatial_data[0][0])
+        for i in range(map_count):
+            for j in range(batch_size):
+                for k in range(feature_size):
+                    if len(ax.shape) > 1:
+                        ax[j, k].imshow(np.array(spatial_data[i, j, k, :, :]))
+                    else:
+                        ax[k].imshow(np.array(spatial_data[i, j, k, :, :]))
 
         plt.show(block=False)
         plt.pause(0.000000001)

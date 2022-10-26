@@ -5,8 +5,8 @@ envs:
   # --- Defaults ---
   port: 49999
   # --- Play Mode Setting ---
-  map_type: [0] # 0: Container Map / 1: Training Map / 2: External Map / -1: Random
-  play_mode: "team"  # single, team, team_self, human_play
+  map_type: [2] # 0: Container Map / 1: Training Map / 2: One on One Map / -1: Random
+  play_mode: "one_on_one"  # single, team, team_self, human_play, one_on_one
   play_mode_preset:
     single:
       agent_mode : [ 1, 0, 0, 0, 0] # 0: Bot, 1: Agent, 2: Human-play
@@ -44,6 +44,15 @@ envs:
       enemy_first_weapon_type: [ -1, -1, -1, -1, -1 ]
       agent_second_weapon_type: [ -1, -1, -1, -1, -1 ]
       enemy_second_weapon_type: [ -1, -1, -1, -1, -1 ]
+    one_on_one:
+      agent_mode: [ 1 ]
+      enemy_mode: [ 0 ]
+      agent_type: [ -1 ]
+      enemy_type: [ -1 ]
+      agent_first_weapon_type: [ -1 ]
+      enemy_first_weapon_type: [ -1 ]
+      agent_second_weapon_type: [ -1 ]
+      enemy_second_weapon_type: [ -1 ]
   # --- Character Kinematics ---
   kinematics:
     x_speed: 220.1 # 220.0 Left/Right sight rotation speed
@@ -73,7 +82,7 @@ envs:
   next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)
   # --- Feature parameters ---
   global_resolution: 100
-  local_resolution: 30
+  local_resolution: 100
   init_height: -5
   step_info_dim: 12
   spatial_dim: 8

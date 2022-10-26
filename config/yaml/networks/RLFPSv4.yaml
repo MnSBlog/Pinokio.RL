@@ -10,13 +10,13 @@ network:
     spatial_feature:
       use: True
       dim_in: 8
-      dim_out: 256
+      dim_out: 2048
       backbone: ''
       freeze: False
     # --- non-spatial features ---
     non_spatial_feature:
       use: True
-      dim_in: 180
+      dim_in: 36
       dim_out: 256
       extension: True
       freeze: False

@@ -120,11 +120,11 @@ class IntrinsicParallelRunner(GeneralRunner):
                 # 업데이트마다 결과 보상값 출력
                 print('Update: ', updates, 'Steps: ', runner_config['max_step_num'] - max_step_num,
                       'Reward: ', update_reward, 'fit_Reward: ', update_fit_reward)
-                self.reward_info['memory'].append(update_reward)
-                update_reward = 0
-                update_fit_reward = 0
-                steps = 0
-                updates += 1
+                if max(update_reward.shape) > 1:
+                    mem_reward = torch.mean(update_reward)
+                else:
+                    mem_reward = update_reward.item()
+                self.reward_info['memory'].append(mem_reward)
                 self._agent.update()
                 if runner_config['self_play']:
                     # agent_name = random.choice(self.config['agents'])
@@ -133,10 +133,15 @@ class IntrinsicParallelRunner(GeneralRunner):
                     # agent_config = config['agent']
                     raise NotImplementedError
 
-            # 업데이트 특정값 신경망 파라미터를 파일에 저장
-            if updates % 50 == 0:
-                self._save_agent()
-                self._draw_reward_plot(now_ep=updates, y_lim=[])
+                # 업데이트 특정값 신경망 파라미터를 파일에 저장
+                if updates % 20 == 0:
+                    self._save_agent()
+                    self._draw_reward_plot(now_ep=updates, y_lim=None)
+
+                update_reward = 0
+                update_fit_reward = 0
+                steps = 0
+                updates += 1
 
     def __add_index(self, env_index, action: torch.tensor):
         temp_numpy = action.numpy()

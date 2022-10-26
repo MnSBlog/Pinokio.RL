@@ -14,10 +14,12 @@ def make_lin_sequential(in_channel, out_channel, activation):
     body = nn.Sequential(
         nn.Linear(in_channel, temp_out),
         getattr(nn, activation)())
-    while temp_out > out_channel:
+    while temp_out // 2 > out_channel:
         body.append(nn.Linear(temp_out, temp_out // 2))
         body.append(getattr(nn, activation)())
         temp_out = temp_out // 2
+    body.append(nn.Linear(temp_out, out_channel))
+    body.append(getattr(nn, activation)())
     return body
 
 
@@ -55,7 +57,7 @@ class CustomTorchNetwork(nn.Module):
                                     out_channels=64,
                                     kernel_size=(2, 2), stride=(1, 1)),
                     nn.Flatten(),
-                    nn.Linear(64 * 144, config['spatial_feature']['dim_out']),
+                    nn.Linear(64 * 2209, config['spatial_feature']['dim_out']),
                     nn.ReLU()
                 )
 
