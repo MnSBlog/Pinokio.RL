@@ -200,8 +200,8 @@ class GeneralRunner:
         return actor, critic
 
     def __load_torch_models(self):
-        actor = CustomTorchNetwork(self._config['network']['actor'])
         self._config['network']['critic'] = self.__make_critic_config(self._config['network']['actor'])
+        actor = CustomTorchNetwork(self._config['network']['actor'])
         critic = CustomTorchNetwork(self._config['network']['critic'])
         return actor, critic
 
