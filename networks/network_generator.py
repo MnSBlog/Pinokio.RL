@@ -9,6 +9,20 @@ def make_sequential(in_channels, out_channels, *args, **kwargs):
                          nn.ReLU())
 
 
+def make_lin_sequential(in_channel, out_channel, activation):
+    temp_out = in_channel // 2
+    body = nn.Sequential(
+        nn.Linear(in_channel, temp_out),
+        getattr(nn, activation)())
+    while temp_out // 2 > out_channel:
+        body.append(nn.Linear(temp_out, temp_out // 2))
+        body.append(getattr(nn, activation)())
+        temp_out = temp_out // 2
+    body.append(nn.Linear(temp_out, out_channel))
+    body.append(getattr(nn, activation)())
+    return body
+
+
 class CustomTorchNetwork(nn.Module):
     def __init__(self, config):
         # critic은 자동으로 yaml을 만들어줄것
@@ -35,15 +49,15 @@ class CustomTorchNetwork(nn.Module):
                 networks['spatial_feature'] = nn.Sequential(
                     make_sequential(in_channels=config['spatial_feature']['dim_in'],
                                     out_channels=32,
-                                    kernel_size=(8, 8), stride=(4, 4)),
+                                    kernel_size=(4, 4), stride=(2, 2)),
                     make_sequential(in_channels=32,
                                     out_channels=64,
-                                    kernel_size=(4, 4), stride=(2, 2)),
+                                    kernel_size=(2, 2), stride=(1, 1)),
                     make_sequential(in_channels=64,
                                     out_channels=64,
-                                    kernel_size=(3, 3), stride=(1, 1)),
+                                    kernel_size=(2, 2), stride=(1, 1)),
                     nn.Flatten(),
-                    nn.Linear(64 * 352, config['spatial_feature']['dim_out']),
+                    nn.Linear(64 * 2209, config['spatial_feature']['dim_out']),
                     nn.ReLU()
                 )
 
@@ -63,32 +77,26 @@ class CustomTorchNetwork(nn.Module):
 
         # neck 부분
         config['neck_in'] = config['spatial_feature']['dim_out'] + config['non_spatial_feature']['dim_out']
+        config['neck_out'] = 16
         if config['use_memory_layer'] == "Raw":
             input_layer = nn.Sequential(
-                nn.Linear(config['neck_in'], config['neck_out']),
+                nn.Linear(config['neck_in'], config['neck_in'] // 2),
                 getattr(nn, config['neck_activation'])()
             )
             self.init_h_state = None
             self.recurrent = False
         else:
-            input_layer = getattr(nn, config['use_memory_layer'])(config['neck_in'], config['neck_out'],
+            input_layer = getattr(nn, config['use_memory_layer'])(config['neck_in'], config['neck_in'] // 2,
                                                                   config['memory_layer_len'], batch_first=True)
             self.init_h_state = self.get_initial_h_state(input_layer.num_layers,
                                                          input_layer.hidden_size)
             self.recurrent = True
         networks['input_layer'] = input_layer
-        # 이부분은 자동연산이 가능하도록 할 것
-        neck = nn.Sequential(
-            nn.Linear(config['neck_out'], config['neck_out'] // 2),
-            getattr(nn, config['neck_activation'])(),
-            nn.Linear(config['neck_out'] // 2, config['neck_out'] // 4),
-            getattr(nn, config['neck_activation'])(),
-            nn.Linear(config['neck_out'] // 4, config['neck_out'] // 8),
-            getattr(nn, config['neck_activation'])(),
-            nn.Linear(config['neck_out'] // 8, config['neck_out'] // 16),
-            getattr(nn, config['neck_activation'])(),
-        )
+        neck = make_lin_sequential(in_channel=config['neck_in'] // 2,
+                                   out_channel=config['neck_out'],
+                                   activation=config['neck_activation'])
         networks['neck'] = neck
+        # 민구 추가
 
         # action 부분
         self.outputs_dim = []
@@ -98,12 +106,12 @@ class CustomTorchNetwork(nn.Module):
                 self.outputs_dim.append(action_dim)
                 if config['action_mode'] == "Discrete":
                     networks[key] = nn.Sequential(
-                        nn.Linear(config['neck_out'] // 16, action_dim),
+                        nn.Linear(config['neck_out'], action_dim),
                         nn.Softmax(dim=-1)
                     )
                 else:
                     networks[key] = nn.Sequential(
-                        nn.Linear(config['neck_out'] // 16, action_dim),
+                        nn.Linear(config['neck_out'], action_dim),
                     )
             else:
                 # 연속 액션은 아직 미구현

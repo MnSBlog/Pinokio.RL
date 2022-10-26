@@ -2,7 +2,6 @@ import gym
 import torch
 import subprocess
 import threading
-from gym.core import ObsType, ActType
 from typing import Optional, Union, Tuple
 from utils.sha256_encrypt import is_valid
 from utils.zero_mq import ZmqServer
@@ -93,13 +92,13 @@ class OhtBase(gym.Env):
         seed: Optional[int] = None,
         return_info: bool = False,
         options: Optional[dict] = None,
-    ) -> Union[ObsType, Tuple[ObsType, dict]]:
+    ):
         pass
 
     def render(self, mode="human"):
         pass
 
-    def step(self, action: ActType) -> Tuple[ObsType, float, bool, dict]:
+    def step(self, action):
         pass
 
     def close(self):

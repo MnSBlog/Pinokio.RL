@@ -4,30 +4,74 @@ envs:
   debug: False
   # --- Defaults ---
   port: 49999
-  agent_type: [ -1, -1, -1, -1, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
-  enemy_type: [ -1, -1, -1, -1, -1 ] # -1: Random Agent, 0 ~ 4: Agent control, 5: Bot, 6: Human-play
-  # 0: Free 1: Malloc 2: Phore 4: Sema 4: Thread
-  first_weapon_type: [ 0, 2, 0, 2, 0, 2, 0, 2, 0, 2 ] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
-  second_weapon_type: [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
-  map_type: [1, 0] # 0: Container Map / 1: Training Map / 2: External Map / -1: Random
+  # --- Play Mode Setting ---
+  map_type: [2] # 0: Container Map / 1: Training Map / 2: One on One Map / -1: Random
+  play_mode: "one_on_one"  # single, team, team_self, human_play, one_on_one
+  play_mode_preset:
+    single:
+      agent_mode : [ 1, 0, 0, 0, 0] # 0: Bot, 1: Agent, 2: Human-play
+      enemy_mode : [ 0, 0, 0, 0, 0] # 0: Bot, 1: Agent, 2: Human-play
+      agent_type : [-1, -1, -1, -1, -1] # -1: Random Type(Character), 0: Free, 1: Malloc, 2: Phore, 3: Sema, 4: Thread
+      enemy_type : [-1, -1, -1, -1, -1] # -1: Random Type(Character), 0: Free, 1: Malloc, 2: Phore, 3: Sema, 4: Thread
+      agent_first_weapon_type : [-1, -1, -1, -1, -1] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
+      enemy_first_weapon_type : [-1, -1, -1, -1, -1] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
+      agent_second_weapon_type : [-1, -1, -1, -1, -1] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
+      enemy_second_weapon_type : [-1, -1, -1, -1, -1] # -1: Random / 0: M4A1 / 1: Kar98k / 2: M59A
+    team:
+      agent_mode: [ 1, 1, 1, 1, 1 ]
+      enemy_mode: [ 0, 0, 0, 0, 0 ]
+      agent_type: [ -1, -1, -1, -1, -1 ]
+      enemy_type: [ -1, -1, -1, -1, -1 ]
+      agent_first_weapon_type: [ -1, -1, -1, -1, -1 ]
+      enemy_first_weapon_type: [ -1, -1, -1, -1, -1 ]
+      agent_second_weapon_type: [ -1, -1, -1, -1, -1 ]
+      enemy_second_weapon_type: [ -1, -1, -1, -1, -1 ]
+    team_self:
+      agent_mode: [ 1, 1, 1, 1, 1 ]
+      enemy_mode: [ 1, 1, 1, 1, 1 ]
+      agent_type: [ -1, -1, -1, -1, -1 ]
+      enemy_type: [ -1, -1, -1, -1, -1 ]
+      agent_first_weapon_type: [ -1, -1, -1, -1, -1 ]
+      enemy_first_weapon_type: [ -1, -1, -1, -1, -1 ]
+      agent_second_weapon_type: [ -1, -1, -1, -1, -1 ]
+      enemy_second_weapon_type: [ -1, -1, -1, -1, -1 ]
+    human_play:
+      agent_mode: [ 2, 0, 0, 0, 0 ]
+      enemy_mode: [ 0, 0, 0, 0, 0 ]
+      agent_type: [ -1, -1, -1, -1, -1 ]
+      enemy_type: [ -1, -1, -1, -1, -1 ]
+      agent_first_weapon_type: [ -1, -1, -1, -1, -1 ]
+      enemy_first_weapon_type: [ -1, -1, -1, -1, -1 ]
+      agent_second_weapon_type: [ -1, -1, -1, -1, -1 ]
+      enemy_second_weapon_type: [ -1, -1, -1, -1, -1 ]
+    one_on_one:
+      agent_mode: [ 1 ]
+      enemy_mode: [ 0 ]
+      agent_type: [ -1 ]
+      enemy_type: [ -1 ]
+      agent_first_weapon_type: [ -1 ]
+      enemy_first_weapon_type: [ -1 ]
+      agent_second_weapon_type: [ -1 ]
+      enemy_second_weapon_type: [ -1 ]
   # --- Character Kinematics ---
   kinematics:
-    x_speed: 220.0 # 220.0 Left/Right sight rotation speed
-    y_speed: 100.0 # 100.0 Up/Ddown sight rotation speed
-    learn_speed: 360.0 # 360.0 Learn speed
-    rotate_speed: 180.0 # 180.0 Body rotation speed
-    move_speed: 3.0 # 3.0 Walk speed
-    view_angle: 180.0 # 180.0 Sight angle/range
-    view_radius: 20.0 # 20.0 Sight distance
+    x_speed: 220.1 # 220.0 Left/Right sight rotation speed
+    y_speed: 100.1 # 100.0 Up/Ddown sight rotation speed
+    learn_speed: 360.1 # 360.0 Learn speed
+    rotate_speed: 180.1 # 180.0 Body rotation speed
+    move_speed: 3.1 # 3.0 Walk speed
+    view_angle: 180.1 # 180.0 Sight angle/range
+    view_radius: 20.1 # 20.0 Sight distance
   # --- learning condition ---
   mode: "RealTime" # Pause or RealTime
   period: 200
   acceleration: 1.0
-  update_steps: 100
+  update_steps: 20
   save_steps: 300
   max_steps: -1 # -1: No limit
   history_path: "./History"
   trajectory_q_len: 3
+  reward_range: [-1, 3]
   # --- Algorithm condition ---
   actions: "Discrete" # Discrete or Continuous
   multi_agent: False
@@ -38,7 +82,7 @@ envs:
   next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)
   # --- Feature parameters ---
   global_resolution: 100
-  local_resolution: 30
+  local_resolution: 100
   init_height: -5
   step_info_dim: 12
   spatial_dim: 8

@@ -21,40 +21,9 @@ network:
       extension: False
       freeze: False
     # --- outputs ---
-    neck_in: 256
-    neck_out: 128
     neck_activation: "ReLU"
     n_of_actions:
       - 4
     action_mode: "Discrete" # Discrete or Continuous
-    # --- save / load ---
-    model_path: 'Networks'
-
-  critic:
-    # --- learning option ---
-    use_memory_layer: "Raw"
-    memory_layer_len: 1
-    # - State definition -
-    # --- spatial features ---
-    spatial_feature:
-      use: True
-      dim_in: 1
-      dim_out: 256
-      backbone: ''
-      freeze: False
-    # --- non-spatial features ---
-    non_spatial_feature:
-      use: False
-      dim_in: 0
-      dim_out: 0
-      extension: False
-      freeze: False
-    # --- outputs ---
-    neck_in: 256
-    neck_out: 128
-    neck_activation: "ReLU"
-    n_of_actions:
-      - 1
-    action_mode: "Continuous" # Discrete or Continuous
     # --- save / load ---
     model_path: 'Networks'

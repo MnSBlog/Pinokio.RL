@@ -4,8 +4,6 @@ import gym
 import torch
 import numpy as np
 from typing import Optional, Union, Tuple
-
-from gym.core import ObsType
 from matplotlib import pyplot as plt
 from utils.comm_manger import CommunicationManager
 import threading
@@ -58,7 +56,7 @@ class CombatStrategy(gym.Env):
         seed: Optional[int] = None,
         return_info: bool = False,
         options: Optional[dict] = None,
-    ) -> Union[ObsType, Tuple[ObsType, dict]]:
+    ):
 
         self_play = self.__envConfig['self_play']
         n_of_current_agent = self.__envConfig['agent_count']

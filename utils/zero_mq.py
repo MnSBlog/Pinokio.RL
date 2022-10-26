@@ -34,6 +34,11 @@ class ZmqClient:
         self._socket.connect("tcp://localhost:" + str(port))
 
     def send(self, msg):
-        self._socket.send(msg)
-        reply = self._socket.recv()
+        # 여기서 멈춤 리시브 못 받네
+        if isinstance(msg, str):
+            self._socket.send_string(msg)
+            reply = self._socket.recv()
+        else:
+            self._socket.send(msg)
+            reply = self._socket.recv()
         return reply
