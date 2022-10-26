@@ -39,7 +39,7 @@ class PPO(PolicyAgent):
         state = self.convert_to_torch(state)
         with torch.no_grad():
             if state['action_mask'] is not None:
-                self.actor_old.set_mask(state['action_mask'])
+                self.set_mask(state['action_mask'])
 
             actions, action_logprobs, next_hidden = self.act(state=state, hidden=self.hidden_state)
 
