@@ -133,17 +133,17 @@ class CombatStrategy(gym.Env):
         data_data = data_array.DataAsNumpy()
         data_shape = data_array.ShapeAsNumpy()
 
-        mask_array = None
-        if msg.Mask != None:
+        total_mask = None
+        if msg.MaskIsNone() is False:  # mask 있을 때
             mask_array = msg.Mask(0)
             mask_shape = mask_array.ShapeAsNumpy()
             mask_data = mask_array.DataAsNumpy()
-            mask_result = torch.tensor(mask_data.reshape(mask_shape), dtype=torch.float)
+            total_mask = torch.tensor(mask_data.reshape(mask_shape), dtype=torch.float)
 
         step_data = step_array.DataAsNumpy()
         step_shape = step_array.ShapeAsNumpy()
 
-        return torch.tensor(data_data.reshape(data_shape), dtype=torch.float), mask_result, torch.tensor(step_data.reshape(step_shape), dtype=torch.float)
+        return torch.tensor(data_data.reshape(data_shape), dtype=torch.float), total_mask, torch.tensor(step_data.reshape(step_shape), dtype=torch.float)
         #(tensor or np) 등 real state
 
     def on_received(self, message):
