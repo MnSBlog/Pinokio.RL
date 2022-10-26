@@ -178,10 +178,11 @@ class GeneralRunner:
                              + "-layer_len-" + str(self.layer_len)
                     name_list = [file for file in name_list if prefix in file]
 
-                full_list = [os.path.join(self._config['runner']['history_path'], name) for name in name_list]
-                time_sorted_list = sorted(full_list, key=os.path.getmtime)
-                last_file = time_sorted_list[-1]
-                self._agent.load(checkpoint_path=last_file)
+                if len(name_list) > 0:
+                    full_list = [os.path.join(self._config['runner']['history_path'], name) for name in name_list]
+                    time_sorted_list = sorted(full_list, key=os.path.getmtime)
+                    last_file = time_sorted_list[-1]
+                    self._agent.load(checkpoint_path=last_file)
         finally:
             pass
 
