@@ -127,7 +127,7 @@ class CustomTorchNetwork(nn.Module):
         self.n_of_heads = len(config['n_of_actions'])
         self.networks = nn.ModuleDict(networks)
         self.state_dim = config['neck_in']
-        self.action_mask = []
+        self.action_mask = None
 
     def pre_forward(self, x1, x2):
         cat_alter = []
