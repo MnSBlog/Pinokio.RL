@@ -84,7 +84,7 @@ class PPO(PolicyAgent):
             rewards = np.zeros((len(self.batch_reward), len(self.batch_reward[0])))
             batch_count = 0
             for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
-                for idx in reversed(range(len(reward))):
+                for idx in range(len(reward)):
                     if is_terminal[idx]:
                         discounted_reward = 0
                     discounted_reward = reward[idx] + (self.gamma * discounted_reward)

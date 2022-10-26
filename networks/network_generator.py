@@ -78,7 +78,7 @@ class CustomTorchNetwork(nn.Module):
         config['neck_out'] = 16
         if config['use_memory_layer'] == "Raw":
             input_layer = nn.Sequential(
-                nn.Linear(config['neck_in'], config['neck_out']),
+                nn.Linear(config['neck_in'], config['neck_in'] // 2),
                 getattr(nn, config['neck_activation'])()
             )
             self.init_h_state = None
