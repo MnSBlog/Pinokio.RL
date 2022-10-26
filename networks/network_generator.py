@@ -76,7 +76,14 @@ class CustomTorchNetwork(nn.Module):
                 config['non_spatial_feature']['dim_out'] = config['non_spatial_feature']['dim_in']
 
         # neck 부분
-        config['neck_in'] = config['spatial_feature']['dim_out'] + config['non_spatial_feature']['dim_out']
+        spatial_flag = 0
+        non_spatial_flag = 0
+        if config['spatial_feature']['use']:
+            spatial_flag = 1
+        if config['non_spatial_feature']['use']:
+            non_spatial_flag = 1
+
+        config['neck_in'] = config['spatial_feature']['dim_out'] * spatial_flag + config['non_spatial_feature']['dim_out'] * non_spatial_flag
         config['neck_out'] = 16
         if config['use_memory_layer'] == "Raw":
             input_layer = nn.Sequential(
@@ -142,12 +149,13 @@ class CustomTorchNetwork(nn.Module):
         spatial_x = x['matrix']
         non_spatial_x = x['vector']
 
+        x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
         if self.recurrent:
             self.networks['input_layer'].flatten_parameters()
+            x = x.unsqueeze(dim=1)
             x, h = self.networks['input_layer'](x, h)
-            x = x.unsqueeze(dim=0)
+            x = x.squeeze(dim=1)
         else:
-            x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
             x = self.networks['input_layer'](x)
         x = self.networks['neck'](x.data)
         outputs = []

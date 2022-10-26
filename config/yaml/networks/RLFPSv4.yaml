@@ -1,14 +1,14 @@
 network:
   actor:
     # --- learning option ---
-    obs_stack: False # should not use Memory layer with this
-    use_memory_layer: "Raw" # Raw / LSTM / GRU
+    obs_stack: True # should not use Memory layer with this
+    use_memory_layer: "GRU" # Raw / LSTM / GRU
     memory_q_len: 1
-    memory_layer_len: 1
+    memory_layer_len: 16
     # - State definition -
     # --- spatial features ---
     spatial_feature:
-      use: True
+      use: False
       dim_in: 8
       dim_out: 2048
       backbone: ''
