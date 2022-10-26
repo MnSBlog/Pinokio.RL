@@ -72,30 +72,34 @@ class PPO(PolicyAgent):
 
     def update(self, next_state=None, done=None):
         # Monte Carlo estimate of returns
-        discounted_reward = 0
-        if len(self.batch_reward[0]) == 1:
+
+        if isinstance(self.batch_reward[0], torch.Tensor):
+            discounted_reward = torch.zeros(self.batch_reward[0].shape[1])
+            rewards = np.zeros((len(self.batch_reward), self.batch_reward[0].shape[1]))
+            batch_count = 0
+            for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
+                for idx in range(reward.shape[1]):
+                    if is_terminal[0, idx]:
+                        discounted_reward[idx] = 0
+                    discounted_reward[idx] = reward[0, idx] + (self.gamma * discounted_reward[idx])
+                    rewards[batch_count, idx] = discounted_reward[idx]
+                batch_count += 1
+        else:
+            discounted_reward = 0
             rewards = []
             for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
                 if is_terminal:
                     discounted_reward = 0
                 discounted_reward = reward + (self.gamma * discounted_reward)
                 rewards.insert(0, discounted_reward)
-        else:
-            rewards = np.zeros((len(self.batch_reward), len(self.batch_reward[0])))
-            batch_count = 0
-            for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
-                for idx in range(len(reward)):
-                    if is_terminal[idx]:
-                        discounted_reward = 0
-                    discounted_reward = reward[idx] + (self.gamma * discounted_reward)
-                    rewards[batch_count, idx] = discounted_reward
-                batch_count += 1
+
 
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         rewards = rewards.squeeze()
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
-
+        if len(rewards.shape) > 1:
+            rewards = rewards.flatten()
         # convert list to tensor
         part_matrix = None
         if 'spatial_feature' in self.actor.networks:
@@ -119,10 +123,10 @@ class PPO(PolicyAgent):
             (logprobs, dist_entropy) = rtn_evaluations[0]
             if len(rtn_evaluations) > 1:
                 if len(old_logprobs.shape) > 2:
-                    old_logprobs_raw = old_logprobs[:, 0, :].squeeze()
+                    old_logprobs_raw = old_logprobs[:, 0, :].flatten()
                     for idx in range(1, len(rtn_evaluations)):
                         (logprob, entropy) = rtn_evaluations[idx]
-                        old_logprob = old_logprobs[:, idx, :].squeeze()
+                        old_logprob = old_logprobs[:, idx, :].flatten()
 
                         logprobs += logprob
                         dist_entropy += entropy
@@ -168,11 +172,10 @@ class PPO(PolicyAgent):
         for idx, output_dim in enumerate(self.actor.outputs_dim):
             if len(self.actor.outputs_dim) != 1:
                 if len(actions.shape) > 2:
-                    action = actions[:, idx, :].squeeze()
-                    dist = Categorical(outputs[:, :, last:last + output_dim])
+                    action = actions[:, idx, :].flatten()
                 else:
                     action = actions[:, idx]
-                    dist = Categorical(outputs[:, last:last + output_dim])
+                dist = Categorical(outputs[:, last:last + output_dim])
             else:
                 action = actions
                 dist = Categorical(outputs)

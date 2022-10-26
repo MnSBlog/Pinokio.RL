@@ -1,3 +1,4 @@
+import copy
 import time
 import gym
 import torch
@@ -6,6 +7,7 @@ from typing import Optional, Union, Tuple
 
 from matplotlib import pyplot as plt
 from utils.zero_mq import ZmqServer
+from utils.comm_manger import CommunicationManager
 
 
 
@@ -13,12 +15,30 @@ class SMTLotDispatching(gym.Env):
     def __init__(self, env_config):
         self.__envConfig = env_config
         self.__zmq_server = ZmqServer(self.__envConfig['port'], func=)
-
+        self.state_buffer = (None, None, None, None, None)
 
         self.initialize()
 
     def initialize(self):
+        return
 
+    def __get_observation(self):
+        # feature 시각화 함수 실행
+        while self.state_buffer[0] is None:
+            time.sleep(0.001)
+
+        state, reward, done, _, _ = copy.deepcopy(self.state_buffer)
+        self.state_buffer = (None, None, None, None, None)
+        return state, reward, done
+
+    def on_receive(self, data):
+        observation = CommunicationManager.deserialize_info(data)
+
+        state = None
+        reward = None
+        done = None
+
+        self.state_buffer = (state, reward, done, None, None)
     def step(self, action: Optional[list] = None):
         # Send action list
         begin = time.time()

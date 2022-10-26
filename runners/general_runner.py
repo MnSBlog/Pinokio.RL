@@ -20,8 +20,7 @@ class GeneralRunner:
         if "tf" in config['agent']['framework']:
             actor, critic = self.__load_tf_models()
         else:
-            actor = CustomTorchNetwork(config['network']['actor'])
-            critic = CustomTorchNetwork(config['network']['critic'])
+            actor, critic = self.__load_torch_models()
 
         # RL algorithm 생성
         algo_name = config['agent']['framework'] + config['agent_name']
@@ -124,7 +123,7 @@ class GeneralRunner:
         checkpoint_path = os.path.join(self._config['runner']['history_path'], save_name)
         self._agent.save(checkpoint_path=checkpoint_path)
 
-    def _draw_reward_plot(self, now_ep, y_lim: list, prefix_option=True):
+    def _draw_reward_plot(self, now_ep, y_lim, prefix_option=True):
         prefix = 'reward'
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
@@ -142,10 +141,10 @@ class GeneralRunner:
         plt.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
         plt.fill_between(self.reward_info['episode'],
                          self.reward_info['min'], self.reward_info['max'], alpha=0.2)
-        if y_lim is not []:
+        if y_lim is not None:
             plt.ylim(y_lim)
         title = prefix + ".png"
-        plt.savefig("figures/" + title)
+        plt.savefig(os.path.join("figures/", self._config['envs']['name'], title))
 
     def _save_reward_log(self, prefix_option=True):
         prefix = 'reward_log'
