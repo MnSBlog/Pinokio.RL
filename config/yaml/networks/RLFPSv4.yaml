@@ -8,9 +8,9 @@ network:
     # - State definition -
     # --- spatial features ---
     spatial_feature:
-      use: False
+      use: True
       dim_in: 8
-      dim_out: 2048
+      dim_out: 512
       backbone: ''
       freeze: False
     # --- non-spatial features ---

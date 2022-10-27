@@ -57,7 +57,7 @@ class CustomTorchNetwork(nn.Module):
                                     out_channels=64,
                                     kernel_size=(2, 2), stride=(1, 1)),
                     nn.Flatten(),
-                    nn.Linear(64 * 2209, config['spatial_feature']['dim_out']),
+                    nn.Linear(64 * 144, config['spatial_feature']['dim_out']),
                     nn.ReLU()
                 )
 
