@@ -65,6 +65,7 @@ envs:
     view_angle: 180.1 # 180.0 Sight angle/range
     view_radius: 20.1 # 20.0 Sight distance
   # --- learning condition ---
+
   mode: "Pause" # Pause or RealTime
   period: 200
   acceleration: 1.0
