@@ -8,7 +8,7 @@ network:
     # - State definition -
     # --- spatial features ---
     spatial_feature:
-      use: True
+      use: False
       dim_in: 8
       dim_out: 2048
       backbone: ''

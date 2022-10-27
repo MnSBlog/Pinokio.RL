@@ -6,7 +6,7 @@ envs:
   port: 49999
   # --- Play Mode Setting ---
   build_path: "./Exe/Environment.exe"
-  headless: False
+  headless: True
   map_type: [2, 2, 2] # 0: Container Map / 1: Training Map / 2: One on One Map / -1: Random
   play_mode: "one_on_one"  # single, team, team_self, human_play, one_on_one
   play_mode_preset:
