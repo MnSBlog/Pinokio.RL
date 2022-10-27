@@ -21,8 +21,8 @@ network:
       extension: False
       freeze: False
     # --- outputs ---
-    neck_in: 12
-    neck_out: 512
+    neck_in: 192
+    neck_out: 16
     neck_activation: "ReLU"
     n_of_actions:
       - 5
