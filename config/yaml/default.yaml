@@ -1,5 +1,5 @@
 # --- Modules ---
-runner_name: "IntrinsicParallelRunner" # path about StepRunner / gym / EpisodeRunner
-network_name: "RLFPSv4" # custom_network_path / torchvision.models(pre-trained)
-env_name: "RLFPSv4" # Environment name (include gym.env)
+runner_name: "StepRunner" # path about StepRunner / gym / EpisodeRunner
+network_name: "CombatStrategy" # custom_network_path / torchvision.models(pre-trained)
+env_name: "CombatStrategy" # Environment name (include gym.env)
 agent_name: "PPO" # Algorithm name

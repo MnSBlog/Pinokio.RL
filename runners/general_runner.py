@@ -156,7 +156,7 @@ class GeneralRunner:
         plt.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
         plt.fill_between(self.reward_info['episode'],
                          self.reward_info['min'], self.reward_info['max'], alpha=0.2)
-        if y_lim is not None:
+        if y_lim:
             plt.ylim(y_lim)
         title = prefix + ".png"
         plt.savefig(os.path.join("figures/", self._config['envs']['name'], title))
