@@ -21,43 +21,13 @@ network:
       extension: False
       freeze: False
     # --- outputs ---
-    neck_in: 12
-    neck_out: 512
+    neck_in: 192
+    neck_out: 16
     neck_activation: "ReLU"
     n_of_actions:
       - 5
       - 3
       - 3
     action_mode: "Discrete" # Discrete or Continuous
-    # --- save / load ---
-    model_path: 'Networks'
-
-  critic:
-    # --- learning option ---
-    use_memory_layer: "Raw"
-    memory_q_len: 16
-    memory_layer_len: 1
-    # - State definition -
-    # --- spatial features ---
-    spatial_feature:
-      use: False
-      dim_in: 0
-      dim_out: 0
-      backbone: 'resnet50'
-      freeze: False
-    # --- non-spatial features ---
-    non_spatial_feature:
-      use: True
-      dim_in: 12
-      dim_out: 12
-      extension: False
-      freeze: False
-    # --- outputs ---
-    neck_in: 4
-    neck_out: 64
-    neck_activation: "ReLU"
-    n_of_actions:
-      - 1
-    action_mode: "Continuous" # Discrete or Continuous
     # --- save / load ---
     model_path: 'Networks'

@@ -110,8 +110,9 @@ class IntrinsicParallelRunner(GeneralRunner):
             state = self._update_memory(next_state)
 
             train_reward = self._fit_reward(reward)
-            self._agent.batch_reward.append(train_reward)
-            self._agent.batch_done.append(done)
+            for idx in range(map_count):
+                self._agent.batch_reward.append(train_reward[idx])
+                self._agent.batch_done.append(done[idx])
             update_fit_reward += train_reward
             update_reward += reward
 
@@ -125,6 +126,7 @@ class IntrinsicParallelRunner(GeneralRunner):
                 else:
                     mem_reward = update_reward.item()
                 self.reward_info['memory'].append(mem_reward)
+                self.save_epi_reward.append(mem_reward)
                 self._agent.update()
                 if runner_config['self_play']:
                     # agent_name = random.choice(self.config['agents'])
@@ -136,12 +138,14 @@ class IntrinsicParallelRunner(GeneralRunner):
                 # 업데이트 특정값 신경망 파라미터를 파일에 저장
                 if updates % 20 == 0:
                     self._save_agent()
-                    self._draw_reward_plot(now_ep=updates, y_lim=None)
+                    self._draw_reward_plot(now_ep=updates, y_lim=500)
 
                 update_reward = 0
                 update_fit_reward = 0
                 steps = 0
                 updates += 1
+
+        self._save_reward_log()
 
     def __add_index(self, env_index, action: torch.tensor):
         temp_numpy = action.numpy()
@@ -167,3 +171,4 @@ class IntrinsicParallelRunner(GeneralRunner):
         train_reward = (rew - self.rew_numerator) / self.rew_gap
 
         return train_reward
+

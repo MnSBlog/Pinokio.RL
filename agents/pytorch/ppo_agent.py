@@ -39,7 +39,7 @@ class PPO(PolicyAgent):
         state = self.convert_to_torch(state)
         with torch.no_grad():
             if state['action_mask'] is not None:
-                self.actor_old.set_mask(state['action_mask'])
+                self.set_mask(state['action_mask'])
 
             actions, action_logprobs, next_hidden = self.act(state=state, hidden=self.hidden_state)
 
@@ -58,22 +58,22 @@ class PPO(PolicyAgent):
         rtn_logprob = []
         outputs, hidden = self.actor_old(x=state, h=hidden)
         last = 0
+        if self.actor_old.action_mask is not None:
+            outputs *= self.actor_old.action_mask
         for idx, output_dim in enumerate(self.actor_old.outputs_dim):
-            if len(self.actor_old.action_mask) > 0:
-                outputs[:, last:last + output_dim] *= self.actor_old.action_mask[idx]
             dist = Categorical(outputs[:, last:last + output_dim])
             action = dist.sample()
             action_logprob = dist.log_prob(action)
             rtn_action.append(action.detach())
             rtn_logprob.append(action_logprob.detach())
-            last = output_dim
+            last += output_dim
 
         return torch.stack(rtn_action, dim=0), torch.stack(rtn_logprob, dim=0), hidden
 
     def update(self, next_state=None, done=None):
         # Monte Carlo estimate of returns
 
-        if isinstance(self.batch_reward[0], torch.Tensor):
+        if max(self.batch_reward[0].shape) > 1:
             discounted_reward = torch.zeros(self.batch_reward[0].shape[1])
             rewards = np.zeros((len(self.batch_reward), self.batch_reward[0].shape[1]))
             batch_count = 0
@@ -182,7 +182,7 @@ class PPO(PolicyAgent):
             action_logprobs = dist.log_prob(action)
             dist_entropy = dist.entropy()
             rtn_evaluations.append((action_logprobs, dist_entropy))
-            last = output_dim
+            last += output_dim
 
         return rtn_evaluations
 
@@ -241,8 +241,4 @@ class PPO(PolicyAgent):
 
     def set_mask(self, mask):
         if mask is not None:
-            self.actor_old.action_mask = []
-            last = 0
-            for output_dim in self.actor_old.outputs_dim:
-                self.actor_old.action_mask.append(mask[:, last:last + output_dim])
-                last = output_dim
+            self.actor_old.action_mask = mask

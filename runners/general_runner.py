@@ -36,7 +36,7 @@ class GeneralRunner:
             self._load_pretrain_network()
 
         # state
-        self.memory_q = {'matrix': [], 'vector': []}
+        self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
 
         # Calculate information
         self.save_epi_reward = []
@@ -58,6 +58,11 @@ class GeneralRunner:
         plt.clf()
 
     def _fit_reward(self, rew):
+        if self.rew_max < rew:
+            rew = torch.tensor(self.rew_max, dtype=torch.float)
+        if self.rew_min > rew:
+            rew = torch.tensor(self.rew_min, dtype=torch.float)
+
         if self.rew_min > rew:
             print('reward min is updated: ', rew)
             self.rew_min = rew
@@ -81,6 +86,8 @@ class GeneralRunner:
                 self.memory_q['matrix'].append(state['matrix'])
             if len(state['vector']) > 0:
                 self.memory_q['vector'].append(state['vector'])
+            if len(state['action_mask']) > 0:
+                self.memory_q['action_mask'].append(state['action_mask'])
         else:
             if len(state.shape) > 1:
                 state = np.expand_dims(state[:, :, 0], axis=0)
@@ -92,7 +99,7 @@ class GeneralRunner:
         self.memory_q = {'matrix': [], 'vector': []}
 
     def _update_memory(self, state=None):
-        matrix_obs, vector_obs = [], []
+        matrix_obs, vector_obs, mask_obs = [], [], []
 
         if state is not None:
             self._insert_q(state)
@@ -105,6 +112,10 @@ class GeneralRunner:
             if len(self.memory_q['vector']) > 0:
                 vector_obs = torch.cat(self.memory_q['vector'], dim=1).detach()
                 self.memory_q['vector'].pop(0)
+
+            if len(self.memory_q['action_mask']) > 0:
+                mask_obs = self.memory_q['action_mask'][-1]
+                self.memory_q['action_mask'].pop(0)
         else:
             if len(self.memory_q['matrix']) > 0:
                 matrix_obs = np.concatenate(self.memory_q['matrix'], axis=0)
@@ -114,7 +125,11 @@ class GeneralRunner:
                 vector_obs = np.concatenate(self.memory_q['vector'], axis=0)
                 self.memory_q['vector'].pop(0)
 
-        state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': None}
+            if len(self.memory_q['action_mask']) > 0:
+                mask_obs = self.memory_q['action_mask'][-1]
+                self.memory_q['action_mask'].pop(0)
+
+        state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': mask_obs}
         return state
 
     def _save_agent(self, prefix_option=True):
@@ -145,7 +160,7 @@ class GeneralRunner:
         plt.fill_between(self.reward_info['episode'],
                          self.reward_info['min'], self.reward_info['max'], alpha=0.2)
         if y_lim is not None:
-            plt.ylim(y_lim)
+            plt.ylim(0, y_lim)
         title = prefix + ".png"
         plt.savefig(os.path.join("figures/", self._config['env_name'], title))
 
@@ -167,10 +182,11 @@ class GeneralRunner:
                              + "-layer_len-" + str(self.layer_len)
                     name_list = [file for file in name_list if prefix in file]
 
-                full_list = [os.path.join(self._config['runner']['history_path'], name) for name in name_list]
-                time_sorted_list = sorted(full_list, key=os.path.getmtime)
-                last_file = time_sorted_list[-1]
-                self._agent.load(checkpoint_path=last_file)
+                if len(name_list) > 0:
+                    full_list = [os.path.join(self._config['runner']['history_path'], name) for name in name_list]
+                    time_sorted_list = sorted(full_list, key=os.path.getmtime)
+                    last_file = time_sorted_list[-1]
+                    self._agent.load(checkpoint_path=last_file)
         finally:
             pass
 
