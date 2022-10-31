@@ -46,6 +46,7 @@ class CustomTorchNetwork(nn.Module):
                 spatial_processor.append(backbone)
                 networks['spatial_feature'] = spatial_processor
             else:
+                shape = config['spatial_feature']['shape']
                 networks['spatial_feature'] = nn.Sequential(
                     make_sequential(in_channels=config['spatial_feature']['dim_in'],
                                     out_channels=32,
@@ -57,7 +58,7 @@ class CustomTorchNetwork(nn.Module):
                                     out_channels=64,
                                     kernel_size=(2, 2), stride=(1, 1)),
                     nn.Flatten(),
-                    nn.Linear(64 * 2209, config['spatial_feature']['dim_out']),
+                    nn.Linear(64 * (shape[0] // 2 - 3) * (shape[1] // 2 - 3), config['spatial_feature']['dim_out']),
                     nn.ReLU()
                 )
 
