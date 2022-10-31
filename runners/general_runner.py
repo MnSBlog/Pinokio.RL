@@ -168,7 +168,7 @@ class GeneralRunner:
         prefix = 'reward_log'
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
-        filename = "./history" + self._config['envs']['name'] + prefix + '_epi_reward.txt'
+        filename = os.path.join("./history", self._config['envs']['name'], prefix + '_epi_reward.txt')
         np.savetxt(filename, self.save_epi_reward)
         self._draw_reward_plot(now_ep=cnt, y_lim=None)
 
