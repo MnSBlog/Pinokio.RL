@@ -11,7 +11,6 @@ from agents.general_agent import GeneralAgent
 from networks.network_generator import CustomTorchNetwork
 
 
-## Design patter을 다시 생각해서 할 것
 class GeneralRunner:
     def __init__(self, config: dict, env: gym.Env):
         self._config = config
@@ -26,10 +25,6 @@ class GeneralRunner:
         algo_name = config['agent']['framework'] + config['agent_name']
         self._agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self._config['agent'],
                                                               actor=actor, critic=critic)
-        # Public information
-        self.memory_len = self._config['network']['actor']['memory_q_len']
-        self.layer_len = self._config['network']['actor']['memory_layer_len']
-        self.network_type = self._config['network']['actor']['use_memory_layer']
 
         # Pretrain(이어하기 조건)
         if self._config['runner']['pretrain']:
@@ -39,7 +34,7 @@ class GeneralRunner:
         self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
 
         # Calculate information
-        self.save_epi_reward = []
+        self.save_batch_reward = []
         self.reward_info = {'mu': [0], 'max': [0], 'min': [0], 'episode': [0], 'memory': []}
         self.rew_min = self._config['envs']['reward_range'][0]
         self.rew_max = self._config['envs']['reward_range'][1]
@@ -49,20 +44,76 @@ class GeneralRunner:
         fig = plt.figure()
         self.torch_state = False
 
+        # Public information
+        self.memory_len = self._config['network']['actor']['memory_q_len']
+        self.layer_len = self._config['network']['actor']['memory_layer_len']
+        self.network_type = self._config['network']['actor']['use_memory_layer']
+
+        # Public variables
+        self.count, self.batch_reward, self.done = 0, 0, False
+
     def run(self):
         pass
 
     def plot_result(self):
-        plt.plot(self.save_epi_reward)
+        plt.plot(self.save_batch_reward)
         plt.show()
         plt.clf()
 
-    def _fit_reward(self, rew):
-        if self.rew_max < rew:
-            rew = torch.tensor(self.rew_max, dtype=torch.float)
-        if self.rew_min > rew:
-            rew = torch.tensor(self.rew_min, dtype=torch.float)
+    def _env_init(self, reset_env=False):
+        self.count, self.batch_reward = 0, 0
+        state = None
+        if reset_env:
+            self.done = False
+            self._clear_state_memory()
+            ret = self._env.reset()
+            state = ret[0]
+            for _ in range(self.memory_len):
+                self._insert_q(state)
 
+            state = self._update_memory()
+        return state
+
+    def _interaction(self, action):
+        # 다음 상태, 보상 관측
+        state, reward, done, trunc, info = self._env.step(action)
+        done |= trunc
+        state = self._update_memory(state)
+
+        train_reward = self._fit_reward(reward)
+        self._agent.batch_reward.append(train_reward)
+        self._agent.batch_done.append(done)
+        self.count += 1
+        self.batch_reward += reward
+        self.done = done
+        return state
+
+    def _select_action(self, state):
+        action = self._agent.select_action(state)
+
+        if torch.is_tensor(action):
+            action = action.squeeze()
+            if len(action.shape) == 0:
+                action = action.item()
+        return action
+
+    def _update_agent(self, next_state):
+        if len(self._agent.batch_reward) >= self._config['runner']['batch_size']:
+            # 학습 추출
+            self._agent.update(next_state=next_state, done=self.done)
+            return True
+        else:
+            return False
+
+    def _sweep_cycle(self, itr):
+        self.reward_info['memory'].append(self.batch_reward)
+        self.save_batch_reward.append(self.batch_reward)
+        # 업데이트 특정값 신경망 파라미터를 파일에 저장
+        if itr % self._config['runner']['draw_interval'] == 0:
+            self._save_agent()
+            self._draw_reward_plot(now_ep=itr, y_lim=[0, 500])
+
+    def _fit_reward(self, rew):
         if self.rew_min > rew:
             print('reward min is updated: ', rew)
             self.rew_min = rew
@@ -95,7 +146,7 @@ class GeneralRunner:
             else:
                 self.memory_q['vector'].append(state)
 
-    def _clear_memory(self):
+    def _clear_state_memory(self):
         self.memory_q = {'matrix': [], 'vector': []}
 
     def _update_memory(self, state=None):
@@ -169,7 +220,7 @@ class GeneralRunner:
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
         filename = os.path.join("./history", self._config['envs']['name'], prefix + '_epi_reward.txt')
-        np.savetxt(filename, self.save_epi_reward)
+        np.savetxt(filename, self.save_batch_reward)
         self._draw_reward_plot(now_ep=cnt, y_lim=None)
 
     def _load_pretrain_network(self, prefix_option=True):
