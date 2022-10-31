@@ -29,7 +29,7 @@ class RLFPSv4(gym.Env):
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
         if self.__envConfig['headless']:
             command = os.path.abspath(self.__envConfig['build_path']) + " -commPort " + str(self.__envConfig["port"])
-            subprocess.Popen(command, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
+            subprocess.Popen(command, shell=True, stdin=None, stdout=subprocess.DEVNULL, stderr=None, close_fds=True)
         self.initialize()
 
     def initialize(self):

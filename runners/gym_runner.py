@@ -19,6 +19,7 @@ class GymRunner(GeneralRunner):
         for ep in range(1, self._config['runner']['max_episode_num'] + 1):
             # 에피소드 초기화
             step, episode_reward, done = 0, 0, False
+            self._clear_memory()
             # 환경 초기화 및 초기 상태 관측 및 큐
             ret = self._env.reset()
             state = ret[0]
@@ -57,10 +58,10 @@ class GymRunner(GeneralRunner):
             # 업데이트 특정값 신경망 파라미터를 파일에 저장
             if ep % 100 == 0:
                 self._save_agent()
-                self._draw_reward_plot(now_ep=ep, y_lim=[])
+                self._draw_reward_plot(now_ep=ep, y_lim=[0, 500])
 
         # 학습이 끝난 후, 누적 보상값 저장
-        self._save_reward_log()
+        self._save_reward_log(ep)
         self._env.close()
 
 
@@ -96,7 +97,6 @@ class ParallelGymRunner:
                     sub_config['env_name'] = env_name
                     sub_config = self.update_config(config=sub_config, key='envs', name=env_name)
                     sub_config['network']['actor']['memory_q_len'] = q_len
-                    sub_config['network']['critic']['memory_q_len'] = q_len
                     sub_config['network']['actor']['use_memory_layer'] = layer_len
                     args.append(sub_config)
 

@@ -6,8 +6,8 @@ envs:
   port: 49999
   # --- Play Mode Setting ---
   build_path: "./Exe/Environment.exe"
-  headless: False
-  map_type: [2, 2, 2] # 0: Container Map / 1: Training Map / 2: One on One Map / -1: Random
+  headless: False # True, False
+  map_type: [2, 3, 4] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hole / -1: Random
   play_mode: "one_on_one"  # single, team, team_self, human_play, one_on_one
   play_mode_preset:
     single:
@@ -65,7 +65,8 @@ envs:
     view_angle: 180.1 # 180.0 Sight angle/range
     view_radius: 20.1 # 20.0 Sight distance
   # --- learning condition ---
-  mode: "RealTime" # Pause or RealTime
+
+  mode: "Pause" # Pause or RealTime
   period: 200
   acceleration: 1.0
   update_steps: 20
@@ -83,8 +84,8 @@ envs:
   init_n_of_enemy: 1
   next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)
   # --- Feature parameters ---
-  global_resolution: 100
-  local_resolution: 100
+  global_resolution: 30
+  local_resolution: 30
   init_height: -5
   step_info_dim: 12
   spatial_dim: 8

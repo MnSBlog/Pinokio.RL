@@ -9,6 +9,7 @@ network:
     # --- spatial features ---
     spatial_feature:
       use: True
+      shape: [210, 160]
       dim_in: 1
       dim_out: 512
       backbone: ''

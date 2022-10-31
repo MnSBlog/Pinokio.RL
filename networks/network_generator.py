@@ -46,6 +46,7 @@ class CustomTorchNetwork(nn.Module):
                 spatial_processor.append(backbone)
                 networks['spatial_feature'] = spatial_processor
             else:
+                shape = config['spatial_feature']['shape']
                 networks['spatial_feature'] = nn.Sequential(
                     make_sequential(in_channels=config['spatial_feature']['dim_in'],
                                     out_channels=32,
@@ -57,7 +58,7 @@ class CustomTorchNetwork(nn.Module):
                                     out_channels=64,
                                     kernel_size=(2, 2), stride=(1, 1)),
                     nn.Flatten(),
-                    nn.Linear(64 * 2209, config['spatial_feature']['dim_out']),
+                    nn.Linear(64 * (shape[0] // 2 - 3) * (shape[1] // 2 - 3), config['spatial_feature']['dim_out']),
                     nn.ReLU()
                 )
 
@@ -76,14 +77,7 @@ class CustomTorchNetwork(nn.Module):
                 config['non_spatial_feature']['dim_out'] = config['non_spatial_feature']['dim_in']
 
         # neck 부분
-        spatial_flag = 0
-        non_spatial_flag = 0
-        if config['spatial_feature']['use']:
-            spatial_flag = 1
-        if config['non_spatial_feature']['use']:
-            non_spatial_flag = 1
-
-        config['neck_in'] = config['spatial_feature']['dim_out'] * spatial_flag + config['non_spatial_feature']['dim_out'] * non_spatial_flag
+        config['neck_in'] = config['spatial_feature']['dim_out'] + config['non_spatial_feature']['dim_out']
         config['neck_out'] = 16
         if config['use_memory_layer'] == "Raw":
             input_layer = nn.Sequential(
@@ -127,7 +121,7 @@ class CustomTorchNetwork(nn.Module):
         self.n_of_heads = len(config['n_of_actions'])
         self.networks = nn.ModuleDict(networks)
         self.state_dim = config['neck_in']
-        self.action_mask = None
+        self.action_mask = []
 
     def pre_forward(self, x1, x2):
         cat_alter = []
@@ -149,13 +143,12 @@ class CustomTorchNetwork(nn.Module):
         spatial_x = x['matrix']
         non_spatial_x = x['vector']
 
-        x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
         if self.recurrent:
             self.networks['input_layer'].flatten_parameters()
-            x = x.unsqueeze(dim=1)
             x, h = self.networks['input_layer'](x, h)
-            x = x.squeeze(dim=1)
+            x = x.unsqueeze(dim=0)
         else:
+            x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
             x = self.networks['input_layer'](x)
         x = self.networks['neck'](x.data)
         outputs = []

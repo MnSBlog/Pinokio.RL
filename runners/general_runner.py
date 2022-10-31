@@ -95,6 +95,9 @@ class GeneralRunner:
             else:
                 self.memory_q['vector'].append(state)
 
+    def _clear_memory(self):
+        self.memory_q = {'matrix': [], 'vector': []}
+
     def _update_memory(self, state=None):
         matrix_obs, vector_obs, mask_obs = [], [], []
 
@@ -138,7 +141,7 @@ class GeneralRunner:
         checkpoint_path = os.path.join(self._config['runner']['history_path'], save_name)
         self._agent.save(checkpoint_path=checkpoint_path)
 
-    def _draw_reward_plot(self, now_ep, y_lim, prefix_option=True):
+    def _draw_reward_plot(self, now_ep, y_lim=None, prefix_option=True):
         prefix = 'reward'
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
@@ -156,17 +159,18 @@ class GeneralRunner:
         plt.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
         plt.fill_between(self.reward_info['episode'],
                          self.reward_info['min'], self.reward_info['max'], alpha=0.2)
-        if y_lim:
-            plt.ylim(y_lim)
+        if y_lim is not None:
+            plt.ylim(0, y_lim)
         title = prefix + ".png"
-        plt.savefig(os.path.join("figures/", self._config['envs']['name'], title))
+        plt.savefig(os.path.join("figures/", self._config['env_name'], title))
 
-    def _save_reward_log(self, prefix_option=True):
+    def _save_reward_log(self, cnt, prefix_option=True):
         prefix = 'reward_log'
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
         filename = "./history" + self._config['envs']['name'] + prefix + '_epi_reward.txt'
         np.savetxt(filename, self.save_epi_reward)
+        self._draw_reward_plot(now_ep=cnt, y_lim=None)
 
     def _load_pretrain_network(self, prefix_option=True):
         try:
