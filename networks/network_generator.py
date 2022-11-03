@@ -142,13 +142,13 @@ class CustomTorchNetwork(nn.Module):
     def forward(self, x, h=None):
         spatial_x = x['matrix']
         non_spatial_x = x['vector']
-
+        x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
         if self.recurrent:
             self.networks['input_layer'].flatten_parameters()
+            x = x.unsqueeze(dim=1)
             x, h = self.networks['input_layer'](x, h)
             x = x.unsqueeze(dim=0)
         else:
-            x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
             x = self.networks['input_layer'](x)
         x = self.networks['neck'](x.data)
         outputs = []

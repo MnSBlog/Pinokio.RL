@@ -38,7 +38,7 @@ class PPO(PolicyAgent):
     def select_action(self, state):
         state = self.convert_to_torch(state)
         with torch.no_grad():
-            if state['action_mask'] is not None:
+            if len(state['action_mask']) > 0:
                 self.set_mask(state['action_mask'])
 
             actions, action_logprobs, next_hidden = self.act(state=state, hidden=self.hidden_state)
@@ -58,7 +58,7 @@ class PPO(PolicyAgent):
         rtn_logprob = []
         outputs, hidden = self.actor_old(x=state, h=hidden)
         last = 0
-        if self.actor_old.action_mask is not None:
+        if len(self.actor_old.action_mask) > 0:
             outputs *= self.actor_old.action_mask
         for idx, output_dim in enumerate(self.actor_old.outputs_dim):
             dist = Categorical(outputs[:, last:last + output_dim])
@@ -227,7 +227,7 @@ class PPO(PolicyAgent):
             spatial_x = spatial_x.to(self.device)
 
         if torch.is_tensor(mask) is False:
-            if mask is not None:
+            if len(mask) > 0:
                 mask = torch.tensor(mask, dtype=torch.float).to(self.device)
                 mask = mask.unsqueeze(dim=0)
         else:
@@ -240,5 +240,5 @@ class PPO(PolicyAgent):
         return state
 
     def set_mask(self, mask):
-        if mask is not None:
+        if len(mask) > 0:
             self.actor_old.action_mask = mask

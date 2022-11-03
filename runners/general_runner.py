@@ -26,10 +26,6 @@ class GeneralRunner:
         self._agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self._config['agent'],
                                                               actor=actor, critic=critic)
 
-        # Pretrain(이어하기 조건)
-        if self._config['runner']['pretrain']:
-            self._load_pretrain_network()
-
         # state
         self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
 
@@ -51,6 +47,10 @@ class GeneralRunner:
 
         # Public variables
         self.count, self.batch_reward, self.done = 0, 0, False
+
+        # Pretrain(이어하기 조건)
+        if self._config['runner']['pretrain']:
+            self._load_pretrain_network()
 
     def run(self):
         pass
@@ -147,7 +147,7 @@ class GeneralRunner:
                 self.memory_q['vector'].append(state)
 
     def _clear_state_memory(self):
-        self.memory_q = {'matrix': [], 'vector': []}
+        self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
 
     def _update_memory(self, state=None):
         matrix_obs, vector_obs, mask_obs = [], [], []
@@ -199,7 +199,7 @@ class GeneralRunner:
 
         mu = np.mean(self.reward_info['memory'])
         sigma = np.std(self.reward_info['memory'])
-
+        mu = mu + (2 * sigma)
         self.reward_info['mu'].append(mu)
         self.reward_info['max'].append(mu + (0.5 * sigma))
         self.reward_info['min'].append(mu - (0.5 * sigma))
@@ -211,17 +211,16 @@ class GeneralRunner:
         plt.fill_between(self.reward_info['episode'],
                          self.reward_info['min'], self.reward_info['max'], alpha=0.2)
         if y_lim is not None:
-            plt.ylim(0, y_lim)
+            plt.ylim(y_lim)
         title = prefix + ".png"
         plt.savefig(os.path.join("figures/", self._config['env_name'], title))
 
-    def _save_reward_log(self, cnt, prefix_option=True):
+    def _save_reward_log(self, prefix_option=True):
         prefix = 'reward_log'
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
-        filename = os.path.join("./history", self._config['envs']['name'], prefix + '_epi_reward.txt')
+        filename = os.path.join("./history", self._config['env_name'], prefix + '_epi_reward.txt')
         np.savetxt(filename, self.save_batch_reward)
-        self._draw_reward_plot(now_ep=cnt, y_lim=None)
 
     def _load_pretrain_network(self, prefix_option=True):
         try:

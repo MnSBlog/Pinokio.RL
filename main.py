@@ -17,7 +17,7 @@ def load_config(form="yaml"):
     config = config_loader.final_config_dict
     module_list = []
     for key, value in config.items():
-        if isinstance(key, str):
+        if isinstance(value, str):
             key = key.replace('_name', 's')
             module_path = os.path.join(key, value)
             module_list.append(module_path)
