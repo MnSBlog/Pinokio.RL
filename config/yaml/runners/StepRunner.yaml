@@ -13,7 +13,7 @@ runner:
   history_path: "./history"
   best_model_root: "Best"
   condition_path: "./config/AlgoCondition.xlsx"
-  save_interval: 100
+  draw_interval: 100
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1

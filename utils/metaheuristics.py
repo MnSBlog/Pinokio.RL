@@ -5,13 +5,12 @@ import random
 
 class Solver:
     def __init__(self, **kwargs):
-        inputs = ['parameters', 'terminal_function', 'test_function', 'operation']
+        inputs = ['parameters', 'test_function']
         for k in inputs:
             if k not in kwargs:
                 raise "Please set " + k
 
         self._Parameters = kwargs['parameters']
-        self._IsTerminal = kwargs['terminal_function']
         self._TestFunc = kwargs['test_function']
 
     def __getitem__(self, key):
@@ -21,6 +20,9 @@ class Solver:
         pass
 
     def close(self, forced=False):
+        pass
+
+    def is_terminal(self):
         pass
 
 
@@ -37,12 +39,16 @@ class HarmonySearch(Solver):
             self.__hm['output'].append(0.0)
             self.__hm['value'].append(self.__gen_memory())
 
+        self.not_update_memory = 0
+
     def start(self):
         short_term_memory = copy.deepcopy(self.__hm['value'])
 
-        while self._IsTerminal() is False:
+        while self.is_terminal() is False:
             with Pool(self.__hms) as p:
                 new_output = p.map(self._TestFunc, short_term_memory)
+
+            worst_output = copy.deepcopy(self.__hm['output'][-1])
             outputs = self.__hm['output'] + new_output
             short_term_memory = self.__hm['value'] + short_term_memory
 
@@ -50,13 +56,22 @@ class HarmonySearch(Solver):
             sorted_index = sorted(index, key=lambda k: outputs[k], reverse=True)
             self.__hm['value'] = short_term_memory[:sorted_index[:self.__hms]]
             self.__hm['output'] = outputs[:sorted_index[:self.__hms]]
+
+            if worst_output < self.__hm['output'][-1]:
+                self.not_update_memory = 0
+            else:
+                self.not_update_memory += 1
+
             short_term_memory = self.__next_harmony()
 
     def close(self, forced=False):
-        if forced or self._IsTerminal():
+        if forced or self.is_terminal():
             return self.__hm['value'][0], self.__hm['output'][0]
         else:
             return None, None
+
+    def is_terminal(self):
+        return self.not_update_memory >= 10
 
     def __gen_memory(self):
         value = dict()

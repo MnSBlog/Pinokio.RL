@@ -1,6 +1,6 @@
 runner:
   # --- Defaults ---
-  max_iteration_num: 1000
+  max_iteration_num: 300
   pretrain: True
   render: False
   off_pg: False
@@ -11,6 +11,7 @@ runner:
   # --- Operation options ---
   use_cuda: True # Use gpu by default unless it isn't available
   history_path: "./history"
+  figure_path: "./figures"
   best_model_root: "Best"
   condition_path: "./config/AlgoCondition.xlsx"
   draw_interval: 20

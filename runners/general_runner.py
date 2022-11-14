@@ -41,7 +41,8 @@ class GeneralRunner:
         self.torch_state = False
 
         # Public information
-        self.memory_len = self._config['network']['actor']['memory_q_len']
+        self.memory_len = max(self._config['network']['actor']['spatial_feature']['memory_q_len'],
+                              self._config['network']['actor']['non_spatial_feature']['memory_q_len'])
         self.layer_len = self._config['network']['actor']['memory_layer_len']
         self.network_type = self._config['network']['actor']['use_memory_layer']
 
@@ -134,17 +135,21 @@ class GeneralRunner:
         if isinstance(state, dict):
             self.torch_state = True
             if len(state['matrix']) > 0:
-                self.memory_q['matrix'].append(state['matrix'])
+                if self._config['network']['actor']['non_spatial_feature']['memory_q_len'] > len(self.memory_q['matrix']):
+                    self.memory_q['matrix'].append(state['matrix'])
             if len(state['vector']) > 0:
-                self.memory_q['vector'].append(state['vector'])
+                if self._config['network']['actor']['spatial_feature']['memory_q_len'] > len(self.memory_q['vector']):
+                    self.memory_q['vector'].append(state['vector'])
             if len(state['action_mask']) > 0:
                 self.memory_q['action_mask'].append(state['action_mask'])
         else:
             if len(state.shape) > 1:
-                state = np.expand_dims(state[:, :, 0], axis=0)
-                self.memory_q['matrix'].append(state)
+                if self._config['network']['actor']['non_spatial_feature']['memory_q_len'] > len(self.memory_q['matrix']):
+                    state = np.expand_dims(state[:, :, 0], axis=0)
+                    self.memory_q['matrix'].append(state)
             else:
-                self.memory_q['vector'].append(state)
+                if self._config['network']['actor']['spatial_feature']['memory_q_len'] > len(self.memory_q['vector']):
+                    self.memory_q['vector'].append(state)
 
     def _clear_state_memory(self):
         self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}

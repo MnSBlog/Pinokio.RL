@@ -2,12 +2,13 @@ network:
   actor:
     # --- learning option ---
     obs_stack: True # should not use Memory layer with this
-    use_memory_layer: ["Raw", "GRU"] # Raw / LSTM / GRU
-    memory_q_len: [1, 4, 16, 32]
+    use_memory_layer: "Raw" # Raw / LSTM / GRU
+    memory_q_len: "local" # Integer / List / String(Local)
     memory_layer_len: 4
     # - State definition -
     # --- spatial features ---
     spatial_feature:
+      memory_q_len: 4
       use: False
       dim_in: 0
       dim_out: 0
@@ -15,13 +16,13 @@ network:
       freeze: False
     # --- non-spatial features ---
     non_spatial_feature:
+      memory_q_len: 4
       use: True
       dim_in: 4
       dim_out: 64
       extension: True
       freeze: False
     # --- outputs ---
-    neck_in: 12
     neck_out: 16
     neck_activation: "ReLU"
     n_of_actions:

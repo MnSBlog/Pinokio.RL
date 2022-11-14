@@ -31,7 +31,11 @@ class CustomTorchNetwork(nn.Module):
 
         # Spatial feature network 정의
         if config['spatial_feature']['use']:
-            config['spatial_feature']['dim_in'] = config['spatial_feature']['dim_in'] * config['memory_q_len']
+            if isinstance(config['memory_q_len'], str):
+                local_len = config['spatial_feature']['memory_q_len']
+            else:
+                local_len = config['memory_q_len']
+            config['spatial_feature']['dim_in'] = config['spatial_feature']['dim_in'] * local_len
             if config['spatial_feature']['backbone'] != '':
                 spatial_processor = make_sequential(in_channels=config['spatial_feature']['dim_in'],
                                                     out_channels=config['spatial_feature']['dim_in'] // 2,
@@ -61,10 +65,15 @@ class CustomTorchNetwork(nn.Module):
                     nn.Linear(64 * (shape[0] // 2 - 3) * (shape[1] // 2 - 3), config['spatial_feature']['dim_out']),
                     nn.ReLU()
                 )
-
+        else:
+            config['non_spatial_feature']['dim_out'] = 0
         # non-spatial feature network 정의
         if config['non_spatial_feature']['use']:
-            config['non_spatial_feature']['dim_in'] = config['non_spatial_feature']['dim_in'] * config['memory_q_len']
+            if isinstance(config['memory_q_len'], str):
+                local_len = config['non_spatial_feature']['memory_q_len']
+            else:
+                local_len = config['memory_q_len']
+            config['non_spatial_feature']['dim_in'] = config['non_spatial_feature']['dim_in'] * local_len
             if config['non_spatial_feature']['extension']:
                 vector_processor = nn.Sequential(
                     nn.Conv1d(in_channels=config['non_spatial_feature']['dim_in'],
@@ -75,10 +84,11 @@ class CustomTorchNetwork(nn.Module):
                 networks['non_spatial_feature'] = vector_processor
             else:
                 config['non_spatial_feature']['dim_out'] = config['non_spatial_feature']['dim_in']
+        else:
+            config['spatial_feature']['dim_out'] = 0
 
         # neck 부분
         config['neck_in'] = config['spatial_feature']['dim_out'] + config['non_spatial_feature']['dim_out']
-        config['neck_out'] = 16
         if config['use_memory_layer'] == "Raw":
             input_layer = nn.Sequential(
                 nn.Linear(config['neck_in'], config['neck_in'] // 2),
