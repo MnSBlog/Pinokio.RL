@@ -49,15 +49,16 @@ def update_config(old_config, update_note):
     network_config['use_memory_layer'] = "GRU" if update_note['neck-use_rnn'] else "Raw"
     if network_config['non_spatial_feature']['use']:
         network_config['non_spatial_feature']['memory_layer_len'] = update_note['vector-stacking']
+        network_config['non_spatial_feature']['num_layer'] = update_note['vector-layer_num']
+        network_config['non_spatial_feature']['use_cnn'] = update_note['vector-use_cnn']
+        network_config['non_spatial_feature']['extension'] = update_note['vector-use_extension']
         network_config['non_spatial_feature']['dim_out'] = update_note['vector-output_node']
-
-        update_note['vector-use_cnn']
-        update_note['vector-layer_num']
 
     if network_config['spatial_feature']['use']:
         network_config['spatial_feature']['memory_layer_len'] = update_note['matrix-stacking']
         network_config['spatial_feature']['dim_out'] = update_note['matrix-output_node']
-        update_note['matrix-layer_num']
+        network_config['non_spatial_feature']['num_layer'] = update_note['matrix-layer_num']
+
 
     update_note['neck-layer_num']
     update_note['neck-use_rnn']
