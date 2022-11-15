@@ -1,26 +1,26 @@
-network-spatial_feature-stacking:
+network-actor-non_spatial_feature-memory_q_len:
   min: 1
   max: 64
-network-spatial_feature-use_extension: [True, False]
-network-spatial_feature-use_cnn: [True, False]
-network-spatial_feature-layer_num:
+network-actor-non_spatial_feature-extension: [True, False]
+network-actor-non_spatial_feature-use_cnn: [True, False]
+network-actor-non_spatial_feature-num_layer:
   min: 1
   max: 4
-network-spatial_feature-output_node: [16, 32, 64, 128, 256, 512, 1024]
-network-non_spatial_feature-stacking:
+network-actor-non_spatial_feature-dim_out: [16, 32, 64, 128, 256, 512, 1024]
+network-actor-spatial_feature-memory_q_len:
   min: 1
   max: 64
-network-non_spatial_feature-layer_num:
+network-actor-spatial_feature-num_layer:
   min: 1
   max: 4
-network-non_spatial_feature-output_node: [16, 32, 64, 128, 256, 512, 1024]
-network-neck_layer_num:
+network-actor-spatial_feature-dim_out: [16, 32, 64, 128, 256, 512, 1024]
+network-actor-neck_num_layer:
   min: 1
   max: 4
-network-neck_use_rnn_num:
+network-actor-num_memory_layer:
   min: 0
   max: 8
-network-neck_out: [8, 16, 32, 64, 128, 256]
+network-actor-neck_out: [8, 16, 32, 64, 128, 256]
 agent-loss_function: ["CrossEntropyLoss", "MSELoss", "L1Loss"]
 agent-optimizer: ['SGD','Adam','AdaGrad','RMSprop']
 runner-batch_size:

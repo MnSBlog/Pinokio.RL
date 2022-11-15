@@ -7,8 +7,8 @@ class AutoRLRunner(GeneralRunner):
     def __init__(self, config: dict, env: gym.Env):
         super(AutoRLRunner, self).__init__(config, env)
 
-        if os.path.exists(os.path.join(self._config['figure_path'], config['env_name'])) is False:
-            os.mkdir(os.path.join(self._config['figure_path'], config['env_name']))
+        if os.path.exists(os.path.join(self._config['runner']['figure_path'], config['env_name'])) is False:
+            os.mkdir(os.path.join(self._config['runner']['figure_path'], config['env_name']))
 
     def run(self):
         reward_sum = 0.0

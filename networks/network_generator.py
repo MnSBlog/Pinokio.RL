@@ -9,63 +9,42 @@ def make_sequential(in_channels, out_channels, *args, **kwargs):
                          nn.ReLU())
 
 
-def make_lin_sequential(in_channel, out_channel, activation, num_layer="auto"):
-    if num_layer == "auto":
-        temp_out = in_channel // 2
-        body = nn.Sequential(
-            nn.Linear(in_channel, temp_out),
-            getattr(nn, activation)())
-        while temp_out // 2 > out_channel:
-            body.append(nn.Linear(temp_out, temp_out // 2))
-            body.append(getattr(nn, activation)())
-            temp_out = temp_out // 2
-        body.append(nn.Linear(temp_out, out_channel))
-        body.append(getattr(nn, activation)())
-
-    elif isinstance(num_layer, int):
-        num_layer -= 1
+def make_lin_sequential(in_channel, out_channel, activation, num_layer):
+    num_layer -= 1
+    if num_layer == 0:
+        sep = out_channel
+    else:
         sep = (out_channel - in_channel) / num_layer
         sep = int(sep) + in_channel
-        body = nn.Sequential(
-            nn.Linear(in_channel, sep),
-            getattr(nn, activation)())
 
-        for _ in range(num_layer):
-            in_channel += sep
-            sep += sep
-            body.append(nn.Linear(in_channel, sep))
-            body.append(getattr(nn, activation)())
+    body = nn.Sequential(
+        nn.Linear(in_channel, sep),
+        getattr(nn, activation)())
 
-    else:
-        raise Exception("Wrong Invalid num_layer")
+    for _ in range(num_layer):
+        in_channel += sep
+        sep += sep
+        body.append(nn.Linear(in_channel, sep))
+        body.append(getattr(nn, activation)())
     return body
 
 
-def make_conv1d_sequential(in_channel, out_channel, num_layer="auto"):
-    if num_layer == "auto":
-        temp_out = in_channel // 2
-        body = nn.Sequential(
-            nn.Conv1d(in_channels=in_channel, out_channels=temp_out, kernel_size=(1,))
-        )
-        while temp_out // 2 > out_channel:
-            body.append(nn.Conv1d(in_channels=temp_out, out_channels=temp_out // 2, kernel_size=(1,)))
-            temp_out = temp_out // 2
-        body.append(nn.Linear(temp_out, out_channel))
-
-    elif isinstance(num_layer, int):
-        num_layer -= 1
+def make_conv1d_sequential(in_channel, out_channel, num_layer):
+    num_layer -= 1
+    if num_layer == 0:
+        sep = out_channel
+    else:
         sep = (out_channel - in_channel) / num_layer
         sep = int(sep) + in_channel
-        body = nn.Sequential(
-            nn.Conv1d(in_channels=in_channel, out_channels=sep, kernel_size=(1,))
-        )
-        for _ in range(num_layer):
-            in_channel += sep
-            sep += sep
-            body.append(nn.Conv1d(in_channels=in_channel, out_channels=sep, kernel_size=(1,)))
 
-    else:
-        raise Exception("Wrong Invalid num_layer")
+    body = nn.Sequential(
+        nn.Conv1d(in_channels=in_channel, out_channels=sep, kernel_size=(1,))
+    )
+    for _ in range(num_layer):
+        in_channel += sep
+        sep += sep
+        body.append(nn.Conv1d(in_channels=in_channel, out_channels=sep, kernel_size=(1,)))
+
     return body
 
 
@@ -122,12 +101,9 @@ class CustomTorchNetwork(nn.Module):
             config['non_spatial_feature']['dim_in'] = config['non_spatial_feature']['dim_in'] * local_len
             if config['non_spatial_feature']['extension']:
                 if config['non_spatial_feature']['use_cnn']:
-                    vector_processor = nn.Sequential(
-                        nn.Conv1d(in_channels=config['non_spatial_feature']['dim_in'],
-                                  out_channels=config['non_spatial_feature']['dim_out'] // 2, kernel_size=(1,)),
-                        nn.Conv1d(in_channels=config['non_spatial_feature']['dim_out'] // 2,
-                                  out_channels=config['non_spatial_feature']['dim_out'], kernel_size=(1,))
-                    )
+                    vector_processor = make_conv1d_sequential(in_channel=config['non_spatial_feature']['dim_in'],
+                                                              out_channel=config['non_spatial_feature']['dim_out'],
+                                                              num_layer=config['non_spatial_feature']['num_layer'])
                 else:
                     vector_processor = make_lin_sequential(in_channel=config['non_spatial_feature']['dim_in'],
                                                            out_channel=config['non_spatial_feature']['dim_out'],
@@ -141,26 +117,37 @@ class CustomTorchNetwork(nn.Module):
 
         # neck 부분
         config['neck_in'] = config['spatial_feature']['dim_out'] + config['non_spatial_feature']['dim_out']
-        if config['use_memory_layer'] == "Raw":
+
+        if config['neck_num_layer'] - 1 == 0:
+            sep = config['neck_out']
+        else:
+            sep = (config['neck_out'] - config['neck_in']) / (config['neck_num_layer'] - 1)
+            sep = int(sep) + config['neck_in']
+
+        in_channel = config['neck_in']
+        if config['num_memory_layer'] == 0:
             input_layer = nn.Sequential(
-                nn.Linear(config['neck_in'], config['neck_in'] // 2),
+                nn.Linear(in_channel, sep),
                 getattr(nn, config['neck_activation'])()
             )
             self.init_h_state = None
             self.recurrent = False
         else:
-            input_layer = getattr(nn, config['use_memory_layer'])(config['neck_in'], config['neck_in'] // 2,
-                                                                  config['memory_layer_len'], batch_first=True)
+            input_layer = getattr(nn, "GRU")(in_channel, sep,
+                                             config['num_memory_layer'], batch_first=True)
             self.init_h_state = self.get_initial_h_state(input_layer.num_layers,
                                                          input_layer.hidden_size)
             self.recurrent = True
-        networks['input_layer'] = input_layer
-        neck = make_lin_sequential(in_channel=config['neck_in'] // 2,
-                                   out_channel=config['neck_out'],
-                                   activation=config['neck_activation'])
-        networks['neck'] = neck
-        # 민구 추가
 
+        networks['input_layer'] = input_layer
+        neck = nn.Sequential()
+        for _ in range(config['neck_num_layer'] - 1):
+            in_channel += sep
+            sep += sep
+            neck.append(nn.Linear(in_channel, sep))
+            neck.append(getattr(nn, config['neck_activation'])())
+
+        networks['neck'] = neck
         # action 부분
         self.outputs_dim = []
         for index, action_dim in enumerate(config['n_of_actions']):

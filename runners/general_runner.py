@@ -43,8 +43,8 @@ class GeneralRunner:
         # Public information
         self.memory_len = max(self._config['network']['actor']['spatial_feature']['memory_q_len'],
                               self._config['network']['actor']['non_spatial_feature']['memory_q_len'])
-        self.layer_len = self._config['network']['actor']['memory_layer_len']
-        self.network_type = self._config['network']['actor']['use_memory_layer']
+        self.layer_len = self._config['network']['actor']['num_memory_layer']
+        self.network_type = "GRU" if self._config['network']['actor']['num_memory_layer'] > 0 else "Raw"
 
         # Public variables
         self.count, self.batch_reward, self.done = 0, 0, False

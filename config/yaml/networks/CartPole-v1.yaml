@@ -3,7 +3,6 @@ network:
     # --- learning option ---
     obs_stack: True # should not use Memory layer with this
     memory_q_len: "local" # Integer / List / String(Local)
-    memory_layer_len: 4
     # - State definition -
     # --- spatial features ---
     spatial_feature:
@@ -22,10 +21,12 @@ network:
       dim_in: 4
       dim_out: 64
       extension: True
+      use_cnn: False
       freeze: False
     # --- outputs ---
     neck_out: 16
     neck_activation: "ReLU"
+    neck_num_layer: 3
     num_memory_layer: 0
     n_of_actions:
       - 2

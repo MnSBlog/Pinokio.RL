@@ -75,7 +75,7 @@ class HarmonySearch(Solver):
 
     def __gen_memory(self):
         value = dict()
-        for key, values in self._Parameters.item():
+        for key, values in self._Parameters.items():
             if isinstance(values, list):
                 choice = random.choice(range(len(values)))
                 value[key] = values[choice % len(values)]
@@ -91,7 +91,7 @@ class HarmonySearch(Solver):
                 new_harmony.append(self.__gen_memory())
             else:
                 harmony = random.choice(self.__hm['value'])
-                for key, values in self._Parameters.item():
+                for key, values in self._Parameters.items():
                     if isinstance(values, list):
                         choice = values.index(harmony[key])
                         choice, _ = self.__adjust_pitch(choice=choice)
