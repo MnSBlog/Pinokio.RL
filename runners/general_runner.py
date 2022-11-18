@@ -41,8 +41,7 @@ class GeneralRunner:
         self.torch_state = False
 
         # Public information
-        self.memory_len = max(self._config['network']['actor']['spatial_feature']['memory_q_len'],
-                              self._config['network']['actor']['non_spatial_feature']['memory_q_len'])
+        self.memory_len = self._config['network']['actor']['memory_q_len']
         self.layer_len = self._config['network']['actor']['num_memory_layer']
         self.network_type = "GRU" if self._config['network']['actor']['num_memory_layer'] > 0 else "Raw"
 
@@ -80,13 +79,15 @@ class GeneralRunner:
         state, reward, done, trunc, info = self._env.step(action)
         done |= trunc
         state = self._update_memory(state)
-
-        train_reward = self._fit_reward(reward)
-        self._agent.batch_reward.append(train_reward)
-        self._agent.batch_done.append(done)
         self.count += 1
         self.batch_reward += reward
         self.done = done
+
+        train_reward = self._fit_reward(reward)
+        self._agent.batch_reward.append(train_reward)
+        if isinstance(done, bool):
+            done = np.reshape(done, -1)
+        self._agent.batch_done.append(done)
         return state
 
     def _select_action(self, state):
@@ -126,30 +127,35 @@ class GeneralRunner:
             self.rew_gap = (self.rew_max - self.rew_min) / 2
             self.rew_numerator = (self.rew_max + self.rew_min) / 2
         # 학습용 보상 [-1, 1]로 fitting
-        rew = np.reshape(rew, [1, 1])
+        rew = np.reshape(rew, -1)
         train_reward = (rew - self.rew_numerator) / self.rew_gap
 
         return train_reward
 
     def _insert_q(self, state):
+        mem_lim = self._config['network']['actor']['memory_q_len']
         if isinstance(state, dict):
+            # Custom environment, 이미 형식이 맞춰져 있다고 판단
             self.torch_state = True
             if len(state['matrix']) > 0:
-                if self._config['network']['actor']['non_spatial_feature']['memory_q_len'] > len(self.memory_q['matrix']):
+                if mem_lim > len(self.memory_q['matrix']):
                     self.memory_q['matrix'].append(state['matrix'])
             if len(state['vector']) > 0:
-                if self._config['network']['actor']['spatial_feature']['memory_q_len'] > len(self.memory_q['vector']):
+                if mem_lim > len(self.memory_q['vector']):
                     self.memory_q['vector'].append(state['vector'])
             if len(state['action_mask']) > 0:
                 self.memory_q['action_mask'].append(state['action_mask'])
         else:
+            # Open AI gym에서 받아온 State
             if len(state.shape) > 1:
-                if self._config['network']['actor']['non_spatial_feature']['memory_q_len'] > len(self.memory_q['matrix']):
+                # (b, c, w, h)로 변경
+                if mem_lim > len(self.memory_q['matrix']):
                     state = np.expand_dims(state[:, :, 0], axis=0)
                     self.memory_q['matrix'].append(state)
             else:
-                if self._config['network']['actor']['spatial_feature']['memory_q_len'] > len(self.memory_q['vector']):
-                    self.memory_q['vector'].append(state)
+                # (b, c, f)로 변경
+                if mem_lim > len(self.memory_q['vector']):
+                    self.memory_q['vector'].append(state.reshape(1, 1, -1))
 
     def _clear_state_memory(self):
         self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
@@ -174,11 +180,11 @@ class GeneralRunner:
                 self.memory_q['action_mask'].pop(0)
         else:
             if len(self.memory_q['matrix']) > 0:
-                matrix_obs = np.concatenate(self.memory_q['matrix'], axis=0)
+                matrix_obs = np.concatenate(self.memory_q['matrix'], axis=1)
                 self.memory_q['matrix'].pop(0)
 
             if len(self.memory_q['vector']) > 0:
-                vector_obs = np.concatenate(self.memory_q['vector'], axis=0)
+                vector_obs = np.concatenate(self.memory_q['vector'], axis=1)
                 self.memory_q['vector'].pop(0)
 
             if len(self.memory_q['action_mask']) > 0:

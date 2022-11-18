@@ -54,8 +54,11 @@ class HarmonySearch(Solver):
 
             index = range(len(outputs))
             sorted_index = sorted(index, key=lambda k: outputs[k], reverse=True)
-            self.__hm['value'] = short_term_memory[:sorted_index[:self.__hms]]
-            self.__hm['output'] = outputs[:sorted_index[:self.__hms]]
+            self.__hm['value'] = []
+            self.__hm['output'] = []
+            for winner in sorted_index[:self.__hms]:
+                self.__hm['value'].append(copy.deepcopy(short_term_memory[winner]))
+                self.__hm['output'].append(copy.deepcopy(outputs[winner]))
 
             if worst_output < self.__hm['output'][-1]:
                 self.not_update_memory = 0

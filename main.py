@@ -57,8 +57,6 @@ def check_parallel(config):
         parallel = True
     if isinstance(config['network']['actor']['memory_q_len'], list):
         parallel = True
-    if isinstance(config['network']['actor']['use_memory_layer'], list):
-        parallel = True
     return parallel
 
 

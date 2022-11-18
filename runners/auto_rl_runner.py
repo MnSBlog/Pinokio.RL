@@ -25,5 +25,4 @@ class AutoRLRunner(GeneralRunner):
             reward_sum += self.batch_reward
             self.save_batch_reward.append(self.batch_reward)
             self._sweep_cycle(ep)
-        self._save_reward_log()
-        return reward_sum
+        return reward_sum, self.save_batch_reward
