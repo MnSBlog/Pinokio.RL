@@ -7,8 +7,8 @@ envs:
   # --- Play Mode Setting ---
   build_path: "./Exe/Environment.exe"
   headless: False # True, False
-  map_type: [2, 3, 4] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hole / -1: Random
-  play_mode: "one_on_one"  # single, team, team_self, human_play, one_on_one
+  map_type: [3] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hole / -1: Random
+  play_mode: "team"  # single, team, team_self, human_play, one_on_one
   play_mode_preset:
     single:
       agent_mode : [ 1, 0, 0, 0, 0] # 0: Bot, 1: Agent, 2: Human-play

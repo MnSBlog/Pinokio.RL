@@ -45,13 +45,13 @@ class CustomTorchNetwork(nn.Module):
         self.local_len = config['memory_q_len']
         # Spatial feature network 정의
         if config['spatial_feature']['use']:
-            config['spatial_feature']['dim_in'] = config['spatial_feature']['dim_in'] * self.local_len
+            in_channel = config['spatial_feature']['dim_in'][0] * self.local_len
             if config['spatial_feature']['backbone'] != '':
-                spatial_processor = make_sequential(in_channels=config['spatial_feature']['dim_in'],
-                                                    out_channels=config['spatial_feature']['dim_in'] // 2,
+                spatial_processor = make_sequential(in_channels=in_channel,
+                                                    out_channels=in_channel // 2,
                                                     kernel_size=(2, 2), stride=(1, 1))
 
-                spatial_processor.append(make_sequential(in_channels=config['spatial_feature']['dim_in'] // 2,
+                spatial_processor.append(make_sequential(in_channels=in_channel // 2,
                                                          out_channels=3,
                                                          kernel_size=(2, 2), stride=(1, 1)))
                 backbone = getattr(models, config['spatial_feature']['backbone'])(weights=None)
@@ -60,9 +60,9 @@ class CustomTorchNetwork(nn.Module):
                 spatial_processor.append(backbone)
                 networks['spatial_feature'] = spatial_processor
             else:
-                shape = config['spatial_feature']['shape']
+                shape = config['spatial_feature']['dim_in'][1:]
                 networks['spatial_feature'] = nn.Sequential(
-                    make_sequential(in_channels=config['spatial_feature']['dim_in'],
+                    make_sequential(in_channels=in_channel,
                                     out_channels=32,
                                     kernel_size=(4, 4), stride=(2, 2)),
                     make_sequential(in_channels=32,
@@ -164,7 +164,6 @@ class CustomTorchNetwork(nn.Module):
         cat_alter = []
         if 'spatial_feature' in self.networks:
             x1 = self.networks['spatial_feature'](x1)
-            x1 = x1.view(x1.shape[0], -1)
             cat_alter.append(x1)
         if 'non_spatial_feature' in self.networks:
             if self.use_cnn is False:

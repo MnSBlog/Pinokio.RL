@@ -119,18 +119,17 @@ class GeneralRunner:
             self._draw_reward_plot(now_ep=itr, y_lim=[0, 500])
 
     def _fit_reward(self, rew):
-        if self.rew_min > rew:
+        if True in (self.rew_min > rew[:]):
             print('reward min is updated: ', rew)
-            self.rew_min = rew
+            self.rew_min = rew.min().item()
             self.rew_gap = (self.rew_max - self.rew_min) / 2
             self.rew_numerator = (self.rew_max + self.rew_min) / 2
-        elif self.rew_max < rew:
+        if True in (self.rew_max < rew[:]):
             print('reward max is updated: ', rew)
-            self.rew_max = rew
+            self.rew_max = rew.max().item()
             self.rew_gap = (self.rew_max - self.rew_min) / 2
             self.rew_numerator = (self.rew_max + self.rew_min) / 2
         # 학습용 보상 [-1, 1]로 fitting
-        rew = np.reshape(rew, -1)
         train_reward = (rew - self.rew_numerator) / self.rew_gap
 
         return train_reward
@@ -171,11 +170,15 @@ class GeneralRunner:
 
         if self.torch_state:
             if len(self.memory_q['matrix']) > 0:
-                matrix_obs = torch.cat(self.memory_q['matrix'], dim=1).detach()
+                matrix_obs = torch.cat(self.memory_q['matrix'], dim=2).detach()
+                shape = matrix_obs.shape
+                matrix_obs = matrix_obs.view(shape[0], -1, shape[-2], shape[-1])
                 self.memory_q['matrix'].pop(0)
 
             if len(self.memory_q['vector']) > 0:
                 vector_obs = torch.cat(self.memory_q['vector'], dim=1).detach()
+                shape = vector_obs.shape
+                vector_obs = vector_obs.view(shape[0], -1, shape[-1])
                 self.memory_q['vector'].pop(0)
 
             if len(self.memory_q['action_mask']) > 0:
@@ -295,6 +298,7 @@ class GeneralRunner:
                 critic_config['spatial_feature']['dim_out'] = neck_in
             else:
                 critic_config['non_spatial_feature']['dim_out'] = neck_in
+        critic_config['non_spatial_feature']['use_cnn'] = False
         critic_config['n_of_actions'] = [1]
         critic_config['action_mode'] = "Continuous"
         return critic_config

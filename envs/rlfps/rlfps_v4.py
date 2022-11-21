@@ -41,12 +41,32 @@ class RLFPSv4(gym.Env):
             + '"')
 
     def step(self, action: Optional[list] = None):
+        # 인덱스 부여
+        action = self.__insert_index(action)
         # Send action list
         action_buffer = CommunicationManager.serialize_action("Action", action.cpu())
         self.__zmq_client.send("Action")
 
         self.__zmq_client.send(action_buffer)
         return self.__get_observation()
+
+    def __insert_index(self, action):
+        action = action.detach()  # 1, 5, 3 1, 5, 2
+        action = action.T
+        action = action.view(len(self.__envConfig['map_type']), -1, action.shape[-1])
+        action = action.cpu().numpy()
+
+        send_action = np.zeros((action.shape[0], action.shape[1], action.shape[2] + 2))
+        for map_idx in range(len(self.__envConfig['map_type'])):
+            map_dump = action[map_idx, :, :]
+            agent_index = list(range(self.__agents_of_map))
+            env_index = [map_idx] * self.__agents_of_map
+            map_dump = np.c_[agent_index, map_dump]
+            map_dump = np.c_[env_index, map_dump]
+            send_action[map_idx, :, :] = map_dump
+
+        action = torch.tensor(send_action, dtype=torch.float)
+        return action
 
     def reset(
         self,
@@ -74,8 +94,8 @@ class RLFPSv4(gym.Env):
               '"Physics"' + str(','.join(str(e) for e in self.__envConfig['kinematics'].values())) + '"'
         self.__zmq_client.send(msg)
         # To gathering spatial-feature
-        state, _, _, _ = self.__get_observation()
-        return state
+        state, _, _, _, info = self.__get_observation()
+        return state, info
 
     def __get_observation(self):
         character_info_list = self.__zmq_client.send('CharacterInfo')
@@ -93,12 +113,26 @@ class RLFPSv4(gym.Env):
         _, deserialized_step_info_list, _ = CommunicationManager.deserialize_info(step_results)
 
         done = torch.tensor(deserialized_step_info_list[:, :, 0], dtype=torch.bool)
+        done = done.view(-1)
         reward = self.__calculate_reward(deserialized_step_info_list)
+        reward = reward.view(-1)
+
         vector_shape = deserialized_char_info_list.shape
+        matrix_shape = deserialized_field_info_list.shape
+        mask_shape = deserialized_action_mask.shape
+
+        front = matrix_shape[0] * matrix_shape[1]
+        deserialized_field_info_list = deserialized_field_info_list.view(front, 1, matrix_shape[-3],
+                                                                         matrix_shape[-2], matrix_shape[-1])
+        front = vector_shape[0] * vector_shape[1]
+        tail = vector_shape[2] * vector_shape[3]
+        deserialized_char_info_list = deserialized_char_info_list.view(front, 1, tail)
+
+        deserialized_action_mask = deserialized_action_mask.view(mask_shape[0] * mask_shape[1], -1)
         state = {'matrix': deserialized_field_info_list,
-                 'vector': deserialized_char_info_list.reshape([vector_shape[0], vector_shape[1], vector_shape[2] * vector_shape[3]]),
+                 'vector': deserialized_char_info_list,
                  'action_mask': deserialized_action_mask}
-        return state, reward, done, None
+        return state, reward, done, False, deserialized_step_info_list
 
     def __initialize_feature_display(self, batch_size, feature_size):
         figure, ax = plt.subplots(batch_size, feature_size, figsize=(15, 15))

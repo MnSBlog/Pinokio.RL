@@ -1,6 +1,6 @@
 runner:
   # --- Defaults ---
-  max_iteration_num: 5000 # 몇 번 업데이트 할건지
+  max_iteration_num: 5000
   pretrain: False
   render: True
   off_pg: False

@@ -21,7 +21,7 @@ class StepRunner(GeneralRunner):
                 action = self._select_action(state)
                 state = self._interaction(action)
             print('Update: ', update, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
-            self._sweep_cycle(state)
+            self._sweep_cycle(update)
 
 
 class IntrinsicParallelRunner(GeneralRunner):
