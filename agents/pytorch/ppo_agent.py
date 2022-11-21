@@ -25,20 +25,19 @@ class PPO(PolicyAgent):
             {'params': self.actor.parameters(), 'lr': self.actor_lr},
             {'params': self.critic.parameters(), 'lr': self.critic_lr}
         ]
-
         self.optimizer = getattr(torch.optim, parameters['optimizer'])(opt_arg)
         self.actor_old.load_state_dict(self.actor.state_dict())
         self.critic_old.load_state_dict(self.critic.state_dict())
         self.loss = getattr(nn, parameters['loss_function'])()
         self.device = device
         self.hidden_state = copy.deepcopy(self.actor.init_h_state)
-        if self.actor.recurrent:
+        if self.hidden_state is not None:
             self.hidden_state = self.hidden_state.to(self.device)
 
     def select_action(self, state):
         state = self.convert_to_torch(state)
         with torch.no_grad():
-            if state['action_mask'] is not None:
+            if len(state['action_mask']) > 0:
                 self.set_mask(state['action_mask'])
 
             actions, action_logprobs, next_hidden = self.act(state=state, hidden=self.hidden_state)
@@ -48,7 +47,6 @@ class PPO(PolicyAgent):
             self.batch_action.append(actions)
             self.batch_hidden_state.append(next_hidden)
             self.batch_log_old_policy_pdf.append(action_logprobs)
-
             self.hidden_state = next_hidden
 
         return actions
@@ -58,7 +56,7 @@ class PPO(PolicyAgent):
         rtn_logprob = []
         outputs, hidden = self.actor_old(x=state, h=hidden)
         last = 0
-        if self.actor_old.action_mask is not None:
+        if len(self.actor_old.action_mask) > 0:
             outputs *= self.actor_old.action_mask
         for idx, output_dim in enumerate(self.actor_old.outputs_dim):
             dist = Categorical(outputs[:, last:last + output_dim])
@@ -72,34 +70,24 @@ class PPO(PolicyAgent):
 
     def update(self, next_state=None, done=None):
         # Monte Carlo estimate of returns
-
-        if max(self.batch_reward[0].shape) > 1:
-            discounted_reward = torch.zeros(self.batch_reward[0].shape[1])
-            rewards = np.zeros((len(self.batch_reward), self.batch_reward[0].shape[1]))
-            batch_count = 0
-            for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
-                for idx in range(reward.shape[1]):
-                    if is_terminal[0, idx]:
-                        discounted_reward[idx] = 0
-                    discounted_reward[idx] = reward[0, idx] + (self.gamma * discounted_reward[idx])
-                    rewards[batch_count, idx] = discounted_reward[idx]
-                batch_count += 1
-        else:
-            discounted_reward = 0
-            rewards = []
-            for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
-                if is_terminal:
-                    discounted_reward = 0
-                discounted_reward = reward + (self.gamma * discounted_reward)
-                rewards.insert(0, discounted_reward)
-
+        # Agent 수 만큼 생성
+        discounted_reward = torch.zeros(self.batch_reward[0].shape[0])
+        rewards = np.zeros((len(self.batch_reward), self.batch_reward[0].shape[0]))
+        batch_count = 0
+        # b, n 구조로 계산
+        for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
+            # batch iteration n about r(or d) shape
+            for idx in range(reward.shape[0]):
+                if is_terminal[idx]:
+                    discounted_reward[idx] = 0
+                discounted_reward[idx] = reward[idx] + (self.gamma * discounted_reward[idx])
+                rewards[batch_count, idx] = discounted_reward[idx]
+            batch_count += 1
 
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
-        rewards = rewards.squeeze()
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
-        if len(rewards.shape) > 1:
-            rewards = rewards.flatten()
+        rewards = rewards.flatten()
         # convert list to tensor
         part_matrix = None
         if 'spatial_feature' in self.actor.networks:
@@ -107,18 +95,18 @@ class PPO(PolicyAgent):
         part_vector = torch.cat(self.batch_state_vector, dim=0).detach().to(self.device)
 
         old_states = {'matrix': part_matrix, 'vector': part_vector}
-        old_actions = torch.squeeze(torch.stack(self.batch_action, dim=0)).detach().to(self.device)
-        old_logprobs = torch.squeeze(torch.stack(self.batch_log_old_policy_pdf, dim=0)).detach().to(self.device)
+        old_actions = torch.stack(self.batch_action, dim=0).detach().to(self.device)
+        old_logprobs = torch.stack(self.batch_log_old_policy_pdf, dim=0).detach().to(self.device)
         old_hiddens = None
         if self.actor.recurrent:
-            old_hiddens = torch.squeeze(torch.stack(self.batch_hidden_state, dim=1)).detach().to(self.device)
+            old_hiddens = self.batch_hidden_state[-1].detach().to(self.device)
         # Optimize policy for K epochs
         for _ in range(self.epochs):
-            # Evaluating old actions and values
+            # Evaluating old actions and values ***** 여기서부터 이어서 리팩토링
             rtn_evaluations = self.evaluate(old_states, old_actions, hidden=old_hiddens)
             state_values, _ = self.critic(old_states)
             # match state_values tensor dimensions with rewards tensor
-            state_values = torch.squeeze(state_values)
+            state_values = state_values.flatten()
 
             (logprobs, dist_entropy) = rtn_evaluations[0]
             if len(rtn_evaluations) > 1:
@@ -213,21 +201,17 @@ class PPO(PolicyAgent):
         mask = state['action_mask']
 
         if torch.is_tensor(non_spatial_x) is False:
-            non_spatial_x = torch.tensor(non_spatial_x, dtype=torch.float).to(self.device)
-            non_spatial_x = non_spatial_x.unsqueeze(dim=0)
-        else:
-            non_spatial_x = non_spatial_x.to(self.device)
-        non_spatial_x = non_spatial_x.unsqueeze(dim=2)
+            non_spatial_x = torch.tensor(non_spatial_x, dtype=torch.float)
+        non_spatial_x = non_spatial_x.to(self.device)
 
         if torch.is_tensor(spatial_x) is False:
             if len(spatial_x) > 0:
                 spatial_x = torch.tensor(spatial_x, dtype=torch.float).to(self.device)
-                spatial_x = spatial_x.unsqueeze(dim=0)
         else:
             spatial_x = spatial_x.to(self.device)
 
         if torch.is_tensor(mask) is False:
-            if mask is not None:
+            if len(mask) > 0:
                 mask = torch.tensor(mask, dtype=torch.float).to(self.device)
                 mask = mask.unsqueeze(dim=0)
         else:
@@ -240,5 +224,5 @@ class PPO(PolicyAgent):
         return state
 
     def set_mask(self, mask):
-        if mask is not None:
+        if len(mask) > 0:
             self.actor_old.action_mask = mask

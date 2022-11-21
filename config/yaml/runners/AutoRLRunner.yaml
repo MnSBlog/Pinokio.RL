@@ -1,12 +1,12 @@
 runner:
   # --- Defaults ---
-  max_iteration_num: 3000
+  max_iteration_num: 300
   pretrain: False
   render: False
   off_pg: False
   logger: False # False or True(OpenAI Logger)
   # --- Learning Condition ---
-  batch_size: 68 # batch size
+  batch_size: 30 # batch size
   self_play: False
   # --- Operation options ---
   use_cuda: True # Use gpu by default unless it isn't available
@@ -15,7 +15,3 @@ runner:
   best_model_root: "Best"
   condition_path: "./config/AlgoCondition.xlsx"
   draw_interval: 20
-  # --- curriculum learning ---
-  curriculum_learning: False
-  init_n_of_enemy: 1
-  next_phase_condition: "Clear" # Clear / Reward-val(point) / Kill-val(count) or Time-val(seconds)

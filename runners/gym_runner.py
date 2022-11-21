@@ -16,52 +16,19 @@ class GymRunner(GeneralRunner):
 
     def run(self):
         # 에피소드마다 다음을 반복
-        for ep in range(1, self._config['runner']['max_episode_num'] + 1):
+        for ep in range(1, self._config['runner']['max_iteration_num'] + 1):
             # 에피소드 초기화
-            step, episode_reward, done = 0, 0, False
-            # 환경 초기화 및 초기 상태 관측 및 큐
-            ret = self._env.reset()
-            state = ret[0]
-            for _ in range(self.memory_len):
-                self._insert_q(state)
+            state = self._env_init(reset_env=True)
+            while not self.done:
+                action = self._select_action(state)
+                state = self._interaction(action)
+                self._update_agent(next_state=state)
 
-            state = self._update_memory()
-            while not done:
-                if self._config['runner']['render']:
-                    self._env.render()
-                action = self._agent.select_action(state)
-                if torch.is_tensor(action):
-                    action = action.squeeze()
-                    if len(action.shape) == 0:
-                        action = action.item()
-
-                # 다음 상태, 보상 관측
-                state, reward, done, trunc, info = self._env.step(action)
-                done |= trunc
-                state = self._update_memory(state)
-
-                train_reward = self._fit_reward(reward)
-                self._agent.batch_reward.append(train_reward)
-                self._agent.batch_done.append(done)
-                step += 1
-                episode_reward += reward
-
-                if len(self._agent.batch_reward) >= self._config['runner']['batch_size']:
-                    # 학습 추출
-                    self._agent.update(next_state=state, done=done)
             # 에피소드마다 결과 보상값 출력
-            print('Episode: ', ep, 'Steps: ', step, 'Reward: ', episode_reward)
-            self.reward_info['memory'].append(episode_reward)
-            self.save_epi_reward.append(episode_reward)
-
-            # 업데이트 특정값 신경망 파라미터를 파일에 저장
-            if ep % 100 == 0:
-                self._save_agent()
-                self._draw_reward_plot(now_ep=ep, y_lim=[])
-
-        # 학습이 끝난 후, 누적 보상값 저장
+            print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
+            self.save_batch_reward.append(self.batch_reward)
+            self._sweep_cycle(ep)
         self._save_reward_log()
-        self._env.close()
 
 
 class ParallelGymRunner:
@@ -92,12 +59,11 @@ class ParallelGymRunner:
                 os.mkdir(sub_config['runner']['history_path'])
 
             for q_len in self.q_cases:
-                for layer_len in self.layer_cases:
+                for layer_case in self.layer_cases:
                     sub_config['env_name'] = env_name
                     sub_config = self.update_config(config=sub_config, key='envs', name=env_name)
                     sub_config['network']['actor']['memory_q_len'] = q_len
-                    sub_config['network']['critic']['memory_q_len'] = q_len
-                    sub_config['network']['actor']['use_memory_layer'] = layer_len
+                    sub_config['network']['actor']['use_memory_layer'] = layer_case
                     args.append(sub_config)
 
         pool.map(self.sub_runner_start, args)
