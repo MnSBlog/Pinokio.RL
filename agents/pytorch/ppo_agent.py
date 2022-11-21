@@ -25,14 +25,13 @@ class PPO(PolicyAgent):
             {'params': self.actor.parameters(), 'lr': self.actor_lr},
             {'params': self.critic.parameters(), 'lr': self.critic_lr}
         ]
-
         self.optimizer = getattr(torch.optim, parameters['optimizer'])(opt_arg)
         self.actor_old.load_state_dict(self.actor.state_dict())
         self.critic_old.load_state_dict(self.critic.state_dict())
         self.loss = getattr(nn, parameters['loss_function'])()
         self.device = device
         self.hidden_state = copy.deepcopy(self.actor.init_h_state)
-        if self.actor.recurrent:
+        if self.hidden_state is not None:
             self.hidden_state = self.hidden_state.to(self.device)
 
     def select_action(self, state):
@@ -48,7 +47,6 @@ class PPO(PolicyAgent):
             self.batch_action.append(actions)
             self.batch_hidden_state.append(next_hidden)
             self.batch_log_old_policy_pdf.append(action_logprobs)
-
             self.hidden_state = next_hidden
 
         return actions

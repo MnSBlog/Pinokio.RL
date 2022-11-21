@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from agents.tf.actorcritic import Actor, Critic
 from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
-from networks.network_generator import CustomTorchNetwork
+from agents.pytorch.copy_ppo import PPO
+from networks.network_generator import CustomTorchNetwork, SimpleActorNetwork, SimpleCriticNetwork
 
 
 class GeneralRunner:
@@ -16,13 +17,14 @@ class GeneralRunner:
         self._config = config
         self._env = env
         # 액터 신경망 및 크리틱 신경망 생성
-        if "tf" in config['agent']['framework']:
-            actor, critic = self.__load_tf_models()
-        else:
-            actor, critic = self.__load_torch_models()
+        actor, critic = self.__load_networks(config['agent']['framework'])
 
         # RL algorithm 생성
         algo_name = config['agent']['framework'] + config['agent_name']
+        # 설마 액터러닝레이트? *****
+        # state_dim = config['network']['actor']['non_spatial_feature']['dim_in'] * config['network']['actor']['memory_q_len']
+        # self._agent = PPO(state_dim, 2, 0.0001, 0.001, 0.99, 20, 0.05, False)
+        # self._agent.instance_networks((actor, critic))
         self._agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self._config['agent'],
                                                               actor=actor, critic=critic)
 
@@ -103,6 +105,7 @@ class GeneralRunner:
         if len(self._agent.batch_reward) >= self._config['runner']['batch_size']:
             # 학습 추출
             self._agent.update(next_state=next_state, done=self.done)
+            # self._agent.update()
             return True
         else:
             return False
@@ -267,8 +270,11 @@ class GeneralRunner:
 
     def __load_torch_models(self):
         self._config['network']['critic'] = self.__make_critic_config(self._config['network']['actor'])
+        dim_in = self._config['network']['actor']['memory_q_len'] * self._config['network']['actor']['non_spatial_feature']['dim_in']
         actor = CustomTorchNetwork(self._config['network']['actor'])
         critic = CustomTorchNetwork(self._config['network']['critic'])
+        # actor = SimpleActorNetwork(input_dim=dim_in, output_dim=2)
+        # critic = SimpleCriticNetwork(input_dim=dim_in)
         return actor, critic
 
     def __load_networks(self, framework='tf'):

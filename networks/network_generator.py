@@ -3,6 +3,7 @@ import copy
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from torch.distributions import Categorical
 
 
 def make_sequential(in_channels, out_channels, *args, **kwargs):
@@ -213,3 +214,46 @@ class CustomTorchNetwork(nn.Module):
         #     hidden_size),
         #     dtype=torch.float)
         return h_0
+
+
+class SimpleActorNetwork(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(SimpleActorNetwork, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.Tanh(),
+            nn.Linear(64, 64),
+            nn.Tanh(),
+            nn.Linear(64, output_dim),
+            nn.Softmax(dim=-1)
+        )
+        self.init_h_state = None
+        self.action_mask = []
+        self.networks = []
+        self.recurrent = False
+        self.outputs_dim = [output_dim]
+        self.input_dim = input_dim
+
+    def forward(self, x, h=None):
+        x = x['vector'].view(-1, self.input_dim)
+        return self.model(x), h
+
+
+class SimpleCriticNetwork(nn.Module):
+    def __init__(self, input_dim):
+        super(SimpleCriticNetwork, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.Tanh(),
+            nn.Linear(64, 64),
+            nn.Tanh(),
+            nn.Linear(64, 1)
+        )
+        self.init_h_state = None
+        self.action_mask = []
+        self.outputs_dim = []
+        self.input_dim = input_dim
+
+    def forward(self, x, h=None):
+        x = x['vector'].view(-1, self.input_dim)
+        return self.model(x), h
