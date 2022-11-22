@@ -21,7 +21,6 @@ class GeneralRunner:
 
         # RL algorithm 생성
         algo_name = config['agent']['framework'] + config['agent_name']
-        # 설마 액터러닝레이트? *****
         # state_dim = config['network']['actor']['non_spatial_feature']['dim_in'] * config['network']['actor']['memory_q_len']
         # self._agent = PPO(state_dim, 2, 0.0001, 0.001, 0.99, 20, 0.05, False)
         # self._agent.instance_networks((actor, critic))
@@ -86,9 +85,10 @@ class GeneralRunner:
         self.done = done
 
         train_reward = self._fit_reward(reward)
-        self._agent.batch_reward.append(train_reward)
         if isinstance(done, bool):
             done = np.reshape(done, -1)
+            train_reward = np.reshape(train_reward, -1)
+        self._agent.batch_reward.append(train_reward)
         self._agent.batch_done.append(done)
         return state
 
@@ -111,7 +111,11 @@ class GeneralRunner:
             return False
 
     def _sweep_cycle(self, itr):
-        self.reward_info['memory'].append(self.batch_reward)
+        if isinstance(self.batch_reward, float):
+            self.reward_info['memory'].append(self.batch_reward)
+        else:
+            self.reward_info['memory'].append(self.batch_reward.mean().item())
+
         self.save_batch_reward.append(self.batch_reward)
         # 업데이트 특정값 신경망 파라미터를 파일에 저장
         if itr % self._config['runner']['draw_interval'] == 0:
@@ -119,12 +123,19 @@ class GeneralRunner:
             self._draw_reward_plot(now_ep=itr, y_lim=[0, 500])
 
     def _fit_reward(self, rew):
-        if True in (self.rew_min > rew[:]):
+        if isinstance(rew, float):
+            min_under = self.rew_min > rew
+            max_over = self.rew_max < rew
+        else:
+            min_under = True in (self.rew_min > rew[:])
+            max_over = True in (self.rew_max < rew[:])
+
+        if min_under:
             print('reward min is updated: ', rew)
             self.rew_min = rew.min().item()
             self.rew_gap = (self.rew_max - self.rew_min) / 2
             self.rew_numerator = (self.rew_max + self.rew_min) / 2
-        if True in (self.rew_max < rew[:]):
+        if max_over:
             print('reward max is updated: ', rew)
             self.rew_max = rew.max().item()
             self.rew_gap = (self.rew_max - self.rew_min) / 2

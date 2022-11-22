@@ -46,7 +46,6 @@ class RLFPSv4(gym.Env):
         # Send action list
         action_buffer = CommunicationManager.serialize_action("Action", action.cpu())
         self.__zmq_client.send("Action")
-
         self.__zmq_client.send(action_buffer)
         return self.__get_observation()
 
