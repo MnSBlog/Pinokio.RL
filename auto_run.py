@@ -1,7 +1,7 @@
 import copy
 import time
 import os
-import numpy as np
+import pandas as pd
 import gym
 from utils.yaml_config import YamlConfig
 from runners.auto_rl_runner import AutoRLRunner
@@ -29,7 +29,7 @@ def save_config(config, path):
         yaml.dump(config, f)
 
 
-def save_outputs(args, history, path):
+def save_outputs(args, metric, path):
     name = time.process_time()
     now = datetime.now()
     prefix = now.strftime("%Y-%m-%d-%H-%M-%S.%f")
@@ -38,8 +38,9 @@ def save_outputs(args, history, path):
     if os.path.isdir(save_path) is False:
         os.mkdir(save_path)
     save_config(args, os.path.join(save_path, prefix + "run_args.yaml"))
-    if history is not None:
-        np.savetxt(os.path.join(save_path, prefix + "reward_history.txt"), history)
+    if metric is not None:
+        data = pd.DataFrame.from_dict(metric)
+        data.to_csv(os.path.join(path, str(name), 'metric.csv'))
 
 
 def test_function(memory):
@@ -48,12 +49,12 @@ def test_function(memory):
     run_args = update_config(run_args, memory)
 
     runner = AutoRLRunner(config=run_args, env=env)
-    output, history = runner.run()
+    output, metric = runner.run()
 
     figure_path = './figures/AutoRL'
     env_path = os.path.join(figure_path, run_args['env_name'])
     count = len(os.listdir(env_path)) - 1
-    save_outputs(args=run_args, history=history, path=os.path.join(env_path, str(count)))
+    save_outputs(args=run_args, metric=metric, path=os.path.join(env_path, str(count)))
     return output
 
 
@@ -107,7 +108,7 @@ def main():
     optimizer = HarmonySearch(parameters=optim_args, test_function=test_function)
     optimizer.start()
     output_config, output = optimizer.close()
-    save_outputs(args=output_config, history=None, path=env_path)
+    save_outputs(args=output_config, metric=None, path=env_path)
     print(output_config)
     print(output)
 
