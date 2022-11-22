@@ -41,7 +41,6 @@ class GeneralRunner:
         self.rew_gap = (self.rew_max - self.rew_min) / 2
         self.rew_numerator = (self.rew_max + self.rew_min) / 2
 
-        fig = plt.figure()
         self.torch_state = False
 
         # Public information
@@ -77,7 +76,7 @@ class GeneralRunner:
     def _interaction(self, action):
         # 다음 상태, 보상 관측
         state, reward, done, trunc, info = self._env.step(action)
-        done |= trunc
+        #done |= trunc
         state = self._update_memory(state)
 
         train_reward = self._fit_reward(reward)
@@ -125,7 +124,7 @@ class GeneralRunner:
             self.rew_gap = (self.rew_max - self.rew_min) / 2
             self.rew_numerator = (self.rew_max + self.rew_min) / 2
         # 학습용 보상 [-1, 1]로 fitting
-        rew = np.reshape(rew, [1, 1])
+        #rew = np.reshape(rew, [1, 1])
         train_reward = (rew - self.rew_numerator) / self.rew_gap
 
         return train_reward
@@ -147,7 +146,7 @@ class GeneralRunner:
                 self.memory_q['vector'].append(state)
 
     def _clear_state_memory(self):
-        self.memory_q = {'matrix': [], 'vector': []}
+        self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
 
     def _update_memory(self, state=None):
         matrix_obs, vector_obs, mask_obs = [], [], []

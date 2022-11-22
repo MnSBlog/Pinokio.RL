@@ -1,15 +1,17 @@
+import copy
 import os
+import time
+
 import gym
 import numpy as np
 import torch
-
+from envs import REGISTRY as ENV_REGISTRY
 from runners.general_runner import GeneralRunner
 
 
 class StepRunner(GeneralRunner):
     def __init__(self, config: dict, env: gym.Env):
         super(StepRunner, self).__init__(config, env)
-
         if os.path.exists(os.path.join('./figures', config['env_name'])) is False:
             os.mkdir(os.path.join('./figures', config['env_name']))
 
@@ -21,7 +23,7 @@ class StepRunner(GeneralRunner):
                 action = self._select_action(state)
                 state = self._interaction(action)
             print('Update: ', update, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
-            self._sweep_cycle(state)
+            self._sweep_cycle(update)
 
 
 class IntrinsicParallelRunner(GeneralRunner):
@@ -132,3 +134,69 @@ class IntrinsicParallelRunner(GeneralRunner):
 
         return train_reward
 
+
+class ParallelStepRunner:
+    def __init__(self, config: dict):
+        env_names = self.get_element(config['env_name'])
+        q_cases = self.get_element(config['network']['actor']['memory_q_len'])
+        layer_cases = self.get_element(config['network']['actor']['use_memory_layer'])
+        self.worker_count = len(env_names) * len(q_cases) * len(layer_cases)
+        self.env_names = env_names
+        self.q_cases = q_cases
+        self.layer_cases = layer_cases
+        self.config = config
+
+    def run(self):
+        from multiprocessing.pool import ThreadPool
+        pool = ThreadPool(self.worker_count)
+        args = []
+        for env_name in self.env_names:
+            sub_config = copy.deepcopy(self.config)
+            sub_config['runner']['history_path'] = os.path.join("./history", env_name)
+            if os.path.exists(sub_config['runner']['history_path']) is False:
+                os.mkdir(sub_config['runner']['history_path'])
+
+            sub_config['runner']['history_path'] = os.path.join(sub_config['runner']['history_path'],
+                                                                sub_config['agent_name'])
+            if os.path.exists(sub_config['runner']['history_path']) is False:
+                os.mkdir(sub_config['runner']['history_path'])
+
+            for q_len in self.q_cases:
+                for layer_len in self.layer_cases:
+                    sub_config['env_name'] = env_name
+                    sub_config['network_name'] = env_name
+                    sub_config = self.update_config(config=sub_config, key='envs', name=env_name)
+                    sub_config = self.update_config(config=sub_config, key='network', name=env_name)
+                    sub_config['network']['actor']['memory_q_len'] = q_len
+                    sub_config['network']['actor']['use_memory_layer'] = layer_len
+                    args.append(sub_config)
+
+        pool.map(self.sub_runner_start, args)
+
+    @staticmethod
+    def update_config(config, key, name):
+        from utils.yaml_config import YamlConfig
+        if key == 'network':
+            path_key = 'networks'
+        else:
+            path_key = key
+        root = os.path.join("./config/yaml/", path_key)
+        name = name + '.yaml'
+        sub_dict = YamlConfig.get_dict(os.path.join(root, name))
+        config[key] = sub_dict[key]
+        return copy.deepcopy(config)
+
+    @staticmethod
+    def sub_runner_start(config: dict):
+        env = ENV_REGISTRY[config['env_name']](**config['envs'])
+        sub_runner = StepRunner(config=config, env=env)
+        sub_runner.run()
+
+    @staticmethod
+    def get_element(target):
+        rtn_list = []
+        if isinstance(target, list):
+            return target
+        else:
+            rtn_list.append(target)
+            return rtn_list

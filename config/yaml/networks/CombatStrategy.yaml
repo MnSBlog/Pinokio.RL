@@ -16,8 +16,8 @@ network:
     # --- non-spatial features ---
     non_spatial_feature:
       use: True
-      dim_in: 12
-      dim_out: 12
+      dim_in: 15
+      dim_out: 15
       extension: False
       freeze: False
     # --- outputs ---
@@ -25,9 +25,9 @@ network:
     neck_out: 16
     neck_activation: "ReLU"
     n_of_actions:
-      - 5
+      - 4
       - 3
-      - 3
+
     action_mode: "Discrete" # Discrete or Continuous
     # --- save / load ---
     model_path: 'Networks'

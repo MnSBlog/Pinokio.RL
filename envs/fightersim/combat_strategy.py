@@ -45,10 +45,14 @@ class CombatStrategy(gym.Env):
     def step(self, action: torch.tensor = None):
         # Send action list
         begin = time.time()
+        if isinstance(action, int):
+            action = torch.tensor(action, dtype=torch.float)
+
         action_buffer = CommunicationManager.serialize_action("Action", action.cpu())
         self.server.send(action_buffer)
         begin = time.time()
-        return self.__get_observation()
+        state, reward, done = self.__get_observation()
+        return state, reward, done, None, None
 
     def reset(
         self,
@@ -57,13 +61,8 @@ class CombatStrategy(gym.Env):
         return_info: bool = False,
         options: Optional[dict] = None,
     ):
-
-        self_play = self.__envConfig['self_play']
-        n_of_current_agent = self.__envConfig['agent_count']
-        n_of_current_enemy = self.__envConfig['enemy_count']
-        # To gathering spatial-feature
         state, _, _ = self.__get_observation()
-        return state
+        return state, None
 
     def __get_observation(self):
         # feature 시각화 함수 실행
@@ -104,15 +103,11 @@ class CombatStrategy(gym.Env):
 
     def __calculate_reward(self, step_result):
         reward = torch.zeros(1, 1)
-        reward += (step_result[2] + step_result[3]) % 2  # on radar on screen 1
-        reward += 5*step_result[1]  # targetting 5
-        reward += 10*step_result[8]  # on damage 10
-        reward += 20*step_result[5]  # kill 20
-        # reward += 1 * step_result[:, 4]  #
-        reward -= (-1)*(step_result[3]-1)  # just radar -1
-        reward -= 5*step_result[7]  # targeted -5
-        reward -= 10*step_result[10]  # get damage -10
-        reward -= (-20)*(step_result[6]-1)  # death -20
+        reward += (step_result[3] + step_result[3]) % 2  # on radar on screen 1
+        reward += 5*step_result[13]  # position score 5 or -5
+        reward += 5*step_result[14] # evasion score 5
+        reward -= 5*step_result[10] # damaged score -5
+        reward -= step_result[12] # heightRestriction -1
         return reward
 
     def render(self, mode="human", **kwargs):

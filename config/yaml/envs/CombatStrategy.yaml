@@ -7,7 +7,7 @@ envs:
   agent_count: 1
   enemy_count: 1
   agent_type: [-1]
-  reward_range: [-36, 36]
+  reward_range: [-11, 11]
   first_weapon_type: [1]
   second_weapon_type: [1]
   # --- learning condition ---
@@ -31,11 +31,10 @@ envs:
   global_resolution: 100
   local_resolution: 30
   init_height: -5
-  step_info_dim: 13
-  spatial_dim: 3
-  non_spatial_dim: 12
-  stick_dim: 5
+  step_info_dim: 15
+  spatial_dim: 15
+  non_spatial_dim: 15
+  stick_dim: 4
   speed_dim: 3
-  attack_dim: 3
 
 

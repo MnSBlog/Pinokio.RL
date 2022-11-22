@@ -1,7 +1,7 @@
 runner:
   # --- Defaults ---
-  max_iteration_num: 5000 # 몇 번 업데이트 할건지
-  pretrain: False
+  max_iteration_num: 5000
+  pretrain: True
   render: True
   off_pg: False
   logger: False # False or True(OpenAI Logger)
@@ -14,6 +14,7 @@ runner:
   best_model_root: "Best"
   condition_path: "./config/AlgoCondition.xlsx"
   save_interval: 100
+  draw_interval: 100
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1
