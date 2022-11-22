@@ -66,8 +66,9 @@ def main(args, parallel):
         if "Gym" in args['runner_name']:
             runner = getattr(gym_runner,
                              args['runner_name'])(config=args)
-        else:
-            raise NotImplementedError
+        elif "StepRunner" in args['runner_name']:
+            runner = getattr(std_runner,
+                             args['runner_name'])(config=args)
     else:
         save_folder_check(args)
 

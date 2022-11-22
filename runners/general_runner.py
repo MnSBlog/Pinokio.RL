@@ -38,7 +38,6 @@ class GeneralRunner:
         self.rew_gap = (self.rew_max - self.rew_min) / 2
         self.rew_numerator = (self.rew_max + self.rew_min) / 2
 
-        fig = plt.figure()
         self.torch_state = False
 
         # Public information
@@ -78,7 +77,7 @@ class GeneralRunner:
     def _interaction(self, action):
         # 다음 상태, 보상 관측
         state, reward, done, trunc, info = self._env.step(action)
-        done |= trunc
+        #done |= trunc
         state = self._update_memory(state)
         self.count += 1
         self.batch_reward += reward
