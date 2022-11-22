@@ -82,7 +82,7 @@ envs:
   max_steps: -1 # -1: No limit
   history_path: "./History"
   trajectory_q_len: 3
-  reward_range: [-1, 3]
+  reward_range: [-1, 1.5]
   # --- Algorithm condition ---
   actions: "Discrete" # Discrete or Continuous
   multi_agent: False
