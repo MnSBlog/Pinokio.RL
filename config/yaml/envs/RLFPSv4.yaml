@@ -7,8 +7,8 @@ envs:
   # --- Play Mode Setting ---
   build_path: "./Exe/Environment.exe"
   headless: False # True, False
-  map_type: [3, 2] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hall / -1: Random
-  play_mode: "team"  # single, team, team_self, human_play, one_on_one, 3v3
+  map_type: [2, 2] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hall / -1: Random
+  play_mode: "3v3"  # single, team, team_self, human_play, one_on_one, 3v3
   play_mode_preset:
     single:
       agent_mode : [ 1, 0, 0, 0, 0] # 0: Bot, 1: Agent, 2: Human-play
@@ -75,7 +75,7 @@ envs:
     view_radius: 20.1 # 20.0 Sight distance
   # --- learning condition ---
   mode: "Pause" # Pause or RealTime
-  period: 200
+  period: 100
   acceleration: 1.0
   update_steps: 20
   save_steps: 300

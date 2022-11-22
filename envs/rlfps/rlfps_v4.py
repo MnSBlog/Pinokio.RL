@@ -177,12 +177,12 @@ class RLFPSv4(gym.Env):
     def __calculate_reward(self, step_result):
         shape = step_result.shape
         reward = torch.zeros([shape[0], shape[1]])
-        reward[:, :] += 1 * step_result[:, :, 1]  # team win
-        reward[:, :] += 1 * step_result[:, :, 2]  # kill score
-        reward[:, :] -= 1 * step_result[:, :, 3]  # dead score
-        # reward += 1 * step_result[:, 4]  # damage score
-        # reward -= 1 * step_result[:, 5]  # hitted score
-        reward[:, :] += 1 * step_result[:, :, 6]  # healthy ratio
+        # reward[:, :] += 1 * step_result[:, :, 1]  # team win
+        # reward[:, :] += 1 * step_result[:, :, 2]  # kill score
+        # reward[:, :] -= 1 * step_result[:, :, 3]  # dead score
+        reward += 1 * step_result[:, :, 4]  # damage score
+        reward -= 1 * step_result[:, :, 5]  # hitted score
+        # reward[:, :] += 1 * step_result[:, :, 6]  # healthy ratio
         reward_min = self.__envConfig["reward_range"][0]
         reward_max = self.__envConfig["reward_range"][1]
         reward = torch.clamp(reward, reward_min, reward_max)
