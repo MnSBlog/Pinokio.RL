@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from agents.tf.actorcritic import Actor, Critic
 from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
-from networks.network_generator import CustomTorchNetwork
+from agents.pytorch.copy_ppo import PPO
+from networks.network_generator import CustomTorchNetwork, SimpleActorNetwork, SimpleCriticNetwork
 
 
 class GeneralRunner:
@@ -16,19 +17,15 @@ class GeneralRunner:
         self._config = config
         self._env = env
         # 액터 신경망 및 크리틱 신경망 생성
-        if "tf" in config['agent']['framework']:
-            actor, critic = self.__load_tf_models()
-        else:
-            actor, critic = self.__load_torch_models()
+        actor, critic = self.__load_networks(config['agent']['framework'])
 
         # RL algorithm 생성
         algo_name = config['agent']['framework'] + config['agent_name']
+        # state_dim = config['network']['actor']['non_spatial_feature']['dim_in'] * config['network']['actor']['memory_q_len']
+        # self._agent = PPO(state_dim, 2, 0.0001, 0.001, 0.99, 20, 0.05, False)
+        # self._agent.instance_networks((actor, critic))
         self._agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self._config['agent'],
                                                               actor=actor, critic=critic)
-
-        # Pretrain(이어하기 조건)
-        if self._config['runner']['pretrain']:
-            self._load_pretrain_network()
 
         # state
         self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
@@ -45,11 +42,15 @@ class GeneralRunner:
 
         # Public information
         self.memory_len = self._config['network']['actor']['memory_q_len']
-        self.layer_len = self._config['network']['actor']['memory_layer_len']
-        self.network_type = self._config['network']['actor']['use_memory_layer']
+        self.layer_len = self._config['network']['actor']['num_memory_layer']
+        self.network_type = "GRU" if self._config['network']['actor']['num_memory_layer'] > 0 else "Raw"
 
         # Public variables
         self.count, self.batch_reward, self.done = 0, 0, False
+
+        # Pretrain(이어하기 조건)
+        if self._config['runner']['pretrain']:
+            self._load_pretrain_network()
 
     def run(self):
         pass
@@ -78,13 +79,16 @@ class GeneralRunner:
         state, reward, done, trunc, info = self._env.step(action)
         #done |= trunc
         state = self._update_memory(state)
-
-        train_reward = self._fit_reward(reward)
-        self._agent.batch_reward.append(train_reward)
-        self._agent.batch_done.append(done)
         self.count += 1
         self.batch_reward += reward
         self.done = done
+
+        train_reward = self._fit_reward(reward)
+        if isinstance(done, bool):
+            done = np.reshape(done, -1)
+            train_reward = np.reshape(train_reward, -1)
+        self._agent.batch_reward.append(train_reward)
+        self._agent.batch_done.append(done)
         return state
 
     def _select_action(self, state):
@@ -100,12 +104,17 @@ class GeneralRunner:
         if len(self._agent.batch_reward) >= self._config['runner']['batch_size']:
             # 학습 추출
             self._agent.update(next_state=next_state, done=self.done)
+            # self._agent.update()
             return True
         else:
             return False
 
     def _sweep_cycle(self, itr):
-        self.reward_info['memory'].append(self.batch_reward)
+        if isinstance(self.batch_reward, float):
+            self.reward_info['memory'].append(self.batch_reward)
+        else:
+            self.reward_info['memory'].append(self.batch_reward.mean().item())
+
         self.save_batch_reward.append(self.batch_reward)
         # 업데이트 특정값 신경망 파라미터를 파일에 저장
         if itr % self._config['runner']['draw_interval'] == 0:
@@ -113,37 +122,52 @@ class GeneralRunner:
             self._draw_reward_plot(now_ep=itr, y_lim=[0, 500])
 
     def _fit_reward(self, rew):
-        if self.rew_min > rew:
+        if isinstance(rew, float):
+            min_under = self.rew_min > rew
+            max_over = self.rew_max < rew
+        else:
+            min_under = True in (self.rew_min > rew[:])
+            max_over = True in (self.rew_max < rew[:])
+
+        if min_under:
             print('reward min is updated: ', rew)
-            self.rew_min = rew
+            self.rew_min = rew.min().item()
             self.rew_gap = (self.rew_max - self.rew_min) / 2
             self.rew_numerator = (self.rew_max + self.rew_min) / 2
-        elif self.rew_max < rew:
+        if max_over:
             print('reward max is updated: ', rew)
-            self.rew_max = rew
+            self.rew_max = rew.max().item()
             self.rew_gap = (self.rew_max - self.rew_min) / 2
             self.rew_numerator = (self.rew_max + self.rew_min) / 2
         # 학습용 보상 [-1, 1]로 fitting
-        #rew = np.reshape(rew, [1, 1])
         train_reward = (rew - self.rew_numerator) / self.rew_gap
 
         return train_reward
 
     def _insert_q(self, state):
+        mem_lim = self._config['network']['actor']['memory_q_len']
         if isinstance(state, dict):
+            # Custom environment, 이미 형식이 맞춰져 있다고 판단
             self.torch_state = True
             if len(state['matrix']) > 0:
-                self.memory_q['matrix'].append(state['matrix'])
+                if mem_lim > len(self.memory_q['matrix']):
+                    self.memory_q['matrix'].append(state['matrix'])
             if len(state['vector']) > 0:
-                self.memory_q['vector'].append(state['vector'])
+                if mem_lim > len(self.memory_q['vector']):
+                    self.memory_q['vector'].append(state['vector'])
             if len(state['action_mask']) > 0:
                 self.memory_q['action_mask'].append(state['action_mask'])
         else:
+            # Open AI gym에서 받아온 State
             if len(state.shape) > 1:
-                state = np.expand_dims(state[:, :, 0], axis=0)
-                self.memory_q['matrix'].append(state)
+                # (b, c, w, h)로 변경
+                if mem_lim > len(self.memory_q['matrix']):
+                    state = np.expand_dims(state[:, :, 0], axis=0)
+                    self.memory_q['matrix'].append(state)
             else:
-                self.memory_q['vector'].append(state)
+                # (b, c, f)로 변경
+                if mem_lim > len(self.memory_q['vector']):
+                    self.memory_q['vector'].append(state.reshape(1, 1, -1))
 
     def _clear_state_memory(self):
         self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
@@ -156,11 +180,15 @@ class GeneralRunner:
 
         if self.torch_state:
             if len(self.memory_q['matrix']) > 0:
-                matrix_obs = torch.cat(self.memory_q['matrix'], dim=1).detach()
+                matrix_obs = torch.cat(self.memory_q['matrix'], dim=2).detach()
+                shape = matrix_obs.shape
+                matrix_obs = matrix_obs.view(shape[0], -1, shape[-2], shape[-1])
                 self.memory_q['matrix'].pop(0)
 
             if len(self.memory_q['vector']) > 0:
                 vector_obs = torch.cat(self.memory_q['vector'], dim=1).detach()
+                shape = vector_obs.shape
+                vector_obs = vector_obs.view(shape[0], -1, shape[-1])
                 self.memory_q['vector'].pop(0)
 
             if len(self.memory_q['action_mask']) > 0:
@@ -168,11 +196,11 @@ class GeneralRunner:
                 self.memory_q['action_mask'].pop(0)
         else:
             if len(self.memory_q['matrix']) > 0:
-                matrix_obs = np.concatenate(self.memory_q['matrix'], axis=0)
+                matrix_obs = np.concatenate(self.memory_q['matrix'], axis=1)
                 self.memory_q['matrix'].pop(0)
 
             if len(self.memory_q['vector']) > 0:
-                vector_obs = np.concatenate(self.memory_q['vector'], axis=0)
+                vector_obs = np.concatenate(self.memory_q['vector'], axis=1)
                 self.memory_q['vector'].pop(0)
 
             if len(self.memory_q['action_mask']) > 0:
@@ -198,7 +226,7 @@ class GeneralRunner:
 
         mu = np.mean(self.reward_info['memory'])
         sigma = np.std(self.reward_info['memory'])
-
+        mu = mu + (2 * sigma)
         self.reward_info['mu'].append(mu)
         self.reward_info['max'].append(mu + (0.5 * sigma))
         self.reward_info['min'].append(mu - (0.5 * sigma))
@@ -210,17 +238,16 @@ class GeneralRunner:
         plt.fill_between(self.reward_info['episode'],
                          self.reward_info['min'], self.reward_info['max'], alpha=0.2)
         if y_lim is not None:
-            plt.ylim(0, y_lim)
+            plt.ylim(y_lim)
         title = prefix + ".png"
         plt.savefig(os.path.join("figures/", self._config['env_name'], title))
 
-    def _save_reward_log(self, cnt, prefix_option=True):
+    def _save_reward_log(self, prefix_option=True):
         prefix = 'reward_log'
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
-        filename = os.path.join("./history", self._config['envs']['name'], prefix + '_epi_reward.txt')
+        filename = os.path.join("./history", self._config['env_name'], prefix + '_epi_reward.txt')
         np.savetxt(filename, self.save_batch_reward)
-        self._draw_reward_plot(now_ep=cnt, y_lim=None)
 
     def _load_pretrain_network(self, prefix_option=True):
         try:
@@ -256,8 +283,11 @@ class GeneralRunner:
 
     def __load_torch_models(self):
         self._config['network']['critic'] = self.__make_critic_config(self._config['network']['actor'])
+        dim_in = self._config['network']['actor']['memory_q_len'] * self._config['network']['actor']['non_spatial_feature']['dim_in']
         actor = CustomTorchNetwork(self._config['network']['actor'])
         critic = CustomTorchNetwork(self._config['network']['critic'])
+        # actor = SimpleActorNetwork(input_dim=dim_in, output_dim=2)
+        # critic = SimpleCriticNetwork(input_dim=dim_in)
         return actor, critic
 
     def __load_networks(self, framework='tf'):
@@ -278,6 +308,7 @@ class GeneralRunner:
                 critic_config['spatial_feature']['dim_out'] = neck_in
             else:
                 critic_config['non_spatial_feature']['dim_out'] = neck_in
+        critic_config['non_spatial_feature']['use_cnn'] = False
         critic_config['n_of_actions'] = [1]
         critic_config['action_mode'] = "Continuous"
         return critic_config

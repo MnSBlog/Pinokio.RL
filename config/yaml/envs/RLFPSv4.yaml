@@ -7,8 +7,8 @@ envs:
   # --- Play Mode Setting ---
   build_path: "./Exe/Environment.exe"
   headless: False # True, False
-  map_type: [2, 3, 4] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hole / -1: Random
-  play_mode: "one_on_one"  # single, team, team_self, human_play, one_on_one
+  map_type: [3, 2] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hall / -1: Random
+  play_mode: "team"  # single, team, team_self, human_play, one_on_one, 3v3
   play_mode_preset:
     single:
       agent_mode : [ 1, 0, 0, 0, 0] # 0: Bot, 1: Agent, 2: Human-play
@@ -55,6 +55,15 @@ envs:
       enemy_first_weapon_type: [ -1 ]
       agent_second_weapon_type: [ -1 ]
       enemy_second_weapon_type: [ -1 ]
+    3v3:
+      agent_mode: [ 1, 1, 1 ]
+      enemy_mode: [ 0, 0, 0 ]
+      agent_type: [ -1, -1, -1 ]
+      enemy_type: [ -1, -1, -1 ]
+      agent_first_weapon_type: [ -1, -1, -1 ]
+      enemy_first_weapon_type: [ -1, -1, -1 ]
+      agent_second_weapon_type: [ -1, -1, -1 ]
+      enemy_second_weapon_type: [ -1, -1, -1 ]
   # --- Character Kinematics ---
   kinematics:
     x_speed: 220.1 # 220.0 Left/Right sight rotation speed
@@ -65,7 +74,6 @@ envs:
     view_angle: 180.1 # 180.0 Sight angle/range
     view_radius: 20.1 # 20.0 Sight distance
   # --- learning condition ---
-
   mode: "Pause" # Pause or RealTime
   period: 200
   acceleration: 1.0
@@ -89,7 +97,7 @@ envs:
   init_height: -5
   step_info_dim: 12
   spatial_dim: 8
-  non_spatial_dim: 18
+  non_spatial_dim: 17
   game_result_dim: 8
   move_dim: 9
   attack_dim: 7

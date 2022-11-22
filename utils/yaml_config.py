@@ -56,7 +56,7 @@ class YamlConfig:
         return sub_dict
 
     @staticmethod
-    def select_algorithm(self, args):
+    def select_algorithm(args):
         config = args['runner']
         if config["self_play"]:
             algo_condition = pd.read_excel(config["condition_path"], engine='openpyxl')

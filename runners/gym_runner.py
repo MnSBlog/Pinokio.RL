@@ -28,6 +28,7 @@ class GymRunner(GeneralRunner):
             print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
             self.save_batch_reward.append(self.batch_reward)
             self._sweep_cycle(ep)
+        self._save_reward_log()
 
 
 class ParallelGymRunner:
@@ -58,11 +59,11 @@ class ParallelGymRunner:
                 os.mkdir(sub_config['runner']['history_path'])
 
             for q_len in self.q_cases:
-                for layer_len in self.layer_cases:
+                for layer_case in self.layer_cases:
                     sub_config['env_name'] = env_name
                     sub_config = self.update_config(config=sub_config, key='envs', name=env_name)
                     sub_config['network']['actor']['memory_q_len'] = q_len
-                    sub_config['network']['actor']['use_memory_layer'] = layer_len
+                    sub_config['network']['actor']['use_memory_layer'] = layer_case
                     args.append(sub_config)
 
         pool.map(self.sub_runner_start, args)

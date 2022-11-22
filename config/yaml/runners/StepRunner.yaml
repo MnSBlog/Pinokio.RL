@@ -1,19 +1,18 @@
 runner:
   # --- Defaults ---
-  max_iteration_num: 5000
-  pretrain: True
+  max_iteration_num: 50000000
+  pretrain: False
   render: True
   off_pg: False
   logger: False # False or True(OpenAI Logger)
   # --- Learning Condition ---
-  batch_size: 100 # batch size
+  batch_size: 15 # batch size
   self_play: False
   # --- Operation options ---
   use_cuda: True # Use gpu by default unless it isn't available
   history_path: "./history"
   best_model_root: "Best"
   condition_path: "./config/AlgoCondition.xlsx"
-  save_interval: 100
   draw_interval: 100
   # --- curriculum learning ---
   curriculum_learning: False
