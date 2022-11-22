@@ -227,7 +227,6 @@ class GeneralRunner:
 
         mu = np.mean(self.reward_info['memory'])
         sigma = np.std(self.reward_info['memory'])
-        mu = mu + (2 * sigma)
         self.reward_info['mu'].append(mu)
         self.reward_info['max'].append(mu + (0.5 * sigma))
         self.reward_info['min'].append(mu - (0.5 * sigma))

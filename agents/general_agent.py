@@ -1,3 +1,5 @@
+import os
+import torch
 from agents.tf.actorcritic import Actor, Critic
 
 
@@ -5,6 +7,9 @@ class GeneralAgent:
     def __init__(self, parameters: dict):
         self._config = parameters
         self.exconfig = dict()
+        self.metric_list = ['reward', 'entropy', 'state_value', 'loss']
+        self.statistics = ['max', 'min', 'std', 'mean']
+        self.metric = self.make_metrics()
         # 배치 설정
         self.batch_state_vector = []
         self.batch_state_matrix = []
@@ -43,6 +48,22 @@ class GeneralAgent:
         self.batch_done = []
         self.batch_log_old_policy_pdf = []
         self.batch_hidden_state = []
+
+    def insert_metrics(self, sub_metric):
+        for key in self.metric_list:
+            if key in sub_metric:
+                for statistic in self.statistics:
+                    value = getattr(torch, statistic)(sub_metric[key])
+                    key_name = key + '_' + statistic
+                    self.metric[key_name].append(value.item())
+
+    def make_metrics(self):
+        metric = dict()
+        for title in self.metric_list:
+            for statistic in self.statistics:
+                key_name = title + '_' + statistic
+                metric[key_name] = []
+        return metric
 
 
 class PolicyAgent(GeneralAgent):
