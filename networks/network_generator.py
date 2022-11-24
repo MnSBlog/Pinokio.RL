@@ -170,8 +170,8 @@ class CustomTorchNetwork(nn.Module):
                 x2 = x2.view(x2.shape[0], -1)
             x2 = self.networks['non_spatial_feature'](x2)
 
-        x2 = x2.view(x2.shape[0], -1)
         if 0 not in x2.shape:
+            x2 = x2.view(x2.shape[0], -1)
             cat_alter.append(x2)
         if len(cat_alter) == 2:
             state = torch.cat(cat_alter, dim=1)

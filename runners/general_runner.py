@@ -77,7 +77,7 @@ class GeneralRunner:
     def _interaction(self, action):
         # 다음 상태, 보상 관측
         state, reward, done, trunc, info = self._env.step(action)
-        #done |= trunc
+        done |= trunc
         state = self._update_memory(state)
         self.count += 1
         self.batch_reward += reward
@@ -163,6 +163,7 @@ class GeneralRunner:
                 # (b, c, w, h)로 변경
                 if mem_lim > len(self.memory_q['matrix']):
                     state = np.expand_dims(state[:, :, 0], axis=0)
+                    state = np.expand_dims(state, axis=0)
                     self.memory_q['matrix'].append(state)
             else:
                 # (b, c, f)로 변경

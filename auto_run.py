@@ -30,31 +30,33 @@ def save_config(config, path):
 
 
 def save_outputs(args, metric, path):
-    name = time.process_time()
     now = datetime.now()
     prefix = now.strftime("%Y-%m-%d-%H-%M-%S.%f")
 
-    save_path = os.path.join(path, str(name))
-    if os.path.isdir(save_path) is False:
-        os.mkdir(save_path)
-    save_config(args, os.path.join(save_path, prefix + "run_args.yaml"))
+    if os.path.isdir(path) is False:
+        os.mkdir(path)
+    save_config(args, os.path.join(path, prefix + "run_args.yaml"))
     if metric is not None:
         data = pd.DataFrame.from_dict(metric)
-        data.to_csv(os.path.join(path, str(name), 'metric.csv'))
+        data.to_csv(os.path.join(path, prefix + 'metric.csv'))
 
 
 def test_function(memory):
-    run_args = load_config()
-    env = gym.make(run_args['env_name'], render_mode='human')
-    run_args = update_config(run_args, memory)
+    try:
+        run_args = load_config()
 
-    runner = AutoRLRunner(config=run_args, env=env)
-    output, metric = runner.run()
+        env = gym.make(run_args['env_name'], render_mode=run_args['runner']['render'])
+        run_args = update_config(run_args, memory)
 
-    figure_path = './figures/AutoRL'
-    env_path = os.path.join(figure_path, run_args['env_name'])
-    count = len(os.listdir(env_path)) - 1
-    save_outputs(args=run_args, metric=metric, path=os.path.join(env_path, str(count)))
+        runner = AutoRLRunner(config=run_args, env=env)
+        output, metric = runner.run()
+
+        figure_path = './figures/AutoRL'
+        env_path = os.path.join(figure_path, run_args['env_name'])
+        count = len(os.listdir(env_path)) - 1
+        save_outputs(args=run_args, metric=metric, path=os.path.join(env_path, str(count), str(output)))
+    except ValueError:
+        output = 0.0
     return output
 
 
@@ -108,7 +110,8 @@ def main():
     optimizer = HarmonySearch(parameters=optim_args, test_function=test_function)
     optimizer.start()
     output_config, output = optimizer.close()
-    save_outputs(args=output_config, metric=None, path=env_path)
+    count = len(os.listdir(env_path)) - 1
+    save_outputs(args=output_config, metric=None, path=os.path.join(env_path, str(count), "Best"))
     print(output_config)
     print(output)
 
