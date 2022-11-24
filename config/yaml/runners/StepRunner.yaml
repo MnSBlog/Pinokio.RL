@@ -1,8 +1,8 @@
 runner:
   # --- Defaults ---
   max_iteration_num: 50000000
-  pretrain: False
-  render: True
+  pretrain: True
+  render: False
   off_pg: False
   logger: False # False or True(OpenAI Logger)
   # --- Learning Condition ---

@@ -2,6 +2,8 @@ import copy
 import os
 import gym
 import time
+
+import pandas as pd
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -115,11 +117,12 @@ class GeneralRunner:
         else:
             self.reward_info['memory'].append(self.batch_reward.mean().item())
 
-        self.save_batch_reward.append(self.batch_reward)
+        self.save_batch_reward.append(self.reward_info['memory'][-1])
         # 업데이트 특정값 신경망 파라미터를 파일에 저장
         if itr % self._config['runner']['draw_interval'] == 0:
             self._save_agent()
-            self._draw_reward_plot(now_ep=itr, y_lim=[0, 500])
+            self._draw_reward_plot(now_ep=itr)
+            self._save_metric(itr // self._config['runner']['draw_interval'] - 1)
 
     def _fit_reward(self, rew):
         if isinstance(rew, float):
@@ -241,6 +244,11 @@ class GeneralRunner:
             plt.ylim(y_lim)
         title = prefix + ".png"
         plt.savefig(os.path.join("figures/", self._config['env_name'], title))
+
+    def _save_metric(self, count):
+        data = pd.DataFrame.from_dict(self._agent.metric)
+        data.to_csv(os.path.join(self._config['runner']['history_path'], 'Metric' + str(count) + '.csv'))
+        self._agent.metric = self._agent.make_metrics()
 
     def _save_reward_log(self, prefix_option=True):
         prefix = 'reward_log'
