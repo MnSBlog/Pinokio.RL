@@ -1,3 +1,4 @@
 hmcr: 0.7
 par: 0.1
-hms: 5
+hms: 7
+parallel: False

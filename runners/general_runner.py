@@ -85,6 +85,9 @@ class GeneralRunner:
         self.batch_reward += reward
         self.done = done
 
+        if torch.is_tensor(reward) is False:
+            reward = float(reward)
+
         train_reward = self._fit_reward(reward)
         if isinstance(done, bool):
             done = np.reshape(done, -1)

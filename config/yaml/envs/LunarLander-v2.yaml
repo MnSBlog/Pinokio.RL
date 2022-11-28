@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: LunarLander
+  reward_range: [-100, 300]

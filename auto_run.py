@@ -53,8 +53,14 @@ def test_function(memory):
 
         figure_path = './figures/AutoRL'
         env_path = os.path.join(figure_path, run_args['env_name'])
-        count = len(os.listdir(env_path)) - 1
-        save_outputs(args=run_args, metric=metric, path=os.path.join(env_path, str(count), str(output)))
+        folder_list = os.listdir(env_path)
+        full_list = [os.path.join(env_path, folder) for folder in folder_list]
+        time_sorted_list = sorted(full_list, key=os.path.getmtime)
+        last_folder = time_sorted_list[-1]
+        count = len(os.listdir(last_folder))
+        env_path = os.path.join(last_folder, str(count) + '-Gen')
+
+        save_outputs(args=run_args, metric=metric, path=os.path.join(env_path, str(output)))
     except ValueError:
         output = 0.0
     return output
@@ -104,14 +110,14 @@ def main():
     env_path = os.path.join(figure_path, run_args['env_name'])
     if os.path.isdir(env_path) is False:
         os.mkdir(env_path)
-    count = len(os.listdir(env_path))
-    os.mkdir(os.path.join(env_path, str(count)))
+    now = datetime.now()
+    start_date = now.strftime("%Y-%m-%d-%H-%M-%S")
+    os.mkdir(os.path.join(env_path, start_date))
 
     optimizer = HarmonySearch(parameters=optim_args, test_function=test_function)
-    optimizer.start()
+    optimizer.start(root=os.path.join(env_path, start_date))
     output_config, output = optimizer.close()
-    count = len(os.listdir(env_path)) - 1
-    save_outputs(args=output_config, metric=None, path=os.path.join(env_path, str(count), "Best"))
+    save_outputs(args=output_config, metric=None, path=os.path.join(env_path, start_date, "Best"))
     print(output_config)
     print(output)
 

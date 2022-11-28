@@ -1,5 +1,5 @@
 # --- Modules ---
 runner_name: "AutoRLRunner" # path about StepRunner / GymRunner / EpisodeRunner / AutoRLRunner
-network_name: "Acrobot-v1" # custom_network_path / torchvision.models(pre-trained)
-env_name: "Acrobot-v1" # Environment name (include gym.env)
+network_name: "Tennis-v4" # custom_network_path / torchvision.models(pre-trained)
+env_name: "Tennis-v4" # Environment name (include gym.env)
 agent_name: "PPO" # Algorithm name

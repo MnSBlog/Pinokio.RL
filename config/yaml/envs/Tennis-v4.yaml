@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: Tennis
+  reward_range: [-1, 1]

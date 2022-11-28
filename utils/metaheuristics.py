@@ -1,4 +1,5 @@
 from multiprocessing import Pool
+import os
 import copy
 import random
 
@@ -16,7 +17,7 @@ class Solver:
     def __getitem__(self, key):
         return self._Parameters[key]
 
-    def start(self):
+    def start(self, root):
         pass
 
     def close(self, forced=False):
@@ -41,15 +42,22 @@ class HarmonySearch(Solver):
 
         self.not_update_memory = 0
 
-    def start(self):
+    def start(self, root):
         short_term_memory = copy.deepcopy(self.__hm['value'])
-
         while self.is_terminal() is False:
-            with Pool(self.__hms) as p:
-                new_output = p.map(self._TestFunc, short_term_memory)
+            new_output = []
+            count = len(os.listdir(root)) + 1
+            os.mkdir(os.path.join(root, str(count) + '-Gen'))
+            if self._Parameters['parallel']:
+                with Pool(self.__hms) as p:
+                    new_output = p.map(self._TestFunc, short_term_memory)
+            else:
+                for idx in range(self.__hms):
+                    out = self._TestFunc(short_term_memory[idx])
+                    new_output.append(copy.deepcopy(out))
 
             worst_output = copy.deepcopy(self.__hm['output'][-1])
-            outputs = self.__hm['output'] + new_output
+            outputs = copy.deepcopy(self.__hm['output']) + new_output
             short_term_memory = self.__hm['value'] + short_term_memory
 
             index = range(len(outputs))
