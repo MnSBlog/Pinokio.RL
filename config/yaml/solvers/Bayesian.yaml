@@ -1,0 +1,5 @@
+init_points: 2
+n_iter: 10
+verbose: 2
+random_state: 1
+maximize: True

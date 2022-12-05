@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: Taxi
+  reward_range: [-10, 20]

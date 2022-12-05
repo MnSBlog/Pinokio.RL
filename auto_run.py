@@ -1,21 +1,21 @@
 import copy
-import time
 import os
+import numpy as np
 import pandas as pd
 import gym
+import matplotlib.pyplot as plt
 from utils.yaml_config import YamlConfig
 from runners.auto_rl_runner import AutoRLRunner
-from utils.metaheuristics import HarmonySearch
+import utils.solver as solver
 from main import load_config
 from datetime import datetime
 
 
-def load_optim_config():
+def load_optim_config(optimizer: str):
     config_handler = YamlConfig(root='./config')
 
     solver_root = './config/yaml/solvers/'
     parameters = config_handler.get_dict(os.path.join(solver_root, 'hyperparameters.yaml'))
-    optimizer = 'HarmonySearch'
     opt_config = config_handler.get_dict(os.path.join(solver_root, optimizer + ".yaml"))
     args = dict(parameters, **opt_config)
     return args
@@ -88,9 +88,32 @@ def update_config(old_config, update_note):
     return new_config
 
 
-def main():
+def draw_result(path):
+    generations = os.listdir(path)
+    generations = [folder for folder in generations if 'Gen' in folder]
+    info = {'mu': [0.0], 'max': [0.0], 'min': [0.0], 'iteration': [0]}
+    for gen in range(1, len(generations) + 1):
+        output_path = os.path.join(path, generations[gen - 1])
+        outputs = os.listdir(output_path)
+        outputs = [float(i) for i in outputs]
+        min_val = min(outputs)
+        max_val = max(outputs)
+        mu = np.mean(outputs).item()
+
+        info['mu'].append(mu)
+        info['max'].append(max_val)
+        info['min'].append(min_val)
+        info['iteration'].append(gen)
+
+    plt.plot(info['iteration'], info['max'], '-')
+    plt.fill_between(info['iteration'], info['mu'], info['max'], alpha=0.2)
+    plt.savefig(os.path.join(path, "progress.jpg"))
+    plt.clf()
+
+
+def main(opt: str):
     run_args = load_config()
-    optim_args = load_optim_config()
+    optim_args = load_optim_config(opt)
     network_config = run_args['network']['actor']
     if network_config['spatial_feature']['use'] is False:
         optim_args.pop('network-actor-spatial_feature-memory_q_len', None)
@@ -114,13 +137,15 @@ def main():
     start_date = now.strftime("%Y-%m-%d-%H-%M-%S")
     os.mkdir(os.path.join(env_path, start_date))
 
-    optimizer = HarmonySearch(parameters=optim_args, test_function=test_function)
+    optimizer = getattr(solver, opt)(parameters=optim_args, test_function=test_function)
     optimizer.start(root=os.path.join(env_path, start_date))
     output_config, output = optimizer.close()
     save_outputs(args=output_config, metric=None, path=os.path.join(env_path, start_date, "Best"))
+    draw_result(path=os.path.join(env_path, start_date))
     print(output_config)
     print(output)
 
 
 if __name__ == '__main__':
-    main()
+    solver_name = "Bayesian"
+    main(solver_name)

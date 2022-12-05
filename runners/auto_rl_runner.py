@@ -21,8 +21,6 @@ class AutoRLRunner(GeneralRunner):
                 self._update_agent(next_state=state)
 
             # 에피소드마다 결과 보상값 출력
-            print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
+            # print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
             reward_sum += self.batch_reward
-            self.save_batch_reward.append(self.batch_reward)
-            self._sweep_cycle(ep)
         return reward_sum, self._agent.metric

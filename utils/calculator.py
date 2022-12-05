@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def get_default_kpi(data, interval):
@@ -36,17 +37,29 @@ def convert_to_numpy(path, name):
     return np.array(data)
 
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    filenames = ['historyCartPoleRaw-mem_len-4-layer_len-3_epi_reward',
-                 'historyCartPoleRaw-mem_len-16-layer_len-3_epi_reward',
-                 'historyCartPoleRaw-mem_len-64-layer_len-3_epi_reward']
-    for idx, filename in enumerate(filenames):
-        values = convert_to_numpy(r"D:\MnS\Projects\RL_Library", filename + '.txt')
-        reward_info = get_default_kpi(values, 1000)
+def draw_auto_rl_result(path):
+    generations = os.listdir(path)
+    generations = [folder for folder in generations if 'Gen' in folder]
+    info = {'mu': [0.0], 'max': [0.0], 'min': [0.0], 'iteration': [0]}
+    for gen in range(1, len(generations) + 1):
+        output_path = os.path.join(path, generations[gen-1])
+        outputs = os.listdir(output_path)
+        outputs = [float(i) for i in outputs]
+        min_val = min(outputs)
+        max_val = max(outputs)
+        mu = np.mean(outputs).item()
 
-        plt.plot(reward_info['episode'], reward_info['mu'], '-')
-        plt.fill_between(reward_info['episode'], reward_info['min'], reward_info['max'], alpha=0.2)
-        plt.ylim([0, 400])
-    plt.savefig(os.path.join(r"D:\MnS\Projects\RL_Library\figures", "manual_graph(4).jpg"))
+        info['mu'].append(mu)
+        info['max'].append(max_val)
+        info['min'].append(min_val)
+        info['iteration'].append(gen)
+
+    plt.plot(info['iteration'], info['max'], '-')
+    plt.fill_between(info['iteration'], info['mu'], info['max'], alpha=0.2)
+    plt.savefig(os.path.join(path, "progress.jpg"))
     plt.clf()
+
+
+if __name__ == '__main__':
+    draw_auto_rl_result(r'D:\MnS\Projects\RL_Library\figures\AutoRL\CartPole-v1\2022-12-02-14-38-10')
+
