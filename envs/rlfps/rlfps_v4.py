@@ -176,13 +176,17 @@ class RLFPSv4(gym.Env):
 
     def __calculate_reward(self, step_result):
         shape = step_result.shape
+        # 이거 먼저 체크하고 바로 리턴 맞기만하면 알빠아님
+        reward[:, :] -= 1 * step_result[:, :, 3]  # dead score: 죽으면 0점 모든 보상이 0점
+        reward -= 1 * step_result[:, :, 5]  # hitted score 0점 모든 보상이 0점
+
         reward = torch.zeros([shape[0], shape[1]])
-        # reward[:, :] += 1 * step_result[:, :, 1]  # team win
-        # reward[:, :] += 1 * step_result[:, :, 2]  # kill score
-        # reward[:, :] -= 1 * step_result[:, :, 3]  # dead score
-        reward += 1 * step_result[:, :, 4]  # damage score
-        reward -= 1 * step_result[:, :, 5]  # hitted score
-        # reward[:, :] += 1 * step_result[:, :, 6]  # healthy ratio
+        reward[:, :] += 1 * step_result[:, :, 1]  # team win/lose: +50점 지면 0점
+        reward[:, :] += 1 * step_result[:, :, 2]  # kill score: +50점:
+        reward += 1 * step_result[:, :, 4]  # damage score 20점 데미지 얼마줬던간에 맞기만 하면 무조건 20점
+        reward[:, :] += 1 * step_result[:, :, 6]  # healthy ratio * 5
+
+        # 이거는 70점 이상 컷 0점 이하 컷
         reward_min = self.__envConfig["reward_range"][0]
         reward_max = self.__envConfig["reward_range"][1]
         reward = torch.clamp(reward, reward_min, reward_max)
