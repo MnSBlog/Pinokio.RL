@@ -2,7 +2,7 @@ network:
   actor:
     # --- learning option ---
     obs_stack: True
-    memory_q_len: 4 # Integer / List
+    memory_q_len: 5 # Integer / List
     # - State definition -
     # --- spatial features ---
     spatial_feature:
@@ -22,7 +22,7 @@ network:
       use_cnn: True
       freeze: False
     # --- outputs ---
-    neck_out: 16
+    neck_out: 32
     neck_activation: "ReLU"
     neck_num_layer: 3
     num_memory_layer: 0

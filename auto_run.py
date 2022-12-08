@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import gym
+from envs import REGISTRY as ENV_REGISTRY
 import matplotlib.pyplot as plt
 from utils.yaml_config import YamlConfig
 from runners.auto_rl_runner import AutoRLRunner
@@ -45,7 +46,14 @@ def test_function(memory):
     try:
         run_args = load_config()
 
-        env = gym.make(run_args['env_name'], render_mode=run_args['runner']['render'])
+        from gym import envs
+        check = envs.registry
+
+        if run_args['env_name'] in check:
+            env = gym.make(run_args['env_name'], render_mode=run_args['runner']['render'])
+        else:
+            env = ENV_REGISTRY[run_args['env_name']](**run_args['envs'])
+
         run_args = update_config(run_args, memory)
 
         runner = AutoRLRunner(config=run_args, env=env)
