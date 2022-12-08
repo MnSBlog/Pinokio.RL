@@ -23,7 +23,7 @@ class Solver:
         self._TestFunc = kwargs['test_function']
         self._BestParameter = None
         if self._Parameters['maximize']:
-            self._BestOutput = 0.0
+            self._BestOutput = np.NINF
         else:
             self._BestOutput = np.Inf
 

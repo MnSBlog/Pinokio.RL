@@ -95,7 +95,7 @@ def draw_result(path):
     for gen in range(1, len(generations) + 1):
         output_path = os.path.join(path, generations[gen - 1])
         outputs = os.listdir(output_path)
-        outputs = [float(i) for i in outputs]
+        outputs = [float(i) for i in outputs if '.json' not in i]
         min_val = min(outputs)
         max_val = max(outputs)
         mu = np.mean(outputs).item()
@@ -147,5 +147,5 @@ def main(opt: str):
 
 
 if __name__ == '__main__':
-    solver_name = "Bayesian"
+    solver_name = "HarmonySearch"
     main(solver_name)
