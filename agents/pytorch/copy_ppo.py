@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
-
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 ################################## set device ##################################
 print("============================================================================================")
 # set device to cpu or cuda
