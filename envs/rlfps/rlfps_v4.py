@@ -113,14 +113,28 @@ class RLFPSv4(gym.Env):
 
         done = torch.tensor(deserialized_step_info_list[:, :, 0], dtype=torch.bool)
         done = done.view(-1)
+
         reward = self.__calculate_reward(deserialized_step_info_list)
         reward = reward.view(-1)
+
+        _, deserialized_result_info_list, _ = CommunicationManager.deserialize_info(game_results)
 
         vector_shape = deserialized_char_info_list.shape
         matrix_shape = deserialized_field_info_list.shape
         mask_shape = deserialized_action_mask.shape
 
         front = matrix_shape[0] * matrix_shape[1]
+        deserialized_result_info_list = deserialized_result_info_list.view(front, -1)
+        for idx, done_check in enumerate(done):
+            if done_check.item() is True:
+                result = deserialized_result_info_list[idx, :]
+                line = ''
+                for element in result:
+                    line += str(element.item()) + ', '
+                line += '\n'
+                f = open("gameresult.txt", "a+")
+                f.write(line)
+                f.close()
         deserialized_field_info_list = deserialized_field_info_list.view(front, 1, matrix_shape[-3],
                                                                          matrix_shape[-2], matrix_shape[-1])
         front = vector_shape[0] * vector_shape[1]
@@ -176,15 +190,25 @@ class RLFPSv4(gym.Env):
 
     def __calculate_reward(self, step_result):
         shape = step_result.shape
-        # 이거 먼저 체크하고 바로 리턴 맞기만하면 알빠아님
-        reward[:, :] -= 1 * step_result[:, :, 3]  # dead score: 죽으면 0점 모든 보상이 0점
-        reward -= 1 * step_result[:, :, 5]  # hitted score 0점 모든 보상이 0점
-
         reward = torch.zeros([shape[0], shape[1]])
-        reward[:, :] += 1 * step_result[:, :, 1]  # team win/lose: +50점 지면 0점
-        reward[:, :] += 1 * step_result[:, :, 2]  # kill score: +50점:
-        reward += 1 * step_result[:, :, 4]  # damage score 20점 데미지 얼마줬던간에 맞기만 하면 무조건 20점
-        reward[:, :] += 1 * step_result[:, :, 6]  # healthy ratio * 5
+
+        for map_idx in range(shape[0]):
+            for agent_idx in range(shape[1]):
+                reward[map_idx, agent_idx] += 50 * step_result[map_idx, agent_idx, 1]  # team win/lose: +50점 지면 0점
+                if step_result[map_idx, agent_idx, 2] > 0:
+                    reward[map_idx, agent_idx] += 50
+                # reward[:, :] += 1 * step_result[:, :, 2]  # kill score: +50점:
+                if step_result[map_idx, agent_idx, 4] > 0:
+                    reward[map_idx, agent_idx] += 20
+                # reward += 1 * step_result[:, :, 4]  # damage score 20점 데미지 얼마줬던간에 맞기만 하면 무조건 20점
+                reward[map_idx, agent_idx] += 5 * step_result[map_idx, agent_idx, 6]  # healthy ratio * 5
+
+                reward[map_idx, agent_idx] = 10 * (3.0 - step_result[map_idx, agent_idx, -1])
+                # 이거 먼저 체크하고 바로 리턴 맞기만하면 알빠아님
+                if step_result[map_idx, agent_idx, 3] == 1:
+                    reward[map_idx, agent_idx] = 0
+                # reward[:, :] -= 1 * step_result[:, :, 3]  # dead score: 죽으면 0점 모든 보상이 0점
+                # reward -= 1 * step_result[:, :, 5]  # hitted score 0점 모든 보상이 0점
 
         # 이거는 70점 이상 컷 0점 이하 컷
         reward_min = self.__envConfig["reward_range"][0]

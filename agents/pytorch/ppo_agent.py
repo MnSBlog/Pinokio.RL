@@ -112,7 +112,7 @@ class PPO(PolicyAgent):
             state_values = state_values.flatten()
             # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs.detach())
-
+            # ratios = ratios.clamp(min=3.0e-9, max=88)
             # Finding Surrogate Loss
             advantages = rewards - state_values.detach()
             surr1 = ratios * advantages

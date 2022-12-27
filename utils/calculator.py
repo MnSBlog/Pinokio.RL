@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -37,6 +38,53 @@ def convert_to_numpy(path, name):
     return np.array(data)
 
 
+def draw_game_result(path, filename):
+    col_title = ['TypeID', 'FirstGun', 'SecondGun', 'HP', 'Kill', 'Step', 'Playtime', 'Result', 'None']
+    data = pd.read_csv(path, header=None)
+    data.columns = col_title
+    window = 10
+    results = data['Result'].tolist()
+
+    timeover = []
+    lose = []
+    win = []
+    for idx in range(0, len(results), window):
+        batch = results[idx:idx+window]
+        timeover.append(batch.count(-1.0))
+        lose.append(batch.count(0.0))
+        win.append(batch.count(1.0))
+        test = 1
+
+    x = list(range(len(timeover)))
+
+    lose = [x + y for x, y in zip(win, lose)]
+    timeover = [x + y for x, y in zip(lose, timeover)]
+    plt.fill_between(x, 0, win, alpha=0.7, label='Win')
+    plt.fill_between(x, win, lose, alpha=0.7, label='Lose')
+    plt.fill_between(x, lose, timeover, alpha=0.7, label='TimeOver')
+
+    plt.ylim(0, 11)
+    plt.legend(bbox_to_anchor=(0.8, 1.05), loc='center left')
+    plt.savefig(filename + 'game_result.png')
+    plt.clf()
+
+    results = data['Kill'].tolist()
+    kill_min = []
+    kill_mean = []
+    kill_max = []
+    for idx in range(0, len(results), window):
+        batch = results[idx:idx+window]
+        kill_min.append(min(batch))
+        kill_mean.append(sum(batch) / len(batch))
+        kill_max.append(max(batch))
+
+    plt.plot(x, kill_max, '-')
+    plt.fill_between(x, kill_mean, kill_max, alpha=0.2)
+    plt.ylim(0.0, 4.0)
+    plt.savefig(filename + 'game_kill.png')
+    plt.clf()
+
+
 def draw_auto_rl_result(path):
     generations = os.listdir(path)
     generations = [folder for folder in generations if 'Gen' in folder]
@@ -61,5 +109,11 @@ def draw_auto_rl_result(path):
 
 
 if __name__ == '__main__':
-    draw_auto_rl_result(r'D:\MnS\Projects\RL_Library\figures\AutoRL\CartPole-v1\2022-12-02-14-38-10')
+    root = r'D:\MnS\Projects\RL_Library\history'
+    draw_alters = ['zig_zag_gameresult.csv', 'battle_hall_gameresult.csv', 'total_test.csv']
+    for alter in draw_alters:
+        final_path = os.path.join(root, alter)
+        filename = alter.replace('.csv', '')
+        draw_game_result(path=final_path, filename=filename)
+
 

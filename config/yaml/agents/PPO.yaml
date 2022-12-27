@@ -13,5 +13,5 @@ agent:
   # --- Only Tensorflow ---
   state_dim: 0 # You have to set this value (e.g. env.observation_space.shape[0])
   # - Model configuration -
-  optimizer: 'SGD'
+  optimizer: 'Adam'
   loss_function: 'MSELoss'

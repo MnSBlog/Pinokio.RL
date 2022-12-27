@@ -14,6 +14,8 @@ class StepRunner(GeneralRunner):
         super(StepRunner, self).__init__(config, env)
         if os.path.exists(os.path.join('./figures', config['env_name'])) is False:
             os.mkdir(os.path.join('./figures', config['env_name']))
+        if self._config['runner']['pretrain']:
+            self._load_pretrain_network()
 
     def run(self):
         state = self._env_init(reset_env=True)
@@ -24,6 +26,24 @@ class StepRunner(GeneralRunner):
                 state = self._interaction(action)
             print('Update: ', update, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
             self._sweep_cycle(update)
+
+    def _load_pretrain_network(self, prefix_option=True):
+        try:
+            if os.listdir(self._config['runner']['history_path']):
+                name_list = os.listdir(self._config['runner']['history_path'])
+                if prefix_option:
+                    prefix = self.network_type + "-mem_len-" \
+                             + str(self.memory_len) \
+                             + "-layer_len-" + str(self.layer_len)
+                    name_list = [file for file in name_list if prefix in file]
+
+                if len(name_list) > 0:
+                    full_list = [os.path.join(self._config['runner']['history_path'], name) for name in name_list]
+                    time_sorted_list = sorted(full_list, key=os.path.getmtime)
+                    last_file = time_sorted_list[-1]
+                    self._agent.load(checkpoint_path=last_file)
+        finally:
+            pass
 
 
 class IntrinsicParallelRunner(GeneralRunner):
