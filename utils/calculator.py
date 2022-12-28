@@ -1,3 +1,4 @@
+import copy
 import os
 import pandas as pd
 import numpy as np
@@ -11,7 +12,7 @@ def get_default_kpi(data, interval):
     while True:
         if len(data) <= last_index:
             break
-        chunk = data[last_index:last_index+interval]
+        chunk = data[last_index:last_index + interval]
         mu = np.asscalar(np.mean(chunk))
         sigma = np.asscalar(np.std(chunk))
 
@@ -49,7 +50,7 @@ def draw_game_result(path, filename):
     lose = []
     win = []
     for idx in range(0, len(results), window):
-        batch = results[idx:idx+window]
+        batch = results[idx:idx + window]
         timeover.append(batch.count(-1.0))
         lose.append(batch.count(0.0))
         win.append(batch.count(1.0))
@@ -73,7 +74,7 @@ def draw_game_result(path, filename):
     kill_mean = []
     kill_max = []
     for idx in range(0, len(results), window):
-        batch = results[idx:idx+window]
+        batch = results[idx:idx + window]
         kill_min.append(min(batch))
         kill_mean.append(sum(batch) / len(batch))
         kill_max.append(max(batch))
@@ -85,17 +86,81 @@ def draw_game_result(path, filename):
     plt.clf()
 
 
+def draw_metric_solver(path):
+    draw_auto_rl_result(path)
+    generations = os.listdir(path)
+    generations = [folder for folder in generations if 'Gen' in folder]
+    index = [int(folder.replace('-Gen', '')) for folder in generations if 'Gen' in folder]
+    index.sort()
+    observation = []
+
+    for gen in index:
+        current_folder = os.path.join(path, str(gen) + '-Gen')
+        outputs = os.listdir(current_folder)
+        outputs = [float(i) / 300 for i in outputs]
+        observation.append(outputs)
+
+    for l in index:
+        plt.axvline(l, 0, 500, color='lightgray', linestyle='--')
+    plt.ylim([0, 300])
+    plt.xlim([0, len(index) + 1])
+    plt.plot(index, observation, 'ro')
+    plt.xlabel('Generation')
+    plt.ylabel('Reward')
+    plt.savefig(os.path.join(path, "observed.jpg"))
+    plt.clf()
+
+
+def draw_bayes_result(path, batch=16):
+    created_times = []
+    output_list = []
+    outputs = os.listdir(path)
+    outputs = [output for output in outputs if 'json' not in output]
+    for output in outputs:
+        files = os.listdir(os.path.join(path, output))
+        sub_files = [file for file in files if 'metric' in file]
+        for sub_file in sub_files:
+            full_path = os.path.join(path, output, sub_file)
+            created_times.append(os.path.getmtime(full_path))
+            output_list.append(float(output) / 300)
+
+    created_times = np.array(created_times)
+    output_list = np.array(output_list)
+    time_index = np.argsort(created_times)
+
+    observation = []
+    sub_obs = []
+    for index in time_index:
+        sub_obs.append(output_list[index])
+        if len(sub_obs) == batch:
+            observation.append(copy.deepcopy(sub_obs))
+            sub_obs = []
+
+    index = list(range(1, len(observation) + 1))
+    for l in index:
+        plt.axvline(l, 0, 500, color='lightgray', linestyle='--')
+    plt.ylim([0, 300])
+    plt.xlim([0, len(index) + 1])
+    plt.plot(index, observation, 'ro')
+    plt.xlabel('Generation')
+    plt.ylabel('Reward')
+    plt.savefig(os.path.join(path, "bayes_observed.jpg"))
+    plt.clf()
+
+
 def draw_auto_rl_result(path):
     generations = os.listdir(path)
     generations = [folder for folder in generations if 'Gen' in folder]
+    index = [int(folder.replace('-Gen', '')) for folder in generations if 'Gen' in folder]
+    index.sort()
     info = {'mu': [0.0], 'max': [0.0], 'min': [0.0], 'iteration': [0]}
-    for gen in range(1, len(generations) + 1):
-        output_path = os.path.join(path, generations[gen-1])
+    for gen in index:
+        output_path = os.path.join(path, str(gen) + '-Gen')
         outputs = os.listdir(output_path)
         outputs = [float(i) for i in outputs]
-        min_val = min(outputs)
-        max_val = max(outputs)
-        mu = np.mean(outputs).item()
+        min_val = min(outputs) / 300
+        max_val = max(outputs) / 300
+        mu = np.mean(outputs).item() / 300
 
         info['mu'].append(mu)
         info['max'].append(max_val)
@@ -104,16 +169,12 @@ def draw_auto_rl_result(path):
 
     plt.plot(info['iteration'], info['max'], '-')
     plt.fill_between(info['iteration'], info['mu'], info['max'], alpha=0.2)
+    plt.xlabel('Generation')
+    plt.ylabel('Reward')
     plt.savefig(os.path.join(path, "progress.jpg"))
     plt.clf()
 
 
 if __name__ == '__main__':
-    root = r'D:\MnS\Projects\RL_Library\history'
-    draw_alters = ['zig_zag_gameresult.csv', 'battle_hall_gameresult.csv', 'total_test.csv']
-    for alter in draw_alters:
-        final_path = os.path.join(root, alter)
-        filename = alter.replace('.csv', '')
-        draw_game_result(path=final_path, filename=filename)
-
-
+    root = r'D:\MnS\Projects\RL_Library\figures\AutoRL\CartPole-v1\2022-12-27-22-18-42\1-Gen'
+    draw_bayes_result(path=root)

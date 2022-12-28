@@ -231,7 +231,7 @@ class GeneralRunner:
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
 
-        mu = np.mean(self.reward_info['memory'])
+        mu = np.max(self.reward_info['memory'])
         sigma = np.std(self.reward_info['memory'])
         self.reward_info['mu'].append(mu)
         self.reward_info['max'].append(mu + (0.5 * sigma))

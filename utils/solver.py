@@ -2,7 +2,7 @@ import os
 import copy
 import random
 from collections import defaultdict
-
+import statistics
 import numpy as np
 from multiprocessing import Pool
 from bayes_opt import BayesianOptimization
@@ -109,7 +109,14 @@ class Bayesian(Solver):
 
     def objective_function(self, **kwargs):
         param = self.convert_param(kwargs)
-        return self._TestFunc(param)
+        configs = []
+        for _ in range(8):
+            configs.append(param)
+
+        with Pool(8) as p:
+            new_output = p.map(self._TestFunc, configs)
+        mean = statistics.mean(new_output)
+        return mean
 
     def convert_param(self, kwargs):
         param = dict()

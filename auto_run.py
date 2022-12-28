@@ -145,7 +145,8 @@ def main(opt: str):
     start_date = now.strftime("%Y-%m-%d-%H-%M-%S")
     os.mkdir(os.path.join(env_path, start_date))
 
-    optimizer = getattr(solver, opt)(parameters=optim_args, test_function=test_function)
+    optimizer = getattr(solver, opt)(parameters=optim_args, test_function=test_function,
+                                     init_points=5, n_iter=20, verbose=2, random_state=1)
     optimizer.start(root=os.path.join(env_path, start_date))
     output_config, output = optimizer.close()
     save_outputs(args=output_config, metric=None, path=os.path.join(env_path, start_date, "Best"))
@@ -155,5 +156,5 @@ def main(opt: str):
 
 
 if __name__ == '__main__':
-    solver_name = "HarmonySearch"
+    solver_name = "Bayesian"
     main(solver_name)
