@@ -28,7 +28,7 @@ class RLFPSv4(gym.Env):
         if self.__debug:
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
         if self.__envConfig['headless']:
-            command = os.path.abspath(self.__envConfig['build_path']) + " -commPort " + str(self.__envConfig["port"])
+            command = os.path.abspath(self.__envConfig['build_path']) + " -commPort " + str(self.__envConfig["port"]) + " -batchMode" + ' -logFile ".\Logs.log"'
             subprocess.Popen(command, shell=True, stdin=None, stdout=subprocess.DEVNULL, stderr=None, close_fds=True)
         self.initialize()
 
@@ -158,10 +158,9 @@ class RLFPSv4(gym.Env):
                 else:
                     ax[j].get_xaxis().set_visible(False)
                     ax[j].get_yaxis().set_visible(False)
-        subplot_num = 8
         subplot_title_list = ['char_index', 'visual_field_of_map', 'movable', 'obj_id', 'treat_points',
                               'grenade_damage', 'visible_enemy_location', 'enemy_location']
-        for i in range(subplot_num):
+        for i in range(len(subplot_title_list)):
             if len(ax.shape) > 1:
                 ax[0, i].set_title(subplot_title_list[i], fontsize=12)
             else:
@@ -180,8 +179,10 @@ class RLFPSv4(gym.Env):
             for j in range(batch_size):
                 for k in range(feature_size):
                     if len(ax.shape) > 1:
+                        ax[j, k].clear()
                         ax[j, k].imshow(np.array(spatial_data[i, j, k, :, :]))
                     else:
+                        ax[k].clear()
                         ax[k].imshow(np.array(spatial_data[i, j, k, :, :]))
 
         plt.show(block=False)
