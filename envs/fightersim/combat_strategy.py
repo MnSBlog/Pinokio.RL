@@ -20,25 +20,26 @@ class CombatStrategy(gym.Env):
         self.__self_play = self.__envConfig['self_play']
         self.__debug = self.__envConfig['debug']
         self.__visual_imgs = [[] * self.__envConfig['spatial_dim']] * self.__envConfig['agent_count']
-        #self.__map_capacity = self.__envConfig['map_capacity']
+        # self.__map_capacity = self.__envConfig['map_capacity']
+        self.__map_count = 1
         self.__agents_of_map = self.__envConfig['agent_count']
         self.server = ZmqServer(self.__envConfig['port'], self.on_received)
         self.state_buffer = (None, None, None, None, None)
         if self.__envConfig['self_play']:
             self.__agents_of_map += self.__envConfig['enemy_count']
-       #self.__total_agent_count = self.__agents_of_map * self.__map_capacity
+        # self.__total_agent_count = self.__agents_of_map * self.__map_capacity
         if self.__debug:
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
 
         self.initialize()
 
     def initialize(self):
-       # self.__communication_manager.send_info(
-       #    'Initialize:MapType"' + str(','.join(str(e) for e in self.__envConfig['map_type']))
+        # self.__communication_manager.send_info(
+        #    'Initialize:MapType"' + str(','.join(str(e) for e in self.__envConfig['map_type']))
         #    + '"Pause"' + str(self.__pause_mode)
-         #   + '"Period"' + str(self.__envConfig['period'])
-          #  + '"Acceleration"' + str(self.__envConfig['acceleration'])
-           # + '"')
+        #   + '"Period"' + str(self.__envConfig['period'])
+        #  + '"Acceleration"' + str(self.__envConfig['acceleration'])
+        # + '"')
         t = threading.Thread(target=self.server.listen)
         t.start()
 
@@ -55,11 +56,11 @@ class CombatStrategy(gym.Env):
         return state, reward, done, None, None
 
     def reset(
-        self,
-        *,
-        seed: Optional[int] = None,
-        return_info: bool = False,
-        options: Optional[dict] = None,
+            self,
+            *,
+            seed: Optional[int] = None,
+            return_info: bool = False,
+            options: Optional[dict] = None,
     ):
         state, _, _ = self.__get_observation()
         return state, None
@@ -81,9 +82,10 @@ class CombatStrategy(gym.Env):
                 ax[i, j].get_xaxis().set_visible(False)
                 ax[i, j].get_yaxis().set_visible(False)
         subplot_num = 7
-        subplot_title_list = ['last_enemy_location', 'grenade_damage', 'treat_points', 'obj_id', 'movable', 'visual_field_of_map', 'char_index']
+        subplot_title_list = ['last_enemy_location', 'grenade_damage', 'treat_points', 'obj_id', 'movable',
+                              'visual_field_of_map', 'char_index']
         for i in range(subplot_num):
-            ax[0, i].set_title(subplot_title_list[i], fontsize = 12)
+            ax[0, i].set_title(subplot_title_list[i], fontsize=12)
         plt.tight_layout()
         plt.show(block=False)
         figure.canvas.flush_events()
@@ -103,11 +105,11 @@ class CombatStrategy(gym.Env):
 
     def __calculate_reward(self, step_result):
         reward = torch.zeros(1, 1)
-        reward += (step_result[3] + step_result[3]) % 2  # on radar on screen 1
-        reward += 5*step_result[13]  # position score 5 or -5
-        reward += 5*step_result[14] # evasion score 5
-        reward -= 5*step_result[10] # damaged score -5
-        reward -= step_result[12] # heightRestriction -1
+        reward += (step_result[3] + step_result[3]) / 2  # on radar on screen 1
+        reward += step_result[15]  # targetting area -1~1
+        reward += 5 * step_result[14]  # evasion score 5
+        reward -= 5 * step_result[10]  # damaged score -5
+        reward -= step_result[12]  # heightRestriction -1
         return reward
 
     def render(self, mode="human", **kwargs):
@@ -136,20 +138,17 @@ class CombatStrategy(gym.Env):
         step_data = step_array.DataAsNumpy()
         step_shape = step_array.ShapeAsNumpy()
 
-        return torch.tensor(data_data.reshape(data_shape), dtype=torch.float), total_mask, torch.tensor(step_data.reshape(step_shape), dtype=torch.float)
-        #(tensor or np) 등 real state
+        return torch.tensor(data_data.reshape(data_shape), dtype=torch.float), total_mask, torch.tensor(
+            step_data.reshape(step_shape), dtype=torch.float)
+        # (tensor or np) 등 real state
 
     def on_received(self, message):
-         origin_data, origin_mask, origin_step = self.deserialize(message) # reset에 할당해서 state전달
-         done = torch.tensor(origin_step[0], dtype=torch.bool)
-         reward = self.__calculate_reward(origin_step)
-         state = {'matrix': [],
-                  'vector':  origin_data.unsqueeze(dim=0),
-                  'action_mask': origin_mask.unsqueeze(dim=0)}
-         self.state_buffer = (state, reward, done, False, None)
-
-
-
-
-
-
+        origin_data, origin_mask, origin_step = self.deserialize(message)  # reset에 할당해서 state전달
+        done = torch.tensor(origin_step[0], dtype=torch.bool)
+        done = done.view(self.__map_count * self.__agents_of_map, -1)
+        reward = self.__calculate_reward(origin_step)
+        reward = reward.view(self.__map_count * self.__agents_of_map, -1)
+        state = {'matrix': [],
+                 'vector': origin_data.reshape(self.__map_count * self.__agents_of_map, 1, -1),
+                 'action_mask': origin_mask.reshape(self.__map_count * self.__agents_of_map, -1)}
+        self.state_buffer = (state, reward, done, False, None)

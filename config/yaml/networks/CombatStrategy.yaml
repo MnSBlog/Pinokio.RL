@@ -1,33 +1,35 @@
 network:
   actor:
     # --- learning option ---
-    obs_stack: False # should not use Memory layer with this
-    use_memory_layer: "Raw" # Raw / LSTM / GRU
-    memory_q_len: 16
-    memory_layer_len: 3
+    obs_stack: True
+    memory_q_len: 16 # Integer / List
     # - State definition -
     # --- spatial features ---
     spatial_feature:
       use: False
-      dim_in: 0
+      num_layer: 0
+      dim_in: [ 0, 0, 0 ]
       dim_out: 0
-      backbone: 'resnet50'
+      backbone: ''
       freeze: False
     # --- non-spatial features ---
     non_spatial_feature:
       use: True
+      num_layer: 3
       dim_in: 15
-      dim_out: 15
-      extension: False
+      dim_out: 256
+      extension: True
+      use_cnn: True
       freeze: False
     # --- outputs ---
-    neck_in: 192
-    neck_out: 16
+    neck_out: 32
     neck_activation: "ReLU"
+    neck_num_layer: 3
+    num_memory_layer: 0
+    memory_rnn_len: 0
     n_of_actions:
-      - 4
+      - 7
       - 3
-
     action_mode: "Discrete" # Discrete or Continuous
     # --- save / load ---
     model_path: 'Networks'
