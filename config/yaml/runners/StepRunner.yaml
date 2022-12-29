@@ -1,8 +1,8 @@
 runner:
   # --- Defaults ---
-  max_iteration_num: 50000000
-  pretrain: False
-  render: True
+  max_iteration_num: 9000
+  pretrain: True
+  render: 'human'
   off_pg: False
   logger: False # False or True(OpenAI Logger)
   # --- Learning Condition ---
@@ -11,9 +11,10 @@ runner:
   # --- Operation options ---
   use_cuda: True # Use gpu by default unless it isn't available
   history_path: "./history"
+  figure_path: "./figures"
   best_model_root: "Best"
   condition_path: "./config/AlgoCondition.xlsx"
-  draw_interval: 100
+  draw_interval: 20
   # --- curriculum learning ---
   curriculum_learning: False
   init_n_of_enemy: 1

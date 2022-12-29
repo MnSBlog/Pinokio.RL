@@ -7,8 +7,8 @@ envs:
   # --- Play Mode Setting ---
   build_path: "./Exe/Environment.exe"
   headless: False # True, False
-  map_type: [3, 2] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hall / -1: Random
-  play_mode: "team"  # single, team, team_self, human_play, one_on_one, 3v3
+  map_type: [4, 4] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hall / -1: Random
+  play_mode: "3v3"  # single, team, team_self, human_play, one_on_one, 3v3
   play_mode_preset:
     single:
       agent_mode : [ 1, 0, 0, 0, 0] # 0: Bot, 1: Agent, 2: Human-play
@@ -82,7 +82,7 @@ envs:
   max_steps: -1 # -1: No limit
   history_path: "./History"
   trajectory_q_len: 3
-  reward_range: [-1, 3]
+  reward_range: [0, 70]
   # --- Algorithm condition ---
   actions: "Discrete" # Discrete or Continuous
   multi_agent: False

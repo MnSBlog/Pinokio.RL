@@ -2,7 +2,7 @@ runner:
   # --- Defaults ---
   max_iteration_num: 300
   pretrain: False
-  render: False
+  render: 'human'
   off_pg: False
   logger: False # False or True(OpenAI Logger)
   # --- Learning Condition ---

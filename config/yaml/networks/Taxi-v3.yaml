@@ -16,7 +16,7 @@ network:
     non_spatial_feature:
       use: True
       num_layer: 1
-      dim_in: 6
+      dim_in: 500
       dim_out: 64
       extension: True
       use_cnn: False
@@ -28,7 +28,7 @@ network:
     num_memory_layer: 0
     memory_rnn_len: 0
     n_of_actions:
-      - 3
+      - 6
     action_mode: "Discrete" # Discrete or Continuous
     # --- save / load ---
     model_path: 'Networks'

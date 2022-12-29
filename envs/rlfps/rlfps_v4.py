@@ -28,7 +28,7 @@ class RLFPSv4(gym.Env):
         if self.__debug:
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
         if self.__envConfig['headless']:
-            command = os.path.abspath(self.__envConfig['build_path']) + " -commPort " + str(self.__envConfig["port"])
+            command = os.path.abspath(self.__envConfig['build_path']) + " -commPort " + str(self.__envConfig["port"]) + " -batchMode" + ' -logFile ".\Logs.log"'
             subprocess.Popen(command, shell=True, stdin=None, stdout=subprocess.DEVNULL, stderr=None, close_fds=True)
         self.initialize()
 
@@ -113,14 +113,28 @@ class RLFPSv4(gym.Env):
 
         done = torch.tensor(deserialized_step_info_list[:, :, 0], dtype=torch.bool)
         done = done.view(-1)
+
         reward = self.__calculate_reward(deserialized_step_info_list)
         reward = reward.view(-1)
+
+        _, deserialized_result_info_list, _ = CommunicationManager.deserialize_info(game_results)
 
         vector_shape = deserialized_char_info_list.shape
         matrix_shape = deserialized_field_info_list.shape
         mask_shape = deserialized_action_mask.shape
 
         front = matrix_shape[0] * matrix_shape[1]
+        deserialized_result_info_list = deserialized_result_info_list.view(front, -1)
+        for idx, done_check in enumerate(done):
+            if done_check.item() is True:
+                result = deserialized_result_info_list[idx, :]
+                line = ''
+                for element in result:
+                    line += str(element.item()) + ', '
+                line += '\n'
+                f = open("gameresult.txt", "a+")
+                f.write(line)
+                f.close()
         deserialized_field_info_list = deserialized_field_info_list.view(front, 1, matrix_shape[-3],
                                                                          matrix_shape[-2], matrix_shape[-1])
         front = vector_shape[0] * vector_shape[1]
@@ -144,10 +158,9 @@ class RLFPSv4(gym.Env):
                 else:
                     ax[j].get_xaxis().set_visible(False)
                     ax[j].get_yaxis().set_visible(False)
-        subplot_num = 8
         subplot_title_list = ['char_index', 'visual_field_of_map', 'movable', 'obj_id', 'treat_points',
                               'grenade_damage', 'visible_enemy_location', 'enemy_location']
-        for i in range(subplot_num):
+        for i in range(len(subplot_title_list)):
             if len(ax.shape) > 1:
                 ax[0, i].set_title(subplot_title_list[i], fontsize=12)
             else:
@@ -166,8 +179,10 @@ class RLFPSv4(gym.Env):
             for j in range(batch_size):
                 for k in range(feature_size):
                     if len(ax.shape) > 1:
+                        ax[j, k].clear()
                         ax[j, k].imshow(np.array(spatial_data[i, j, k, :, :]))
                     else:
+                        ax[k].clear()
                         ax[k].imshow(np.array(spatial_data[i, j, k, :, :]))
 
         plt.show(block=False)
@@ -177,12 +192,26 @@ class RLFPSv4(gym.Env):
     def __calculate_reward(self, step_result):
         shape = step_result.shape
         reward = torch.zeros([shape[0], shape[1]])
-        reward[:, :] += 1 * step_result[:, :, 1]  # team win
-        reward[:, :] += 1 * step_result[:, :, 2]  # kill score
-        reward[:, :] -= 1 * step_result[:, :, 3]  # dead score
-        # reward += 1 * step_result[:, 4]  # damage score
-        # reward -= 1 * step_result[:, 5]  # hitted score
-        reward[:, :] += 1 * step_result[:, :, 6]  # healthy ratio
+
+        for map_idx in range(shape[0]):
+            for agent_idx in range(shape[1]):
+                reward[map_idx, agent_idx] += 50 * step_result[map_idx, agent_idx, 1]  # team win/lose: +50점 지면 0점
+                if step_result[map_idx, agent_idx, 2] > 0:
+                    reward[map_idx, agent_idx] += 50
+                # reward[:, :] += 1 * step_result[:, :, 2]  # kill score: +50점:
+                if step_result[map_idx, agent_idx, 4] > 0:
+                    reward[map_idx, agent_idx] += 20
+                # reward += 1 * step_result[:, :, 4]  # damage score 20점 데미지 얼마줬던간에 맞기만 하면 무조건 20점
+                reward[map_idx, agent_idx] += 5 * step_result[map_idx, agent_idx, 6]  # healthy ratio * 5
+
+                reward[map_idx, agent_idx] = 10 * (3.0 - step_result[map_idx, agent_idx, -1])
+                # 이거 먼저 체크하고 바로 리턴 맞기만하면 알빠아님
+                if step_result[map_idx, agent_idx, 3] == 1:
+                    reward[map_idx, agent_idx] = 0
+                # reward[:, :] -= 1 * step_result[:, :, 3]  # dead score: 죽으면 0점 모든 보상이 0점
+                # reward -= 1 * step_result[:, :, 5]  # hitted score 0점 모든 보상이 0점
+
+        # 이거는 70점 이상 컷 0점 이하 컷
         reward_min = self.__envConfig["reward_range"][0]
         reward_max = self.__envConfig["reward_range"][1]
         reward = torch.clamp(reward, reward_min, reward_max)

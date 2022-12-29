@@ -2,12 +2,13 @@ import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
-
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 ################################## set device ##################################
 print("============================================================================================")
 # set device to cpu or cuda
 device = torch.device('cpu')
-if (torch.cuda.is_available()):
+if torch.cuda.is_available():
     device = torch.device('cuda:0')
     torch.cuda.empty_cache()
     print("Device set to : " + str(torch.cuda.get_device_name(device)))

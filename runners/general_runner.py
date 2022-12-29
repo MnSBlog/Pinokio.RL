@@ -2,6 +2,8 @@ import copy
 import os
 import gym
 import time
+
+import pandas as pd
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -77,11 +79,14 @@ class GeneralRunner:
     def _interaction(self, action):
         # 다음 상태, 보상 관측
         state, reward, done, trunc, info = self._env.step(action)
-        #done |= trunc
+        done |= trunc
         state = self._update_memory(state)
         self.count += 1
         self.batch_reward += reward
         self.done = done
+
+        if torch.is_tensor(reward) is False:
+            reward = float(reward)
 
         train_reward = self._fit_reward(reward)
         if isinstance(done, bool):
@@ -115,11 +120,12 @@ class GeneralRunner:
         else:
             self.reward_info['memory'].append(self.batch_reward.mean().item())
 
-        self.save_batch_reward.append(self.batch_reward)
+        self.save_batch_reward.append(self.reward_info['memory'][-1])
         # 업데이트 특정값 신경망 파라미터를 파일에 저장
         if itr % self._config['runner']['draw_interval'] == 0:
             self._save_agent()
-            self._draw_reward_plot(now_ep=itr, y_lim=[0, 500])
+            self._draw_reward_plot(now_ep=itr)
+            self._save_metric(itr // self._config['runner']['draw_interval'] - 1)
 
     def _fit_reward(self, rew):
         if isinstance(rew, float):
@@ -163,6 +169,7 @@ class GeneralRunner:
                 # (b, c, w, h)로 변경
                 if mem_lim > len(self.memory_q['matrix']):
                     state = np.expand_dims(state[:, :, 0], axis=0)
+                    state = np.expand_dims(state, axis=0)
                     self.memory_q['matrix'].append(state)
             else:
                 # (b, c, f)로 변경
@@ -224,9 +231,8 @@ class GeneralRunner:
         if prefix_option:
             prefix = self.network_type + "-mem_len-" + str(self.memory_len) + "-layer_len-" + str(self.layer_len)
 
-        mu = np.mean(self.reward_info['memory'])
+        mu = np.max(self.reward_info['memory'])
         sigma = np.std(self.reward_info['memory'])
-        mu = mu + (2 * sigma)
         self.reward_info['mu'].append(mu)
         self.reward_info['max'].append(mu + (0.5 * sigma))
         self.reward_info['min'].append(mu - (0.5 * sigma))
@@ -241,6 +247,11 @@ class GeneralRunner:
             plt.ylim(y_lim)
         title = prefix + ".png"
         plt.savefig(os.path.join("figures/", self._config['env_name'], title))
+
+    def _save_metric(self, count):
+        data = pd.DataFrame.from_dict(self._agent.metric)
+        data.to_csv(os.path.join(self._config['runner']['history_path'], 'Metric' + str(count) + '.csv'))
+        self._agent.metric = self._agent.make_metrics()
 
     def _save_reward_log(self, prefix_option=True):
         prefix = 'reward_log'

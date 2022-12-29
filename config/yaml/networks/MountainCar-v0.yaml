@@ -10,13 +10,13 @@ network:
       num_layer: 0
       dim_in: 0
       dim_out: 0
-      backbone: 'resnet50'
+      backbone: ''
       freeze: False
     # --- non-spatial features ---
     non_spatial_feature:
       use: True
       num_layer: 1
-      dim_in: 6
+      dim_in: 2
       dim_out: 64
       extension: True
       use_cnn: False

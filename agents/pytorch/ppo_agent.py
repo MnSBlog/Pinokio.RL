@@ -102,6 +102,8 @@ class PPO(PolicyAgent):
         if self.actor.recurrent:
             old_hiddens = self.batch_hidden_state[-1].detach().to(self.device)
         # Optimize policy for K epochs
+        dump = torch.zeros(len(rewards), 1)
+        metrics = {'reward': dump, 'entropy': dump, 'state_value': dump, 'loss': dump}
         for _ in range(self.epochs):
             # Evaluating old actions and values
             logprobs, dist_entropy = self.evaluate(old_states, old_actions, hidden=old_hiddens)
@@ -110,7 +112,7 @@ class PPO(PolicyAgent):
             state_values = state_values.flatten()
             # Finding the ratio (pi_theta / pi_theta__old)
             ratios = torch.exp(logprobs - old_logprobs.detach())
-
+            # ratios = ratios.clamp(min=3.0e-9, max=88)
             # Finding Surrogate Loss
             advantages = rewards - state_values.detach()
             surr1 = ratios * advantages
@@ -124,12 +126,19 @@ class PPO(PolicyAgent):
             loss.mean().backward()
             self.optimizer.step()
 
+            metrics = {'reward': rewards.detach().cpu(),
+                       'entropy': dist_entropy.detach().cpu(),
+                       'state_value': state_values.detach().cpu(),
+                       'loss': loss.detach().cpu()}
         # Copy new weights into old policy
         self.actor_old.load_state_dict(self.actor.state_dict())
         self.critic_old.load_state_dict(self.critic.state_dict())
 
         # clear buffer
         self.batch_clear()
+
+        # insert metric
+        self.insert_metrics(metrics)
 
     def evaluate(self, state, actions, hidden=None):
         outputs, _ = self.actor(x=state, h=hidden)

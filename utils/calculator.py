@@ -1,5 +1,8 @@
+import copy
 import os
+import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def get_default_kpi(data, interval):
@@ -9,7 +12,7 @@ def get_default_kpi(data, interval):
     while True:
         if len(data) <= last_index:
             break
-        chunk = data[last_index:last_index+interval]
+        chunk = data[last_index:last_index + interval]
         mu = np.asscalar(np.mean(chunk))
         sigma = np.asscalar(np.std(chunk))
 
@@ -36,17 +39,142 @@ def convert_to_numpy(path, name):
     return np.array(data)
 
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    filenames = ['historyCartPoleRaw-mem_len-4-layer_len-3_epi_reward',
-                 'historyCartPoleRaw-mem_len-16-layer_len-3_epi_reward',
-                 'historyCartPoleRaw-mem_len-64-layer_len-3_epi_reward']
-    for idx, filename in enumerate(filenames):
-        values = convert_to_numpy(r"D:\MnS\Projects\RL_Library", filename + '.txt')
-        reward_info = get_default_kpi(values, 1000)
+def draw_game_result(path, filename):
+    col_title = ['TypeID', 'FirstGun', 'SecondGun', 'HP', 'Kill', 'Step', 'Playtime', 'Result', 'None']
+    data = pd.read_csv(path, header=None)
+    data.columns = col_title
+    window = 10
+    results = data['Result'].tolist()
 
-        plt.plot(reward_info['episode'], reward_info['mu'], '-')
-        plt.fill_between(reward_info['episode'], reward_info['min'], reward_info['max'], alpha=0.2)
-        plt.ylim([0, 400])
-    plt.savefig(os.path.join(r"D:\MnS\Projects\RL_Library\figures", "manual_graph(4).jpg"))
+    timeover = []
+    lose = []
+    win = []
+    for idx in range(0, len(results), window):
+        batch = results[idx:idx + window]
+        timeover.append(batch.count(-1.0))
+        lose.append(batch.count(0.0))
+        win.append(batch.count(1.0))
+        test = 1
+
+    x = list(range(len(timeover)))
+
+    lose = [x + y for x, y in zip(win, lose)]
+    timeover = [x + y for x, y in zip(lose, timeover)]
+    plt.fill_between(x, 0, win, alpha=0.7, label='Win')
+    plt.fill_between(x, win, lose, alpha=0.7, label='Lose')
+    plt.fill_between(x, lose, timeover, alpha=0.7, label='TimeOver')
+
+    plt.ylim(0, 11)
+    plt.legend(bbox_to_anchor=(0.8, 1.05), loc='center left')
+    plt.savefig(filename + 'game_result.png')
     plt.clf()
+
+    results = data['Kill'].tolist()
+    kill_min = []
+    kill_mean = []
+    kill_max = []
+    for idx in range(0, len(results), window):
+        batch = results[idx:idx + window]
+        kill_min.append(min(batch))
+        kill_mean.append(sum(batch) / len(batch))
+        kill_max.append(max(batch))
+
+    plt.plot(x, kill_max, '-')
+    plt.fill_between(x, kill_mean, kill_max, alpha=0.2)
+    plt.ylim(0.0, 4.0)
+    plt.savefig(filename + 'game_kill.png')
+    plt.clf()
+
+
+def draw_metric_solver(path):
+    draw_auto_rl_result(path)
+    generations = os.listdir(path)
+    generations = [folder for folder in generations if 'Gen' in folder]
+    index = [int(folder.replace('-Gen', '')) for folder in generations if 'Gen' in folder]
+    index.sort()
+    observation = []
+
+    for gen in index:
+        current_folder = os.path.join(path, str(gen) + '-Gen')
+        outputs = os.listdir(current_folder)
+        outputs = [float(i) / 300 for i in outputs]
+        observation.append(outputs)
+
+    for l in index:
+        plt.axvline(l, 0, 500, color='lightgray', linestyle='--')
+    plt.ylim([0, 300])
+    plt.xlim([0, len(index) + 1])
+    plt.plot(index, observation, 'ro')
+    plt.xlabel('Generation')
+    plt.ylabel('Reward')
+    plt.savefig(os.path.join(path, "observed.jpg"))
+    plt.clf()
+
+
+def draw_bayes_result(path, batch=16):
+    created_times = []
+    output_list = []
+    outputs = os.listdir(path)
+    outputs = [output for output in outputs if 'json' not in output]
+    for output in outputs:
+        files = os.listdir(os.path.join(path, output))
+        sub_files = [file for file in files if 'metric' in file]
+        for sub_file in sub_files:
+            full_path = os.path.join(path, output, sub_file)
+            created_times.append(os.path.getmtime(full_path))
+            output_list.append(float(output) / 300)
+
+    created_times = np.array(created_times)
+    output_list = np.array(output_list)
+    time_index = np.argsort(created_times)
+
+    observation = []
+    sub_obs = []
+    for index in time_index:
+        sub_obs.append(output_list[index])
+        if len(sub_obs) == batch:
+            observation.append(copy.deepcopy(sub_obs))
+            sub_obs = []
+
+    index = list(range(1, len(observation) + 1))
+    for l in index:
+        plt.axvline(l, 0, 500, color='lightgray', linestyle='--')
+    plt.ylim([0, 300])
+    plt.xlim([0, len(index) + 1])
+    plt.plot(index, observation, 'ro')
+    plt.xlabel('Generation')
+    plt.ylabel('Reward')
+    plt.savefig(os.path.join(path, "bayes_observed.jpg"))
+    plt.clf()
+
+
+def draw_auto_rl_result(path):
+    generations = os.listdir(path)
+    generations = [folder for folder in generations if 'Gen' in folder]
+    index = [int(folder.replace('-Gen', '')) for folder in generations if 'Gen' in folder]
+    index.sort()
+    info = {'mu': [0.0], 'max': [0.0], 'min': [0.0], 'iteration': [0]}
+    for gen in index:
+        output_path = os.path.join(path, str(gen) + '-Gen')
+        outputs = os.listdir(output_path)
+        outputs = [float(i) for i in outputs]
+        min_val = min(outputs) / 300
+        max_val = max(outputs) / 300
+        mu = np.mean(outputs).item() / 300
+
+        info['mu'].append(mu)
+        info['max'].append(max_val)
+        info['min'].append(min_val)
+        info['iteration'].append(gen)
+
+    plt.plot(info['iteration'], info['max'], '-')
+    plt.fill_between(info['iteration'], info['mu'], info['max'], alpha=0.2)
+    plt.xlabel('Generation')
+    plt.ylabel('Reward')
+    plt.savefig(os.path.join(path, "progress.jpg"))
+    plt.clf()
+
+
+if __name__ == '__main__':
+    root = r'D:\MnS\Projects\RL_Library\figures\AutoRL\CartPole-v1\2022-12-27-22-18-42\1-Gen'
+    draw_bayes_result(path=root)

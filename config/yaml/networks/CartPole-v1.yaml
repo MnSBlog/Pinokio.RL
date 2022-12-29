@@ -17,16 +17,16 @@ network:
       use: True
       num_layer: 1
       dim_in: 4
-      dim_out: 64
-      extension: True
-      use_cnn: False
+      dim_out: 16
+      extension: False
+      use_cnn: True
       freeze: False
     # --- outputs ---
-    neck_out: 16
+    neck_out: 128
     neck_activation: "ReLU"
-    neck_num_layer: 2
+    neck_num_layer: 3
     num_memory_layer: 0
-    memory_rnn_len: 0
+    memory_rnn_len: 2
     n_of_actions:
       - 2
     action_mode: "Discrete" # Discrete or Continuous

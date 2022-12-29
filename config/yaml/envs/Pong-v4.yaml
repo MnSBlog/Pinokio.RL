@@ -1,0 +1,4 @@
+envs:
+  # --- Defaults ---
+  name: Pong
+  reward_range: [-1, 1]
