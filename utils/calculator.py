@@ -41,7 +41,7 @@ def convert_to_numpy(path, name):
 
 def draw_game_result(path, filename):
     col_title = ['TypeID', 'FirstGun', 'SecondGun', 'HP', 'Kill', 'Step', 'Playtime', 'Result', 'None']
-    data = pd.read_csv(path, header=None)
+    data = pd.read_csv(os.path.join(path, filename), header=None)
     data.columns = col_title
     window = 10
     results = data['Result'].tolist()
@@ -62,7 +62,7 @@ def draw_game_result(path, filename):
     timeover = [x + y for x, y in zip(lose, timeover)]
     plt.fill_between(x, 0, win, alpha=0.7, label='Win')
     plt.fill_between(x, win, lose, alpha=0.7, label='Lose')
-    plt.fill_between(x, lose, timeover, alpha=0.7, label='TimeOver')
+    plt.fill_between(x, lose, timeover, alpha=0.7, label='Others')
 
     plt.ylim(0, 11)
     plt.legend(bbox_to_anchor=(0.8, 1.05), loc='center left')
@@ -81,7 +81,7 @@ def draw_game_result(path, filename):
 
     plt.plot(x, kill_max, '-')
     plt.fill_between(x, kill_mean, kill_max, alpha=0.2)
-    plt.ylim(0.0, 4.0)
+    plt.ylim(0.0, 2.0)
     plt.savefig(filename + 'game_kill.png')
     plt.clf()
 
@@ -176,5 +176,5 @@ def draw_auto_rl_result(path):
 
 
 if __name__ == '__main__':
-    root = r'D:\MnS\Projects\RL_Library\figures\AutoRL\CartPole-v1\2022-12-27-22-18-42\1-Gen'
-    draw_bayes_result(path=root)
+    root = r'D:\MnS\Projects\RL_Library'
+    draw_game_result(path=root, filename='gameresult.txt')

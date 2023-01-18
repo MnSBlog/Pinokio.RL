@@ -204,8 +204,9 @@ class RLFPSv4(gym.Env):
                 # reward += 1 * step_result[:, :, 4]  # damage score 20점 데미지 얼마줬던간에 맞기만 하면 무조건 20점
                 reward[map_idx, agent_idx] += 5 * step_result[map_idx, agent_idx, 6]  # healthy ratio * 5
 
-                reward[map_idx, agent_idx] = 10 * (3.0 - step_result[map_idx, agent_idx, -1])
+                # reward[map_idx, agent_idx] += 10 * (3.0 - step_result[map_idx, agent_idx, -1])
                 # 이거 먼저 체크하고 바로 리턴 맞기만하면 알빠아님
+                print(step_result[map_idx, agent_idx, -1])
                 if step_result[map_idx, agent_idx, 3] == 1:
                     reward[map_idx, agent_idx] = 0
                 # reward[:, :] -= 1 * step_result[:, :, 3]  # dead score: 죽으면 0점 모든 보상이 0점
