@@ -28,7 +28,7 @@ class RLFPSv4(gym.Env):
         if self.__debug:
             self.__initialize_feature_display(self.__total_agent_count, self.__envConfig['spatial_dim'])
         if self.__envConfig['headless']:
-            command = os.path.abspath(self.__envConfig['build_path']) + " -commPort " + str(self.__envConfig["port"]) + " -batchMode" + ' -logFile ".\Logs.log"'
+            command = os.path.abspath(self.__envConfig['build_path']) + " -commPort " + str(self.__envConfig["port"]) + " -batchmode -nographics" + ' -logFile ".\Logs.log"'
             subprocess.Popen(command, shell=True, stdin=None, stdout=subprocess.DEVNULL, stderr=None, close_fds=True)
         self.initialize()
 
@@ -206,7 +206,17 @@ class RLFPSv4(gym.Env):
 
                 # reward[map_idx, agent_idx] += 10 * (3.0 - step_result[map_idx, agent_idx, -1])
                 # 이거 먼저 체크하고 바로 리턴 맞기만하면 알빠아님
-                print(step_result[map_idx, agent_idx, -1])
+
+                health_raw = step_result[map_idx, agent_idx, -1].item()
+                enemy_cartridge = step_result[map_idx, agent_idx, -2].item()
+                enemy_health = step_result[map_idx, agent_idx, -3].item()
+                my_cartridge = step_result[map_idx, agent_idx, -4].item()
+
+                print("My Health: " + str(health_raw) +
+                      " Enemy Health: " + str(enemy_health) +
+                      " Enemy Cartridge: " + str(enemy_cartridge) +
+                      " My Cartridge: " + str(my_cartridge))
+
                 if step_result[map_idx, agent_idx, 3] == 1:
                     reward[map_idx, agent_idx] = 0
                 # reward[:, :] -= 1 * step_result[:, :, 3]  # dead score: 죽으면 0점 모든 보상이 0점
