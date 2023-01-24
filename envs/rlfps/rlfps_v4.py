@@ -212,10 +212,10 @@ class RLFPSv4(gym.Env):
                 enemy_health = step_result[map_idx, agent_idx, -3].item()
                 my_cartridge = step_result[map_idx, agent_idx, -4].item()
 
-                print("My Health: " + str(health_raw) +
-                      " Enemy Health: " + str(enemy_health) +
-                      " Enemy Cartridge: " + str(enemy_cartridge) +
-                      " My Cartridge: " + str(my_cartridge))
+                # print("My Health: " + str(health_raw) +
+                #       " Enemy Health: " + str(enemy_health) +
+                #       " Enemy Cartridge: " + str(enemy_cartridge) +
+                #       " My Cartridge: " + str(my_cartridge))
 
                 if step_result[map_idx, agent_idx, 3] == 1:
                     reward[map_idx, agent_idx] = 0
