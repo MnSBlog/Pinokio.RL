@@ -1,3 +1,4 @@
+import copy
 import os
 import gym
 from runners.general_runner import GeneralRunner
@@ -21,6 +22,9 @@ class AutoRLRunner(GeneralRunner):
                 self._update_agent(next_state=state)
 
             # 에피소드마다 결과 보상값 출력
-            # print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
-            reward_sum += self.batch_reward
+            print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
+            self._sweep_cycle(ep)
+            reward_sum += copy.deepcopy(self.batch_reward.item())
+        self._save_reward_log()
+        self._close_env()
         return reward_sum, self._agent.metric

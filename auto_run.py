@@ -1,5 +1,7 @@
 import copy
 import os
+import random
+
 import numpy as np
 import pandas as pd
 import gym
@@ -42,10 +44,8 @@ def save_outputs(args, metric, path):
         data.to_csv(os.path.join(path, prefix + 'metric.csv'))
 
 
-def test_function(memory):
+def test_function(memory, run_args):
     try:
-        run_args = load_config()
-
         from gym import envs
         check = envs.registry
 
@@ -70,7 +70,7 @@ def test_function(memory):
 
         save_outputs(args=run_args, metric=metric, path=os.path.join(env_path, str(output)))
     except ValueError:
-        output = 0.0
+        output = np.NINF
     return output
 
 
@@ -156,5 +156,6 @@ def main(opt: str):
 
 
 if __name__ == '__main__':
-    solver_name = "Bayesian"
+    # HarmonySearch / Bayesian
+    solver_name = "HarmonySearch"
     main(solver_name)

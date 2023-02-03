@@ -76,13 +76,15 @@ class GeneralRunner:
             state = self._update_memory()
         return state
 
+    def _close_env(self):
+        self._env.close()
+        
     def _interaction(self, action):
         # 다음 상태, 보상 관측
         state, reward, done, trunc, info = self._env.step(action)
         done |= trunc
         state = self._update_memory(state)
         self.count += 1
-        self.batch_reward += reward
         self.done = done
 
         if torch.is_tensor(reward) is False:
@@ -92,6 +94,12 @@ class GeneralRunner:
         if isinstance(done, bool):
             done = np.reshape(done, -1)
             train_reward = np.reshape(train_reward, -1)
+
+        if self._config['envs']['trust_result']:
+            if self.done:
+                self.batch_reward += train_reward
+        else:
+            self.batch_reward += train_reward
         self._agent.batch_reward.append(train_reward)
         self._agent.batch_done.append(done)
         return state
@@ -164,6 +172,8 @@ class GeneralRunner:
             if len(state['action_mask']) > 0:
                 self.memory_q['action_mask'].append(state['action_mask'])
         else:
+            if isinstance(state, int):
+                state = np.array(state)
             # Open AI gym에서 받아온 State
             if len(state.shape) > 1:
                 # (b, c, w, h)로 변경

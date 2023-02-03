@@ -235,4 +235,4 @@ class RLFPSv4(gym.Env):
         return
 
     def close(self):
-        pass
+        self.__zmq_client.send('Close')

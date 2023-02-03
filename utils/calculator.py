@@ -93,16 +93,35 @@ def draw_metric_solver(path):
     index = [int(folder.replace('-Gen', '')) for folder in generations if 'Gen' in folder]
     index.sort()
     observation = []
-
+    # 전체의 Min/Max값 찾기 (x - min) / (max - min)
+    min_value = np.Inf
+    max_value = np.NINF
     for gen in index:
         current_folder = os.path.join(path, str(gen) + '-Gen')
         outputs = os.listdir(current_folder)
-        outputs = [float(i) / 300 for i in outputs]
-        observation.append(outputs)
+        outputs = [float(i) for i in outputs]
+        if min(outputs) < min_value:
+            min_value = copy.deepcopy(min(outputs))
+        if max(outputs) > max_value:
+            max_value = copy.deepcopy(max(outputs))
+
+    for gen in index:
+        gen_results = []
+        current_folder = os.path.join(path, str(gen) + '-Gen')
+        outputs = os.listdir(current_folder)
+        for output in outputs:
+            search = os.path.join(path, str(gen) + '-Gen', output)
+            files = os.listdir(search)
+            for _ in range(len(files) // 2):
+                gen_results.append((float(output) - min_value) / (max_value - min_value))
+        if len(gen_results) != 8:
+            for _ in range(8 - len(gen_results)):
+                gen_results.append(min(gen_results))
+        observation.append(gen_results)
 
     for l in index:
-        plt.axvline(l, 0, 500, color='lightgray', linestyle='--')
-    plt.ylim([0, 300])
+        plt.axvline(l, 0.0, 1.2, color='lightgray', linestyle='--')
+    plt.ylim([0, 1.1])
     plt.xlim([0, len(index) + 1])
     plt.plot(index, observation, 'ro')
     plt.xlabel('Generation')
@@ -177,4 +196,4 @@ def draw_auto_rl_result(path):
 
 if __name__ == '__main__':
     root = r'D:\MnS\Projects\RL_Library'
-    draw_game_result(path=root, filename='gameresult.txt')
+    draw_metric_solver(path=r'D:\MnS\Projects\RL_Library\figures\AutoRL\FrozenLake-v1\2023-01-30-21-54-33')

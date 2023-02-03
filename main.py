@@ -3,6 +3,7 @@ import gym
 import os
 import runners.standard_runner as std_runner
 import runners.gym_runner as gym_runner
+import runners.auto_rl_runner
 from utils.yaml_config import YamlConfig
 from envs import REGISTRY as ENV_REGISTRY
 from ray.tune.registry import register_env
@@ -82,9 +83,10 @@ def main(args, parallel):
             runner = gym_runner.GymRunner(config=copy.deepcopy(args), env=env)
         else:
             env = ENV_REGISTRY[args['env_name']](**args['envs'])
-            runner = getattr(std_runner,
-                             args['runner_name'])(config=args,
-                                                  env=env)
+            runner = runners.auto_rl_runner.AutoRLRunner(config=args, env=env)
+            # runner = getattr(std_runner,
+            #                  args['runner_name'])(config=args,
+            #                                       env=env)
     runner.run()
 
 

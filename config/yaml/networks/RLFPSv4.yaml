@@ -16,7 +16,7 @@ network:
     non_spatial_feature:
       use: True
       num_layer: 3
-      dim_in: 34
+      dim_in: 34 # oneonone: 34 3vs3: 102
       dim_out: 256
       extension: True
       use_cnn: True

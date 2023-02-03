@@ -2,12 +2,13 @@ envs:
   # --- Info ---
   name: RLFPSv4
   debug: False
+  trust_result: False
   # --- Defaults ---
   port: 49999
   # --- Play Mode Setting ---
   build_path: "./Exe/Environment.exe"
   headless: True # True, False
-  map_type: [2, 2] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hall / -1: Random
+  map_type: [2] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hall / -1: Random
   play_mode: "one_on_one"  # single, team, team_self, human_play, one_on_one, 3v3
   play_mode_preset:
     single:
@@ -76,7 +77,7 @@ envs:
   # --- learning condition ---
   mode: "Pause" # Pause or RealTime
   period: 200
-  acceleration: 1.0
+  acceleration: 3.0
   update_steps: 20
   save_steps: 300
   max_steps: -1 # -1: No limit

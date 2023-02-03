@@ -1,9 +1,12 @@
 import os
 import copy
 import random
+import shutil
 from collections import defaultdict
 import statistics
 import numpy as np
+from main import load_config
+from utils.yaml_config import YamlConfig
 from multiprocessing import Pool
 from bayes_opt import BayesianOptimization
 from bayes_opt.logger import JSONLogger
@@ -174,12 +177,56 @@ class HarmonySearch(Solver):
         self.__par = self._Parameters['par']
         self.__hms = self._Parameters['hms']
         self.__hm = {'output': [], 'value': []}
-        for _ in range(self.__hms):
-            self.__hm['output'].append(self._BestOutput)
-            self.__hm['value'].append(self.__gen_memory())
-
-        self._BestParameter = copy.deepcopy(self.__hm['value'][0])
         self.not_update_memory = 0
+        self._BestOutput = np.NINF
+        if self._Parameters['load_last']:
+            run_args = load_config()
+            log_path = './figures/AutoRL/' + run_args['env_name']
+            folder_list = os.listdir(log_path)
+            load_path = os.path.join(log_path, folder_list[-2])
+            gene_folders = os.listdir(load_path)
+            # update 및 Best 추출
+            for gene in gene_folders:
+                self.not_update_memory += 1
+                gene_path = os.path.join(load_path, gene)
+                outputs = os.listdir(gene_path)
+                for output in outputs:
+                    if self._BestOutput < float(output):
+                        self._BestOutput = float(output)
+                        contents = os.listdir(os.path.join(gene_path, output))
+                        for content in contents:
+                            if 'yaml' in content:
+                                self._BestParameter = self.__encode_memory(YamlConfig.get_dict(os.path.join(gene_path, output, content)))
+                        self.not_update_memory = 0
+
+            # 살아있는 Gen은 이어서 붙이기
+            gene_path = os.path.join(load_path, gene_folders[-1])
+            outputs = os.listdir(gene_path)
+            for output in outputs:
+                contents = os.listdir(os.path.join(gene_path, output))
+                for content in contents:
+                    if 'yaml' in content:
+                        value = YamlConfig.get_dict(os.path.join(gene_path, output, content))
+                        self.__hm['output'].append(float(output))
+                        self.__hm['value'].append(self.__encode_memory(value))
+                if len(self.__hm['output']) == self.__hms:
+                    break
+            # 초기 샘플마저 추출
+            if len(self.__hm['output']) < self.__hms:
+                for _ in range(self.__hms - len(self.__hm['output'])):
+                    self.__hm['output'].append(np.NINF)
+                    self.__hm['value'].append(self.__gen_memory())
+            # 최신 폴더로 모두 이동
+            for gene in gene_folders:
+                old_path = os.path.join(load_path, gene)
+                new_path = os.path.join(log_path, folder_list[-1], gene)
+                shutil.move(old_path, new_path)
+        else:
+            for _ in range(self.__hms):
+                self.__hm['output'].append(self._BestOutput)
+                self.__hm['value'].append(self.__gen_memory())
+
+            self._BestParameter = copy.deepcopy(self.__hm['value'][0])
 
     def start(self, root):
         short_term_memory = copy.deepcopy(self.__hm['value'])
@@ -188,9 +235,17 @@ class HarmonySearch(Solver):
             count = len(os.listdir(root)) + 1
             os.mkdir(os.path.join(root, str(count) + '-Gen'))
             short_term_memory.append(self._BestParameter)
+            run_args = load_config()
+            run_args_list = []
+            for i in range(self.__hms + 1):
+                temp = copy.deepcopy(run_args)
+                if 'port' in temp['envs']:
+                    temp['envs']['port'] = 49999 - i
+                run_args_list.append(temp)
+
             if self._Parameters['parallel']:
-                with Pool(self.__hms) as p:
-                    new_output = p.map(self._TestFunc, short_term_memory)
+                with Pool(self.__hms + 1) as p:
+                    new_output = p.starmap(self._TestFunc, zip(short_term_memory, run_args_list))
             else:
                 for idx in range(self.__hms):
                     out = self._TestFunc(short_term_memory[idx])
@@ -230,6 +285,17 @@ class HarmonySearch(Solver):
     def is_terminal(self):
         return self.not_update_memory >= 10
 
+    def __encode_memory(self, args):
+        memory = dict()
+        for key, values in self._Parameters.items():
+            if isinstance(values, list) or isinstance(values, dict):
+                sep = key.split('-')
+                sub = copy.deepcopy(args)
+                for level in sep:
+                    sub = sub[level]
+                memory[key] = sub
+        return copy.deepcopy(memory)
+
     def __gen_memory(self):
         value = dict()
         for key, values in self._Parameters.items():
@@ -254,13 +320,16 @@ class HarmonySearch(Solver):
                         choice, _ = self.__adjust_pitch(choice=choice)
                         harmony[key] = values[choice % len(values)]
                     if isinstance(values, dict):
-                        value = harmony[key]
-                        _, value = self.__adjust_pitch(value=value)
-                        if value < values['min']:
-                            value = values['min']
-                        if value > values['max']:
-                            value = values['max']
-                        harmony[key] = value
+                        try:
+                            value = harmony[key]
+                            _, value = self.__adjust_pitch(value=value)
+                            if value < values['min']:
+                                value = values['min']
+                            if value > values['max']:
+                                value = values['max']
+                            harmony[key] = value
+                        except KeyError:
+                            wtf = True
                 new_harmony.append(harmony)
         return new_harmony
 
