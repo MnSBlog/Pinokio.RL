@@ -83,10 +83,10 @@ def main(args, parallel):
             runner = gym_runner.GymRunner(config=copy.deepcopy(args), env=env)
         else:
             env = ENV_REGISTRY[args['env_name']](**args['envs'])
-            runner = runners.auto_rl_runner.AutoRLRunner(config=args, env=env)
-            # runner = getattr(std_runner,
-            #                  args['runner_name'])(config=args,
-            #                                       env=env)
+            # runner = runners.auto_rl_runner.AutoRLRunner(config=args, env=env)
+            runner = getattr(std_runner,
+                             args['runner_name'])(config=args,
+                                                  env=env)
     runner.run()
 
 

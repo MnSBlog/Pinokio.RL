@@ -143,16 +143,19 @@ class GeneralRunner:
             min_under = True in (self.rew_min > rew[:])
             max_over = True in (self.rew_max < rew[:])
 
+        # 이젠 클리핑으로 대체
         if min_under:
             print('reward min is updated: ', rew)
-            self.rew_min = rew.min().item()
-            self.rew_gap = (self.rew_max - self.rew_min) / 2
-            self.rew_numerator = (self.rew_max + self.rew_min) / 2
+            rew = self.rew_min
+            # self.rew_min = rew.min().item()
+            # self.rew_gap = (self.rew_max - self.rew_min) / 2
+            # self.rew_numerator = (self.rew_max + self.rew_min) / 2
         if max_over:
             print('reward max is updated: ', rew)
-            self.rew_max = rew.max().item()
-            self.rew_gap = (self.rew_max - self.rew_min) / 2
-            self.rew_numerator = (self.rew_max + self.rew_min) / 2
+            rew = self.rew_max
+            # self.rew_max = rew.max().item()
+            # self.rew_gap = (self.rew_max - self.rew_min) / 2
+            # self.rew_numerator = (self.rew_max + self.rew_min) / 2
         # 학습용 보상 [-1, 1]로 fitting
         train_reward = (rew - self.rew_numerator) / self.rew_gap
 

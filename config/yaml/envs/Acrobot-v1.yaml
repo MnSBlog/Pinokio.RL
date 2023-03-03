@@ -1,4 +1,5 @@
 envs:
   # --- Defaults ---
   name: Acrobot
+  trust_result: False
   reward_range: [-1, 0]

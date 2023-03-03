@@ -1,15 +1,15 @@
 envs:
   # --- Info ---
   name: RLFPSv4
-  debug: False
+  debug: True
   trust_result: False
   # --- Defaults ---
   port: 49999
   # --- Play Mode Setting ---
   build_path: "./Exe/Environment.exe"
-  headless: True # True, False
+  headless: False # True, False
   map_type: [2] # 0: Container Map / 1: Training Map / 2: One on One Map / 3: Zigzag / 4: Battle Hall / -1: Random
-  play_mode: "one_on_one"  # single, team, team_self, human_play, one_on_one, 3v3
+  play_mode: "team_self"  # single, team, team_self, human_play, one_on_one, 3v3
   play_mode_preset:
     single:
       agent_mode : [ 1, 0, 0, 0, 0] # 0: Bot, 1: Agent, 2: Human-play
@@ -97,7 +97,7 @@ envs:
   local_resolution: 30
   init_height: -5
   step_info_dim: 12
-  spatial_dim: 8
+  spatial_dim: 9
   non_spatial_dim: 17
   game_result_dim: 8
   move_dim: 9

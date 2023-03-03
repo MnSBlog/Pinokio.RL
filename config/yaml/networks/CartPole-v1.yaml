@@ -15,7 +15,7 @@ network:
     # --- non-spatial features ---
     non_spatial_feature:
       use: True
-      num_layer: 1
+      num_layer: 3
       dim_in: 4
       dim_out: 16
       extension: False

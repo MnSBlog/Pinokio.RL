@@ -320,16 +320,13 @@ class HarmonySearch(Solver):
                         choice, _ = self.__adjust_pitch(choice=choice)
                         harmony[key] = values[choice % len(values)]
                     if isinstance(values, dict):
-                        try:
-                            value = harmony[key]
-                            _, value = self.__adjust_pitch(value=value)
-                            if value < values['min']:
-                                value = values['min']
-                            if value > values['max']:
-                                value = values['max']
-                            harmony[key] = value
-                        except KeyError:
-                            wtf = True
+                        value = harmony[key]
+                        _, value = self.__adjust_pitch(value=value)
+                        if value < values['min']:
+                            value = values['min']
+                        if value > values['max']:
+                            value = values['max']
+                        harmony[key] = value
                 new_harmony.append(harmony)
         return new_harmony
 

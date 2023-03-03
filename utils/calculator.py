@@ -196,4 +196,4 @@ def draw_auto_rl_result(path):
 
 if __name__ == '__main__':
     root = r'D:\MnS\Projects\RL_Library'
-    draw_metric_solver(path=r'D:\MnS\Projects\RL_Library\figures\AutoRL\FrozenLake-v1\2023-01-30-21-54-33')
+    draw_metric_solver(path=r'D:\MnS\Projects\RL_Library\figures\AutoRL\RLFPSv4\2023-02-03-12-25-03')
