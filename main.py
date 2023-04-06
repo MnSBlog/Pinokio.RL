@@ -92,5 +92,5 @@ def main(args, parallel):
 
 
 if __name__ == '__main__':
-    arguments = load_config()
-    main(args=arguments, parallel=check_parallel(arguments))
+    argus = load_config()
+    main(args=argus, parallel=check_parallel(argus))
