@@ -2,7 +2,6 @@ import os
 import torch
 from agents.tf.actorcritic import Actor, Critic
 
-
 class GeneralAgent:
     def __init__(self, parameters: dict):
         self._config = parameters
@@ -14,8 +13,15 @@ class GeneralAgent:
         self.batch_state_vector = []
         self.batch_state_matrix = []
         self.batch_action = []
+
+        self.batch_actions = []
+
         self.batch_reward = []
         self.batch_next_state = []
+
+        self.batch_next_state_vector = []
+        self.batch_next_state_matrix = []
+
         self.batch_hidden_state = []
         self.batch_done = []
         self.batch_log_old_policy_pdf = []
@@ -43,8 +49,15 @@ class GeneralAgent:
         self.batch_state_vector = []
         self.batch_state_matrix = []
         self.batch_action = []
+
+        self.batch_actions = []
+
         self.batch_reward = []
         self.batch_next_state = []
+
+        self.batch_next_state_vector = []
+        self.batch_next_state_matrix = []
+        
         self.batch_done = []
         self.batch_log_old_policy_pdf = []
         self.batch_hidden_state = []

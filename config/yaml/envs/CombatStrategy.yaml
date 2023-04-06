@@ -7,7 +7,7 @@ envs:
   agent_count: 1
   enemy_count: 1
   agent_type: [-1]
-  reward_range: [-11, 11]
+  reward_range: [-5, 5]
   first_weapon_type: [1]
   second_weapon_type: [1]
   # --- learning condition ---
@@ -34,7 +34,7 @@ envs:
   step_info_dim: 16
   spatial_dim: 15
   non_spatial_dim: 15
-  maneuver_dim: 7
+  maneuver_dim: 9
   stick_dim: 3
 
 

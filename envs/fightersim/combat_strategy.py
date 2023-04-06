@@ -53,7 +53,7 @@ class CombatStrategy(gym.Env):
         self.server.send(action_buffer)
         begin = time.time()
         state, reward, done = self.__get_observation()
-        return state, reward, done, None, None
+        return state, reward, done, False, None
 
     def reset(
             self,
@@ -105,11 +105,10 @@ class CombatStrategy(gym.Env):
 
     def __calculate_reward(self, step_result):
         reward = torch.zeros(1, 1)
-        reward += (step_result[3] + step_result[3]) / 2  # on radar on screen 1
-        reward += step_result[15]  # targetting area -1~1
-        reward += 5 * step_result[14]  # evasion score 5
-        reward -= 5 * step_result[10]  # damaged score -5
-        reward -= step_result[12]  # heightRestriction -1
+        reward += 5 * step_result[15]  # targetting area -5~5
+        reward -= 3*step_result[12]  # heightRestriction -1
+        reward += step_result[14]
+        reward = torch.clamp(reward, -5, +5)
         return reward
 
     def render(self, mode="human", **kwargs):

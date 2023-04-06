@@ -47,6 +47,7 @@ def save_folder_check(config):
     root = config['runner']['history_path']
     if os.path.exists(os.path.join(root, config['agent_name'])) is False:
         os.mkdir(os.path.join(root, config['agent_name']))
+    if os.path.exists(os.path.join(root, 'best')) is False:
         os.mkdir(os.path.join(root, 'best'))
     config['runner']['history_path'] = os.path.join(root, config['agent_name'])
 
