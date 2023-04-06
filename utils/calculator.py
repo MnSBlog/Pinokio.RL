@@ -41,7 +41,7 @@ def convert_to_numpy(path, name):
 
 def draw_game_result(path, filename):
     col_title = ['TypeID', 'FirstGun', 'SecondGun', 'HP', 'Kill', 'Step', 'Playtime', 'Result', 'None']
-    data = pd.read_csv(path, header=None)
+    data = pd.read_csv(os.path.join(path, filename), header=None)
     data.columns = col_title
     window = 10
     results = data['Result'].tolist()
@@ -62,7 +62,7 @@ def draw_game_result(path, filename):
     timeover = [x + y for x, y in zip(lose, timeover)]
     plt.fill_between(x, 0, win, alpha=0.7, label='Win')
     plt.fill_between(x, win, lose, alpha=0.7, label='Lose')
-    plt.fill_between(x, lose, timeover, alpha=0.7, label='TimeOver')
+    plt.fill_between(x, lose, timeover, alpha=0.7, label='Others')
 
     plt.ylim(0, 11)
     plt.legend(bbox_to_anchor=(0.8, 1.05), loc='center left')
@@ -81,7 +81,7 @@ def draw_game_result(path, filename):
 
     plt.plot(x, kill_max, '-')
     plt.fill_between(x, kill_mean, kill_max, alpha=0.2)
-    plt.ylim(0.0, 4.0)
+    plt.ylim(0.0, 2.0)
     plt.savefig(filename + 'game_kill.png')
     plt.clf()
 
@@ -93,16 +93,35 @@ def draw_metric_solver(path):
     index = [int(folder.replace('-Gen', '')) for folder in generations if 'Gen' in folder]
     index.sort()
     observation = []
-
+    # 전체의 Min/Max값 찾기 (x - min) / (max - min)
+    min_value = np.Inf
+    max_value = np.NINF
     for gen in index:
         current_folder = os.path.join(path, str(gen) + '-Gen')
         outputs = os.listdir(current_folder)
-        outputs = [float(i) / 300 for i in outputs]
-        observation.append(outputs)
+        outputs = [float(i) for i in outputs]
+        if min(outputs) < min_value:
+            min_value = copy.deepcopy(min(outputs))
+        if max(outputs) > max_value:
+            max_value = copy.deepcopy(max(outputs))
+
+    for gen in index:
+        gen_results = []
+        current_folder = os.path.join(path, str(gen) + '-Gen')
+        outputs = os.listdir(current_folder)
+        for output in outputs:
+            search = os.path.join(path, str(gen) + '-Gen', output)
+            files = os.listdir(search)
+            for _ in range(len(files) // 2):
+                gen_results.append((float(output) - min_value) / (max_value - min_value))
+        if len(gen_results) != 8:
+            for _ in range(8 - len(gen_results)):
+                gen_results.append(min(gen_results))
+        observation.append(gen_results)
 
     for l in index:
-        plt.axvline(l, 0, 500, color='lightgray', linestyle='--')
-    plt.ylim([0, 300])
+        plt.axvline(l, 0.0, 1.2, color='lightgray', linestyle='--')
+    plt.ylim([0, 1.1])
     plt.xlim([0, len(index) + 1])
     plt.plot(index, observation, 'ro')
     plt.xlabel('Generation')
@@ -176,5 +195,5 @@ def draw_auto_rl_result(path):
 
 
 if __name__ == '__main__':
-    root = r'D:\MnS\Projects\RL_Library\figures\AutoRL\CartPole-v1\2022-12-27-22-18-42\1-Gen'
-    draw_bayes_result(path=root)
+    root = r'D:\MnS\Projects\RL_Library'
+    draw_metric_solver(path=r'D:\MnS\Projects\RL_Library\figures\AutoRL\RLFPSv4\2023-02-03-12-25-03')

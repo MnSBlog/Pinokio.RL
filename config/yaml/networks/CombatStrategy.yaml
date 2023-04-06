@@ -28,8 +28,8 @@ network:
     num_memory_layer: 0
     memory_rnn_len: 0
     n_of_actions:
-      - 9
       - 3
+      - 9
     action_mode: "Discrete" # Discrete or Continuous
     # --- save / load ---
     model_path: 'Networks'

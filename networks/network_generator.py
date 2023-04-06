@@ -83,10 +83,18 @@ class CustomTorchNetwork(nn.Module):
                 if config['non_spatial_feature']['use_cnn']:
                     self.use_cnn = True
                     channel = config['non_spatial_feature']['dim_out'] // config['non_spatial_feature']['dim_in']
-                    config['non_spatial_feature']['dim_out'] = channel * config['non_spatial_feature']['dim_in']
-                    vector_processor = make_conv1d_sequential(in_channel=self.local_len,
-                                                              out_channel=channel,
-                                                              num_layer=config['non_spatial_feature']['num_layer'])
+                    if channel == 0:
+                        self.use_cnn = False
+                        in_node = config['non_spatial_feature']['dim_in'] * self.local_len
+                        vector_processor = make_lin_sequential(in_channel=in_node,
+                                                               out_channel=config['non_spatial_feature']['dim_out'],
+                                                               activation=config['neck_activation'],
+                                                               num_layer=config['non_spatial_feature']['num_layer'])
+                    else:
+                        config['non_spatial_feature']['dim_out'] = channel * config['non_spatial_feature']['dim_in']
+                        vector_processor = make_conv1d_sequential(in_channel=self.local_len,
+                                                                  out_channel=channel,
+                                                                  num_layer=config['non_spatial_feature']['num_layer'])
                 else:
                     in_node = config['non_spatial_feature']['dim_in'] * self.local_len
                     vector_processor = make_lin_sequential(in_channel=in_node,
@@ -168,7 +176,6 @@ class CustomTorchNetwork(nn.Module):
             if self.use_cnn is False:
                 x2 = x2.view(x2.shape[0], -1)
             x2 = self.networks['non_spatial_feature'](x2)
-
         if 0 not in x2.shape:
             x2 = x2.view(x2.shape[0], -1)
             cat_alter.append(x2)

@@ -2,31 +2,31 @@ network:
   actor:
     # --- learning option ---
     obs_stack: True
-    memory_q_len: 5 # Integer / List
+    memory_q_len: 6 # Integer / List
     # - State definition -
     # --- spatial features ---
     spatial_feature:
       use: True
-      num_layer: 3
-      dim_in: [8, 30, 30]
-      dim_out: 256
+      num_layer: 4
+      dim_in: [9, 30, 30]
+      dim_out: 512
       backbone: ''
       freeze: False
     # --- non-spatial features ---
     non_spatial_feature:
       use: True
-      num_layer: 3
-      dim_in: 102
-      dim_out: 256
+      num_layer: 1
+      dim_in: 170 # oneonone: 34 3vs3: 102 5vsbot: 170
+      dim_out: 64
       extension: True
-      use_cnn: True
+      use_cnn: False
       freeze: False
     # --- outputs ---
     neck_out: 32
     neck_activation: "ReLU"
-    neck_num_layer: 3
-    num_memory_layer: 0
-    memory_rnn_len: 0
+    neck_num_layer: 2
+    num_memory_layer: 2
+    memory_rnn_len: 1
     n_of_actions:
       - 9
       - 7

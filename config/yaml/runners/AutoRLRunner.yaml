@@ -1,6 +1,6 @@
 runner:
   # --- Defaults ---
-  max_iteration_num: 300
+  max_iteration_num: 600
   pretrain: False
   render: 'human'
   off_pg: False
