@@ -25,9 +25,9 @@ network:
     neck_out: 16
     neck_activation: "ReLU"
     n_of_actions:
-      - 4
       - 3
-
+      - 9
+3x9
     action_mode: "Discrete" # Discrete or Continuous
     # --- save / load ---
     model_path: 'Networks'
