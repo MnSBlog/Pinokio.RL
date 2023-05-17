@@ -102,6 +102,8 @@ class GeneralRunner:
             self.batch_reward += train_reward
         self._agent.batch_reward.append(train_reward)
         self._agent.batch_done.append(done)
+        self._agent.batch_next_state_matrix.append(torch.tensor(state['matrix']))
+        self._agent.batch_next_state_vector.append(torch.tensor(state['vector']))
         return state
 
     def _select_action(self, state):
@@ -115,6 +117,7 @@ class GeneralRunner:
 
     def _update_agent(self, next_state):
         if len(self._agent.batch_reward) >= self._config['runner']['batch_size']:
+
             # 학습 추출
             self._agent.update(next_state=next_state, done=self.done)
             # self._agent.update()

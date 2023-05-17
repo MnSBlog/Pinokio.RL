@@ -48,6 +48,7 @@ def save_folder_check(config):
     root = config['runner']['history_path']
     if os.path.exists(os.path.join(root, config['agent_name'])) is False:
         os.mkdir(os.path.join(root, config['agent_name']))
+    if os.path.exists(os.path.join(root, 'best')) is False:
         os.mkdir(os.path.join(root, 'best'))
     config['runner']['history_path'] = os.path.join(root, config['agent_name'])
 
@@ -91,5 +92,5 @@ def main(args, parallel):
 
 
 if __name__ == '__main__':
-    arguments = load_config()
-    main(args=arguments, parallel=check_parallel(arguments))
+    argus = load_config()
+    main(args=argus, parallel=check_parallel(argus))

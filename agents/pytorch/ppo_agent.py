@@ -6,8 +6,8 @@ from agents.pytorch.utilities import get_device
 from agents.general_agent import PolicyAgent
 from torch.distributions import Categorical
 
-
 class PPO(PolicyAgent):
+
     def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
         device = get_device("auto")
         super(PPO, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
