@@ -1,5 +1,5 @@
 # --- Modules ---
-runner_name: "StepRunner" # path about StepRunner / GymRunner / EpisodeRunner / AutoRLRunner
-network_name: "CombatStrategy" # custom_network_path / torchvision.models(pre-trained)
-env_name: "CombatStrategy" # Environment name (include gym.env)
+runner_name: "EpisodeRunner" # path about StepRunner / GymRunner / EpisodeRunner / AutoRLRunner
+network_name: "PaintShop-v1" # custom_network_path / torchvision.models(pre-trained)
+env_name: "PaintShop-v1" # Environment name (include gym.env)
 agent_name: "PPO" # Algorithm name

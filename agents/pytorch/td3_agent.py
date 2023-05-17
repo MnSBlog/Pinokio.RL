@@ -1,170 +1,265 @@
-import copy
-import numpy as np
 import torch
-import torch.nn as nn
-from agents.pytorch.utilities import get_device
-from agents.general_agent import PolicyAgent
+import numpy as np
+
+torch.backends.cudnn.benchmark = True
+import torch.nn.functional as F
+import os
+
+from core.network import Network
+from core.optimizer import Optimizer
+from core.buffer import ReplayBuffer
+from .base import BaseAgent
 
 
-class TD3(PolicyAgent):
-    def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
-        device = get_device("auto")
-        super(PPO, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
-        self.actor_old = copy.deepcopy(actor).to(device)
-        self.critic_old = copy.deepcopy(critic).to(device)
-        # Hyper-parameters
-        self.gamma = self._config['gamma']
-        self.gae_lambda = self._config['gae_lambda']
-        self.actor_lr = self._config['actor_lr']
-        self.critic_lr = self._config['critic_lr']
-        self.epochs = self._config['epochs']
-        self.ratio_clipping = self._config['ratio_clipping']
-        # 표준편차의 최솟값과 최대값 설정
-        self.std_bound = self._config['std_bound']
-        self.state_dim = self._config['state_dim']
-        # Optimizer
-        opt_arg = [
-            {'params': self.actor.parameters(), 'lr': self.actor_lr},
-            {'params': self.critic.parameters(), 'lr': self.critic_lr}
-        ]
+class TD3(BaseAgent):
+    action_type = "continuous"
+    """Twin-delayed deep deterministic policy gradient (TD3) agent.
 
-        self.optimizer = getattr(torch.optim, parameters['optimizer'])(opt_arg)
-        self.actor_old.load_state_dict(self.actor.state_dict())
-        self.critic_old.load_state_dict(self.critic.state_dict())
-        self.loss = getattr(nn, parameters['loss_function'])()
-        self.device = device
-        self.hidden_state = copy.deepcopy(self.actor.init_h_state)
-        h_0, c_0 = self.hidden_state
-        h_0, c_0 = h_0.to(self.device), c_0.to(self.device)
-        self.hidden_state = (h_0, c_0)
+    Args:
+        state_size (int): dimension of state.
+        action_size (int): dimension of action.
+        hidden_size (int): dimension of hidden unit.
+        actor (str): key of actor network class in _network_dict.txt.
+        critic (str): key of critic network class in _network_dict.txt.
+        head (str): key of head in _head_dict.txt.
+        optim_config (dict): dictionary of the optimizer info.
+        gamma (float): discount factor.
+        buffer_size (int): the size of the memory buffer.
+        batch_size (int): the number of samples in the one batch.
+        start_train_step (int): steps to start learning.
+        initial_random_step : number of  uniform-random action step, before running real policy.
+        tau (float): the soft update coefficient.
+        update_delay (int): delayed cycle in which actor and targets are updated.
+        action_noise_std (float): noise which use on choosing action when agent sample.
+        target_noise_std (float): noise which use on calculating target-q.
+        target_noise_clip (float): epsilon used on clipping.
+        run_step (int): the number of total steps.
+        lr_decay: lr_decay option which apply decayed weight on parameters of network.
+        device (str): device to use.
+            (e.g. 'cpu' or 'gpu'. None can also be used, and in this case, the cpu is used.)
+    """
 
-    def select_action(self, state):
-        spatial_x = state['matrix']
-        non_spatial_x = state['vector']
-        mask = state['action_mask']
+    def __init__(
+        self,
+        state_size,
+        action_size,
+        hidden_size=256,
+        actor="deterministic_policy",
+        critic="continuous_q_network",
+        head="mlp",
+        optim_config={
+            "actor": "adam",
+            "critic": "adam",
+            "actor_lr": 1e-3,
+            "critic_lr": 1e-3,
+        },
+        gamma=0.99,
+        buffer_size=50000,
+        batch_size=128,
+        start_train_step=1000,
+        initial_random_step=0,
+        tau=1e-3,
+        update_delay=2,
+        action_noise_std=0.1,
+        target_noise_std=0.2,
+        target_noise_clip=0.5,
+        run_step=1e6,
+        lr_decay=True,
+        device=None,
+        **kwargs,
+    ):
+        self.device = (
+            torch.device(device)
+            if device
+            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
 
-        if torch.is_tensor(non_spatial_x) is False:
-            non_spatial_x = torch.tensor(non_spatial_x, dtype=torch.float).to(self.device)
-            non_spatial_x = non_spatial_x.unsqueeze(dim=0)
-        non_spatial_x = non_spatial_x.unsqueeze(dim=2)
+        self.actor = Network(
+            actor, state_size, action_size, D_hidden=hidden_size, head=head
+        ).to(self.device)
+        self.target_actor = Network(
+            actor, state_size, action_size, D_hidden=hidden_size, head=head
+        ).to(self.device)
+        self.target_actor.load_state_dict(self.actor.state_dict())
+        self.actor_optimizer = Optimizer(
+            optim_config["actor"], self.actor.parameters(), lr=optim_config["actor_lr"]
+        )
 
-        if len(spatial_x) > 0 and torch.is_tensor(spatial_x) is False:
-            spatial_x = torch.tensor(spatial_x, dtype=torch.float).to(self.device)
-            spatial_x = spatial_x.unsqueeze(dim=0)
+        self.critic1 = Network(
+            critic, state_size, action_size, D_hidden=hidden_size, head=head
+        ).to(self.device)
+        self.target_critic1 = Network(
+            critic, state_size, action_size, D_hidden=hidden_size, head=head
+        ).to(self.device)
+        self.target_critic1.load_state_dict(self.critic1.state_dict())
+        self.critic_optimizer1 = Optimizer(
+            optim_config["critic"],
+            self.critic1.parameters(),
+            lr=optim_config["critic_lr"],
+        )
 
-        if mask is not None and torch.is_tensor(mask) is False:
-            mask = torch.tensor(mask, dtype=torch.float).to(self.device)
-            mask = mask.unsqueeze(dim=0)
+        self.critic2 = Network(
+            critic, state_size, action_size, D_hidden=hidden_size, head=head
+        ).to(self.device)
+        self.target_critic2 = Network(
+            critic, state_size, action_size, D_hidden=hidden_size, head=head
+        ).to(self.device)
+        self.target_critic2.load_state_dict(self.critic2.state_dict())
+        self.critic_optimizer2 = Optimizer(
+            optim_config["critic"],
+            self.critic2.parameters(),
+            lr=optim_config["critic_lr"],
+        )
 
-        with torch.no_grad():
-            if mask is not None:
-                self.actor_old.set_mask(mask.to(self.device))
+        self.gamma = gamma
+        self.tau = tau
+        self.memory = ReplayBuffer(buffer_size)
+        self.batch_size = batch_size
+        self.start_train_step = start_train_step
+        self.initial_random_step = initial_random_step
+        self.num_random_step = 0
+        self.num_learn = 0
+        self.run_step = run_step
+        self.lr_decay = lr_decay
 
-            state = self.actor_old.pre_forward(x1=spatial_x, x2=non_spatial_x)
-            actions, action_logprobs, next_hidden = self.actor_old.act(state=state, hidden=self.hidden_state)
+        self.action_size = action_size
+        self.update_delay = update_delay
+        self.action_noise_std = action_noise_std
+        self.target_noise_std = target_noise_std
+        self.target_noise_clip = target_noise_clip
+        self.actor_loss = 0.0
 
-            self.batch_state.append(state)
-            self.batch_action.append(actions)
-            self.batch_hidden_state(next_hidden)
-            self.batch_log_old_policy_pdf.append(action_logprobs)
-
-            self.hidden_state = next_hidden
-
-        return actions
-
-    def update(self, next_state=None, done=None):
-        # Monte Carlo estimate of returns
-        discounted_reward = 0
-        if len(self.batch_reward[0]) == 1:
-            rewards = []
-            for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
-                if is_terminal:
-                    discounted_reward = 0
-                discounted_reward = reward + (self.gamma * discounted_reward)
-                rewards.insert(0, discounted_reward)
+    @torch.no_grad()
+    def act(self, state, training=True):
+        self.actor.train(training)
+        if training and self.num_random_step < self.initial_random_step:
+            action = np.random.uniform(-1.0, 1.0, (1, self.action_size))
+            self.num_random_step += 1
         else:
-            rewards = np.zeros((len(self.batch_reward), len(self.batch_reward[0])))
-            batch_count = 0
-            for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
-                for idx in reversed(range(len(reward))):
-                    if is_terminal[idx]:
-                        discounted_reward = 0
-                    discounted_reward = reward[idx] + (self.gamma * discounted_reward)
-                    rewards[batch_count, idx] = discounted_reward
-                batch_count += 1
+            action = self.actor(self.as_tensor(state))
+            action = action.cpu().numpy()
+            if training:
+                noise = np.random.normal(0, self.action_noise_std, self.action_size)
+                action = (action + noise).clip(-1.0, 1.0)
+        return {"action": action}
 
-        # Normalizing the rewards
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
-        rewards = rewards.squeeze()
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
+    def learn(self):
+        transitions = self.memory.sample(self.batch_size)
+        for key in transitions.keys():
+            transitions[key] = self.as_tensor(transitions[key])
 
-        # convert list to tensor
-        old_states = torch.squeeze(torch.stack(self.batch_state, dim=0)).detach().to(self.device)
-        old_actions = torch.squeeze(torch.stack(self.batch_action, dim=0)).detach().to(self.device)
-        old_logprobs = torch.squeeze(torch.stack(self.batch_log_old_policy_pdf, dim=0)).detach().to(self.device)
-        old_hiddens = None
-        if self.actor.recurrent:
-            old_hiddens = torch.squeeze(torch.stack(self.batch_hidden_state, dim=0)).detach().to(self.device)
-        # Optimize policy for K epochs
-        for _ in range(self.epochs):
-            # Evaluating old actions and values
-            rtn_evaluations = self.actor.evaluate(old_states, old_actions, hidden=old_hiddens)
-            state_values = self.critic(old_states)
-            # match state_values tensor dimensions with rewards tensor
-            state_values = torch.squeeze(state_values)
+        state = transitions["state"]
+        action = transitions["action"]
+        reward = transitions["reward"]
+        next_state = transitions["next_state"]
+        done = transitions["done"]
 
-            (logprobs, dist_entropy) = rtn_evaluations[0]
-            if len(rtn_evaluations) > 1:
-                old_logprobs_raw = old_logprobs[:, 0, :].squeeze()
-                for idx in range(1, len(rtn_evaluations)):
-                    (logprob, entropy) = rtn_evaluations[idx]
-                    old_logprob = old_logprobs[:, idx, :].squeeze()
+        # Critic Update
+        with torch.no_grad():
+            noise = (torch.randn_like(action) * self.target_noise_std).clamp(
+                -self.target_noise_clip, self.target_noise_clip
+            )
+            next_action = (self.target_actor(next_state) + noise).clamp(-1.0, 1.0)
+            next_q1 = self.target_critic1(next_state, next_action)
+            next_q2 = self.target_critic2(next_state, next_action)
+            min_next_q = torch.min(next_q1, next_q2)
+            target_q = reward + (1 - done) * self.gamma * min_next_q
 
-                    logprobs += logprob
-                    dist_entropy += entropy
-                    old_logprobs_raw += old_logprob
-            else:
-                old_logprobs_raw = old_logprobs
-            # Finding the ratio (pi_theta / pi_theta__old)
-            ratios = torch.exp(logprobs - old_logprobs_raw.detach())
+        critic_loss1 = F.mse_loss(target_q, self.critic1(state, action))
+        self.critic_optimizer1.zero_grad()
+        critic_loss1.backward()
+        self.critic_optimizer1.step()
 
-            # Finding Surrogate Loss
-            advantages = rewards - state_values.detach()
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1 - self.ratio_clipping, 1 + self.ratio_clipping) * advantages
+        critic_loss2 = F.mse_loss(target_q, self.critic2(state, action))
+        self.critic_optimizer2.zero_grad()
+        critic_loss2.backward()
+        self.critic_optimizer2.step()
 
-            # final loss of clipped objective PPO
-            loss = -torch.min(surr1, surr2) + 0.5 * self.loss(state_values, rewards) - 0.01 * dist_entropy
+        max_Q = torch.max(target_q, axis=0).values.cpu().numpy()[0]
 
-            # take gradient step
-            self.optimizer.zero_grad()
-            loss.mean().backward()
-            self.optimizer.step()
+        # Delayed Actor Update
+        if self.num_learn % self.update_delay == 0:
+            action_pred = self.actor(state)
+            actor_loss = -self.critic1(state, action_pred).mean()
 
-        # Copy new weights into old policy
-        self.actor_old.load_state_dict(self.actor.state_dict())
-        self.critic_old.load_state_dict(self.critic.state_dict())
+            self.actor_optimizer.zero_grad()
+            actor_loss.backward()
+            self.actor_optimizer.step()
+            self.actor_loss = actor_loss.item()
+            if self.num_learn > 0:
+                self.update_target_soft()
 
-        # clear buffer
-        self.batch_clear()
+        self.num_learn += 1
 
-    def save(self, checkpoint_path: str):
-        if ".pth" not in checkpoint_path:
-            checkpoint_path = checkpoint_path + '.pth'
-        actor_path = checkpoint_path.replace(".pth", "actor.pth")
-        critic_path = checkpoint_path.replace(".pth", "critic.pth")
-        torch.save(self.actor_old.state_dict(), actor_path)
-        torch.save(self.critic_old.state_dict(), critic_path)
+        self.result = {
+            "critic_loss1": critic_loss1.item(),
+            "critic_loss2": critic_loss2.item(),
+            "actor_loss": self.actor_loss,
+            "max_Q": max_Q,
+        }
 
-    def load(self, checkpoint_path: str):
-        if "actor" in checkpoint_path:
-            actor_path = checkpoint_path
-            critic_path = checkpoint_path.replace("actor.pth", "critic.pth")
-        elif "critic" in checkpoint_path:
-            critic_path = checkpoint_path
-            actor_path = checkpoint_path.replace("critic.pth", "actor.pth")
+        return self.result
 
-        self.actor.load_state_dict(torch.load(actor_path, map_location=lambda storage, loc: storage))
-        self.actor_old.load_state_dict(torch.load(actor_path, map_location=lambda storage, loc: storage))
-        self.critic.load_state_dict(torch.load(critic_path, map_location=lambda storage, loc: storage))
-        self.critic_old.load_state_dict(torch.load(critic_path, map_location=lambda storage, loc: storage))
+    def update_target_soft(self):
+        for t_p, p in zip(self.target_critic1.parameters(), self.critic1.parameters()):
+            t_p.data.copy_(self.tau * p.data + (1 - self.tau) * t_p.data)
+        for t_p, p in zip(self.target_critic2.parameters(), self.critic2.parameters()):
+            t_p.data.copy_(self.tau * p.data + (1 - self.tau) * t_p.data)
+        for t_p, p in zip(self.target_actor.parameters(), self.actor.parameters()):
+            t_p.data.copy_(self.tau * p.data + (1 - self.tau) * t_p.data)
+
+    def process(self, transitions, step):
+        result = {}
+        # Process per step
+        self.memory.store(transitions)
+
+        if self.memory.size >= self.batch_size and step >= self.start_train_step:
+            result = self.learn()
+            if self.lr_decay:
+                self.learning_rate_decay(
+                    step,
+                    [
+                        self.actor_optimizer,
+                        self.critic_optimizer1,
+                        self.critic_optimizer2,
+                    ],
+                )
+
+        return result
+
+    def save(self, path):
+        print(f"...Save model to {path}...")
+        save_dict = {
+            "actor": self.actor.state_dict(),
+            "actor_optimizer": self.actor_optimizer.state_dict(),
+            "critic1": self.critic1.state_dict(),
+            "critic2": self.critic2.state_dict(),
+            "critic_optimizer1": self.critic_optimizer1.state_dict(),
+            "critic_optimizer2": self.critic_optimizer2.state_dict(),
+        }
+        torch.save(save_dict, os.path.join(path, "ckpt"))
+
+    def load(self, path):
+        print(f"...Load model from {path}...")
+        checkpoint = torch.load(os.path.join(path, "ckpt"), map_location=self.device)
+        self.actor.load_state_dict(checkpoint["actor"])
+        self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
+
+        self.critic1.load_state_dict(checkpoint["critic1"])
+        self.critic1.load_state_dict(checkpoint["critic2"])
+        self.target_critic1.load_state_dict(self.critic1.state_dict())
+        self.target_critic2.load_state_dict(self.critic2.state_dict())
+        self.critic_optimizer1.load_state_dict(checkpoint["critic_optimizer1"])
+        self.critic_optimizer2.load_state_dict(checkpoint["critic_optimizer2"])
+
+    def sync_in(self, weights):
+        self.actor.load_state_dict(weights)
+
+    def sync_out(self, device="cpu"):
+        weights = self.actor.state_dict()
+        for k, v in weights.items():
+            weights[k] = v.to(device)
+        sync_item = {
+            "weights": weights,
+        }
+        return sync_item

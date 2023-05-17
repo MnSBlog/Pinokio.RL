@@ -18,7 +18,7 @@ network:
       num_layer: 3
       dim_in: 4
       dim_out: 16
-      extension: False
+      extension: True
       use_cnn: True
       freeze: False
     # --- outputs ---
