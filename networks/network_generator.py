@@ -8,7 +8,7 @@ from torch.distributions import Categorical
 def make_sequential(in_channels, out_channels, *args, **kwargs):
     return nn.Sequential(nn.Conv2d(in_channels, out_channels, *args, **kwargs),
                          nn.BatchNorm2d(out_channels),
-                         nn.ReLU())
+                         nn.PReLU())
 
 
 def make_lin_sequential(in_channel, out_channel, activation, num_layer):

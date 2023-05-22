@@ -31,13 +31,13 @@ class A2C(PolicyAgent):
         opt_arg = [
             {'params': self.actor.parameters(), 'lr': self._parameter.actor_lr},
         ]
-        self.optimizer['actor'] = getattr(torch.optim, self._parameter.optimizer)(opt_arg)
+        self.optimizer['actor'] = getattr(torch.optim, self._parameter.actor_optimizer)(opt_arg)
         self.loss['actor'] = getattr(nn, self._parameter.loss_function)()
         # Critic Optimizer
         opt_arg = [
             {'params': self.critic.parameters(), 'lr': self._parameter.critic_lr}
         ]
-        self.optimizer['critic'] = getattr(torch.optim, self._parameter.optimizer)(opt_arg)
+        self.optimizer['critic'] = getattr(torch.optim, self._parameter.critic_optimizer)(opt_arg)
         self.loss['critic'] = getattr(nn, self._parameter.loss_function)()
 
         self.device = device
