@@ -1,14 +1,19 @@
 agent:
   # --- Defaults ---
-  name: "discrete_sac_agent"
+  name: "SAC"
   framework: "torch" # torch or tf
   # --- Hyper parameters ---
-  gamma: 0.99 # discount factor
-  tau: 1e-2 # Tau
-  lr: 5e-4 # learning rate
-  clip_grad_param: 1 # Clip gradient parameter
+  use_dynamic_alpha: False
+  gamma: 0.99
+  tau: 5e-3
+  static_log_alpha: 2.0
+  actor_lr: 5e-4,
+  critic_lr: 1e-3,
+  alpha_lr: 3e-4,
   # --- Only Tensorflow ---
   #state_dim: 0 # You have to set this value (e.g. env.observation_space.shape[0])
   # - Model configuration -
-  optimizer: 'Adam'
+  actor_optimizer: 'Adam'
+  critic_optimizer: 'Adam'
+  alpha_optimizer: 'Adam'
   loss_function: 'MSELoss'

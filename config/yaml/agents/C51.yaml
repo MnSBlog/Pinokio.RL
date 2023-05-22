@@ -1,20 +1,21 @@
 agent:
   # --- Defaults ---
-  name: "DDPG"
+  name: "C51"
   framework: "torch" # torch or tf
   # --- Hyper parameters ---
   gamma: 0.99 # discount factor
-  tau: 1e-2 # Tau
-  actor_lr: 5e-4 # learning rate
-  critic_lr: 5e-3
-  clip_grad_param: 1 # Clip gradient parameter
-  mu: 0
-  theta: 1e-3
-  sigma: 2e-3
+  epsilon: 0.4
+  epsilon_alpha: 7.0
+  epsilon_init: 1.0
+  epsilon_min: 0.1
+  epsilon_eval: 0.0
+  explore_ratio: 0.1
+  n_step: 4
+  v_min: -10
+  v_max: 10
+  num_support: 51
   # --- Only Tensorflow ---
   #state_dim: 0 # You have to set this value (e.g. env.observation_space.shape[0])
   # - Model configuration -
-  actor_optimizer: 'Adam'
-  critic_optimizer: 'Adam'
+  optimizer: 'Adam'
   loss_function: 'MSELoss'
-  buffer: 'Replay'

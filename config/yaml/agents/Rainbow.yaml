@@ -1,12 +1,20 @@
 agent:
   # --- Defaults ---
-  name: "discrete_sac_agent"
+  name: "Rainbow"
   framework: "torch" # torch or tf
   # --- Hyper parameters ---
   gamma: 0.99 # discount factor
-  tau: 1e-2 # Tau
-  lr: 5e-4 # learning rate
-  clip_grad_param: 1 # Clip gradient parameter
+  epsilon: 0.4
+  epsilon_alpha: 7.0
+  epsilon_init: 1.0
+  epsilon_min: 0.1
+  epsilon_eval: 0.0
+  explore_ratio: 0.1
+  n_step: 4
+  noise_type: "factorized"
+  v_min: -10
+  v_max: 10
+  num_support: 51
   # --- Only Tensorflow ---
   #state_dim: 0 # You have to set this value (e.g. env.observation_space.shape[0])
   # - Model configuration -
