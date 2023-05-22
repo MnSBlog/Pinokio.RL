@@ -1,0 +1,5 @@
+envs:
+  # --- Defaults ---
+  name: FrozenLake-v1
+  trust_result: False
+  reward_range: [0, 1]

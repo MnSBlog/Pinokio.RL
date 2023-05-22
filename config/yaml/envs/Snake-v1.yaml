@@ -1,0 +1,8 @@
+envs:
+  # --- Defaults ---
+  name: CartPole
+  trust_result: False
+  cell_size: 20
+  columns: 30
+  rows: 20
+  reward_range: [0, 1]

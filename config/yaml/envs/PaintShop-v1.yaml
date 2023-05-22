@@ -1,0 +1,6 @@
+envs:
+  # --- Defaults ---
+  name: PaintShop
+  cost_path: 'D:\MnS\Projects\RL_Library\envs\paintshop\basic_cost.csv'
+  trust_result: False
+  reward_range: [-10, 0]
