@@ -1,31 +1,17 @@
 import os
 import torch
+from buffer.base import BaseBuffer
 from agents.tf.actorcritic import Actor, Critic
+
 
 class GeneralAgent:
     def __init__(self, parameters: dict):
         self._config = parameters
+        self._buffer = BaseBuffer()
         self.exconfig = dict()
         self.metric_list = ['reward', 'entropy', 'state_value', 'loss']
         self.statistics = ['max', 'min', 'std', 'mean']
         self.metric = self.make_metrics()
-        # 배치 설정
-        self.batch_state_vector = []
-        self.batch_state_matrix = []
-        self.batch_action = []
-
-        self.batch_actions = []
-
-        self.batch_reward = []
-        self.batch_next_state = []
-
-        self.batch_next_state_vector = []
-        self.batch_next_state_matrix = []
-
-        self.batch_hidden_state = []
-        self.batch_done = []
-        self.batch_log_old_policy_pdf = []
-        self.batch_clear()
 
     def select_action(self, state):
         raise NotImplementedError
@@ -44,23 +30,6 @@ class GeneralAgent:
 
     def evaluate(self, state, actions, hidden=None):
         raise NotImplementedError
-
-    def batch_clear(self):
-        self.batch_state_vector = []
-        self.batch_state_matrix = []
-        self.batch_action = []
-
-        self.batch_actions = []
-
-        self.batch_reward = []
-        self.batch_next_state = []
-
-        self.batch_next_state_vector = []
-        self.batch_next_state_matrix = []
-        
-        self.batch_done = []
-        self.batch_log_old_policy_pdf = []
-        self.batch_hidden_state = []
 
     def insert_metrics(self, sub_metric):
         for key in self.metric_list:

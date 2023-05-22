@@ -1,5 +1,7 @@
 from abc import abstractmethod, ABC
 import numpy as np
+import torch
+
 
 class BaseBuffer(ABC):
     def __init__(self):
@@ -41,6 +43,7 @@ class BaseBuffer(ABC):
     def clear(self):
         return
 
+    @staticmethod
     def stack_transition(self, batch):
         transitions = {}
 

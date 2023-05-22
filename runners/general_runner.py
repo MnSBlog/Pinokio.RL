@@ -120,7 +120,6 @@ class GeneralRunner:
 
             # 학습 추출
             self._agent.update(next_state=next_state, done=self.done)
-            # self._agent.update()
             return True
         else:
             return False

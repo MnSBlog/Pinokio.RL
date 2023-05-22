@@ -26,6 +26,7 @@ network:
     neck_activation: "ReLU"
     neck_num_layer: 2
     num_memory_layer: 2
+    kind_of_memory_layer: "GRU"
     memory_rnn_len: 1
     n_of_actions:
       - 9
