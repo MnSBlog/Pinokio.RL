@@ -16,3 +16,5 @@ agent:
   optimizer: 'Adam'
   loss_function: 'SmoothL1Loss'
   buffer: 'PER'
+  # - Kinds of Action
+  action: 'Discrete'

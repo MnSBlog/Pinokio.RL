@@ -1,15 +1,13 @@
 import copy
 import os
 import gym
+from outer.selector import AlgorithmComparator
 from runners.general_runner import GeneralRunner
 
 
 class AutoRLRunner(GeneralRunner):
     def __init__(self, config: dict, env: gym.Env):
         super(AutoRLRunner, self).__init__(config, env)
-
-        if os.path.exists(os.path.join(self._config['runner']['figure_path'], config['env_name'])) is False:
-            os.mkdir(os.path.join(self._config['runner']['figure_path'], config['env_name']))
 
     def run(self):
         reward_sum = 0.0
@@ -28,3 +26,10 @@ class AutoRLRunner(GeneralRunner):
         self._save_reward_log()
         self._close_env()
         return reward_sum, self._agent.metric
+
+
+class AlgorithmFinder(GeneralRunner):
+    def __init__(self, config: dict, env: gym.Env):
+        super(AlgorithmFinder, self).__init__(config, env)
+        self.comparator = AlgorithmComparator(self._config)
+

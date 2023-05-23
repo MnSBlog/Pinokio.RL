@@ -5,8 +5,9 @@ from agents.tf.actorcritic import Actor, Critic
 
 
 class GeneralAgent:
-    def __init__(self, parameters: dict):
+    def __init__(self, parameters: dict, actor, **kwargs):
         self._config = parameters
+        self.actor = actor
         self._buffer = BaseBuffer()
         self.exconfig = dict()
         self.metric_list = ['reward', 'entropy', 'state_value', 'loss']
@@ -50,8 +51,7 @@ class GeneralAgent:
 
 class PolicyAgent(GeneralAgent):
     def __init__(self, parameters: dict, actor, critic):
-        super(PolicyAgent, self).__init__(parameters=parameters)
-        self.actor = actor
+        super(PolicyAgent, self).__init__(parameters=parameters, actor=actor)
         self.critic = critic
 
     def select_action(self, state):

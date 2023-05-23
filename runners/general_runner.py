@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 from agents.tf.actorcritic import Actor, Critic
 from agents import REGISTRY as AGENT_REGISTRY
 from agents.general_agent import GeneralAgent
-from agents.pytorch.copy_ppo import PPO
-from networks.network_generator import CustomTorchNetwork, SimpleActorNetwork, SimpleCriticNetwork
+from networks.network_generator import CustomTorchNetwork
 
 
 class GeneralRunner:
@@ -53,6 +52,9 @@ class GeneralRunner:
         # Pretrain(이어하기 조건)
         if self._config['runner']['pretrain']:
             self._load_pretrain_network()
+
+        if os.path.exists(os.path.join(self._config['runner']['figure_path'], config['env_name'])) is False:
+            os.mkdir(os.path.join(self._config['runner']['figure_path'], config['env_name']))
 
     def run(self):
         pass

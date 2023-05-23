@@ -13,9 +13,6 @@ class EpisodeRunner(GeneralRunner):
     def __init__(self, config: dict, env: gym.Env):
         super(EpisodeRunner, self).__init__(config, env)
 
-        if os.path.exists(os.path.join('./figures', config['env_name'])) is False:
-            os.mkdir(os.path.join('./figures', config['env_name']))
-
     def run(self):
         # 에피소드마다 다음을 반복
         for ep in range(1, self._config['runner']['max_iteration_num'] + 1):
@@ -36,10 +33,6 @@ class EpisodeRunner(GeneralRunner):
 class StepRunner(GeneralRunner):
     def __init__(self, config: dict, env: gym.Env):
         super(StepRunner, self).__init__(config, env)
-        if os.path.exists(os.path.join('./figures', config['env_name'])) is False:
-            os.mkdir(os.path.join('./figures', config['env_name']))
-        if self._config['runner']['pretrain']:
-            self._load_pretrain_network()
 
     def run(self):
         state = self._env_init(reset_env=True)

@@ -19,3 +19,5 @@ agent:
   actor_optimizer: 'Adam'
   critic_optimizer: 'Adam'
   loss_function: 'MSELoss'
+  # - Kinds of Action
+  action: 'Continuous'

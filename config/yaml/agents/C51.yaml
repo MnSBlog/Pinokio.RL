@@ -19,3 +19,5 @@ agent:
   # - Model configuration -
   optimizer: 'Adam'
   loss_function: 'MSELoss'
+  # - Kinds of Action
+  action: 'Discrete'

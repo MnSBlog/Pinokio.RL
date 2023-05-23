@@ -1,6 +1,6 @@
 agent:
   # --- Defaults ---
-  name: "ppo_agent"
+  name: "PPO"
   framework: "torch" # torch or tf
   # --- Hyper parameters ---
   gamma: 0.99 # discount factor
@@ -15,3 +15,5 @@ agent:
   # - Model configuration -
   optimizer: 'Adam'
   loss_function: 'MSELoss'
+  # - Kinds of Action
+  action: 'Discrete'

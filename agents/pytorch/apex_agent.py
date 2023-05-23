@@ -6,8 +6,8 @@ from agents.pytorch.dqn_agent import DQN
 
 
 class ApeX(DQN):
-    def __init__(self, parameters: dict, network):
-        super(ApeX, self).__init__(parameters=parameters, network=network)
+    def __init__(self, parameters: dict, actor, **kwargs):
+        super(ApeX, self).__init__(parameters=parameters, actor=actor)
         # ApeX
         self.num_transitions = 0
 

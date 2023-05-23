@@ -14,3 +14,5 @@ agent:
   optimizer: 'Adam'
   loss_function: 'SmoothL1Loss'
   buffer: 'Replay'
+  # - Kinds of Action
+  action: 'Discrete'

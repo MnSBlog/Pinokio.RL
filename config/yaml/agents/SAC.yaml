@@ -17,3 +17,5 @@ agent:
   critic_optimizer: 'Adam'
   alpha_optimizer: 'Adam'
   loss_function: 'MSELoss'
+  # - Kinds of Action
+  action: 'Discrete/Continuous'

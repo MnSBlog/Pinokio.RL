@@ -8,8 +8,8 @@ from agents.general_agent import GeneralAgent
 
 
 class DQN(GeneralAgent):
-    def __init__(self, parameters: dict, network):
-        super(DQN, self).__init__(parameters=parameters)
+    def __init__(self, parameters: dict, actor, **kwargs):
+        super(DQN, self).__init__(parameters=parameters, actor=actor)
         # Hyperparameters
         gamma = self._config['gamma']  # 0.99,
         epsilon_init = self._config['epsilon_init']  # 1.0

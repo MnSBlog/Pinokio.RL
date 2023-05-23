@@ -18,3 +18,5 @@ agent:
   critic_optimizer: 'Adam'
   loss_function: 'MSELoss'
   buffer: 'Replay'
+  # - Kinds of Action
+  action: 'Continuous'

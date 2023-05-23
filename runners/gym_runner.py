@@ -11,9 +11,6 @@ class GymRunner(GeneralRunner):
         config['agent']['mid_gamma'] = config['agent']['gamma'] ** int(config['runner']['batch_size'] / 2)
         super(GymRunner, self).__init__(config, env)
 
-        if os.path.exists(os.path.join('./figures', config['env_name'])) is False:
-            os.mkdir(os.path.join('./figures', config['env_name']))
-
     def run(self):
         # 에피소드마다 다음을 반복
         for ep in range(1, self._config['runner']['max_iteration_num'] + 1):

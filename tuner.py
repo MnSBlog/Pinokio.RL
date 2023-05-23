@@ -1,6 +1,5 @@
 import copy
 import os
-import random
 
 import numpy as np
 import pandas as pd
@@ -9,7 +8,7 @@ from envs import REGISTRY as ENV_REGISTRY
 import matplotlib.pyplot as plt
 from utils.yaml_config import YamlConfig
 from runners.auto_rl_runner import AutoRLRunner
-import utils.solver as solver
+import outer.solver as solver
 from main import load_config
 from datetime import datetime
 
