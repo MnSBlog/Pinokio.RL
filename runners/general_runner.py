@@ -18,7 +18,7 @@ class GeneralRunner:
         self._config = config
         self._env = env
         # 액터 신경망 및 크리틱 신경망 생성
-        actor, critic = self.__load_networks(config['agent']['framework'])
+        actor, critic = self._load_networks(config['agent']['framework'])
 
         # RL algorithm 생성
         algo_name = config['agent']['framework'] + config['agent_name']
@@ -306,7 +306,7 @@ class GeneralRunner:
         # critic = SimpleCriticNetwork(input_dim=dim_in)
         return actor, critic
 
-    def __load_networks(self, framework='tf'):
+    def _load_networks(self, framework='tf'):
         if "tf" in framework:
             return self.__load_tf_models()
         else:

@@ -2,11 +2,8 @@ from collections import deque
 from itertools import islice
 import torch
 import torch.nn.functional as F
-
-torch.backends.cudnn.benchmark = True
 import numpy as np
-
-from .ape_x import ApeX
+from agents.pytorch.apex_agent import ApeX
 
 
 class R2D2(ApeX):
@@ -19,17 +16,17 @@ class R2D2(ApeX):
         eta (float): priority exponent.
     """
 
-    def __init__(
-        self,
+    def __init__(self, parameters: dict, actor, **kwargs):
+
         # R2D2
         network="r2d2",
         seq_len=80,
         n_burn_in=40,
         zero_padding=True,
         eta=0.9,
-        **kwargs
-    ):
+
         super(R2D2, self).__init__(network=network, **kwargs)
+
         assert 0 < n_burn_in < seq_len
         # R2D2
         self.seq_len = seq_len

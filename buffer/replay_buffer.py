@@ -1,5 +1,5 @@
 import numpy as np
-from base import BaseBuffer
+from buffer.base import BaseBuffer
 
 
 class ReplayBuffer(BaseBuffer):

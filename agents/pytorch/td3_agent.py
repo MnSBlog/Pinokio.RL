@@ -1,115 +1,62 @@
+import copy
 import torch
 import numpy as np
-
-torch.backends.cudnn.benchmark = True
+import torch.nn as nn
 import torch.nn.functional as F
 import os
-
-from core.network import Network
-from core.optimizer import Optimizer
-from core.buffer import ReplayBuffer
-from .base import BaseAgent
+from utils.calculator import multiple
+from buffer.replay_buffer import ReplayBuffer
+from agents.general_agent import PolicyAgent
 
 
-class TD3(BaseAgent):
-    action_type = "continuous"
-    """Twin-delayed deep deterministic policy gradient (TD3) agent.
+class TD3(PolicyAgent):
+    def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
+        super(TD3, self).__init__(parameters=parameters, actor=actor, critic=critic)
 
-    Args:
-        state_size (int): dimension of state.
-        action_size (int): dimension of action.
-        hidden_size (int): dimension of hidden unit.
-        actor (str): key of actor network class in _network_dict.txt.
-        critic (str): key of critic network class in _network_dict.txt.
-        head (str): key of head in _head_dict.txt.
-        optim_config (dict): dictionary of the optimizer info.
-        gamma (float): discount factor.
-        buffer_size (int): the size of the memory buffer.
-        batch_size (int): the number of samples in the one batch.
-        start_train_step (int): steps to start learning.
-        initial_random_step : number of  uniform-random action step, before running real policy.
-        tau (float): the soft update coefficient.
-        update_delay (int): delayed cycle in which actor and targets are updated.
-        action_noise_std (float): noise which use on choosing action when agent sample.
-        target_noise_std (float): noise which use on calculating target-q.
-        target_noise_clip (float): epsilon used on clipping.
-        run_step (int): the number of total steps.
-        lr_decay: lr_decay option which apply decayed weight on parameters of network.
-        device (str): device to use.
-            (e.g. 'cpu' or 'gpu'. None can also be used, and in this case, the cpu is used.)
-    """
-
-    def __init__(
-        self,
-        state_size,
-        action_size,
-        hidden_size=256,
-        actor="deterministic_policy",
-        critic="continuous_q_network",
-        head="mlp",
-        optim_config={
+        hidden_size = 256,
+        actor = "deterministic_policy",
+        critic = "continuous_q_network",
+        head = "mlp",
+        optim_config = {
             "actor": "adam",
             "critic": "adam",
             "actor_lr": 1e-3,
             "critic_lr": 1e-3,
         },
-        gamma=0.99,
-        buffer_size=50000,
-        batch_size=128,
-        start_train_step=1000,
-        initial_random_step=0,
-        tau=1e-3,
-        update_delay=2,
-        action_noise_std=0.1,
-        target_noise_std=0.2,
-        target_noise_clip=0.5,
-        run_step=1e6,
-        lr_decay=True,
-        device=None,
-        **kwargs,
-    ):
-        self.device = (
-            torch.device(device)
-            if device
-            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
+        gamma = 0.99,
+        buffer_size = 50000,
+        batch_size = 128,
+        start_train_step = 1000,
+        initial_random_step = 0,
+        tau = 1e-3,
+        update_delay = 2,
+        action_noise_std = 0.1,
+        target_noise_std = 0.2,
+        target_noise_clip = 0.5,
+        run_step = 1e6,
+        lr_decay = True,
+        device = None,
 
-        self.actor = Network(
-            actor, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_actor = Network(
-            actor, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_actor.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = Optimizer(
-            optim_config["actor"], self.actor.parameters(), lr=optim_config["actor_lr"]
-        )
+        self.target_actor = copy.deepcopy(self.actor)
+        self.target_critic1 = copy.deepcopy(self.critic)
+        self.target_critic2 = copy.deepcopy(self.critic)
 
-        self.critic1 = Network(
-            critic, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_critic1 = Network(
-            critic, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_critic1.load_state_dict(self.critic1.state_dict())
-        self.critic_optimizer1 = Optimizer(
-            optim_config["critic"],
-            self.critic1.parameters(),
-            lr=optim_config["critic_lr"],
-        )
-
-        self.critic2 = Network(
-            critic, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_critic2 = Network(
-            critic, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_critic2.load_state_dict(self.critic2.state_dict())
-        self.critic_optimizer2 = Optimizer(
-            optim_config["critic"],
-            self.critic2.parameters(),
-            lr=optim_config["critic_lr"],
-        )
+        # Optimizer
+        self.optimizer = dict()
+        self.loss = dict()
+        # Actor Optimizer
+        opt_arg = [
+            {'params': self.actor.parameters(), 'lr': self._config['actor_lr']},
+        ]
+        self.optimizer['actor'] = getattr(torch.optim, self._config['actor_optimizer'])(opt_arg)
+        self.loss['actor'] = getattr(nn, self._config['loss_function'])()
+        # Critic Optimizer
+        opt_arg = [
+            {'params': self.critic.parameters(), 'lr': self._config['critic_lr']}
+        ]
+        self.optimizer['critic1'] = getattr(torch.optim, self._config['critic_optimizer'])(opt_arg)
+        self.optimizer['critic2'] = getattr(torch.optim, self._config['critic_optimizer'])(opt_arg)
+        self.loss['critic'] = getattr(nn, self._config['loss_function'])()
 
         self.gamma = gamma
         self.tau = tau
@@ -122,7 +69,7 @@ class TD3(BaseAgent):
         self.run_step = run_step
         self.lr_decay = lr_decay
 
-        self.action_size = action_size
+        self.action_size = multiple(self.actor.outputs_dim)
         self.update_delay = update_delay
         self.action_noise_std = action_noise_std
         self.target_noise_std = target_noise_std

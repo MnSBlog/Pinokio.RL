@@ -36,12 +36,13 @@ class AlgorithmComparator:
         return self.__quicksort_dict(greater) + sorted(equal.items(),
                                                        key=lambda x: x[0], reverse=True) + self.__quicksort_dict(less)
 
-    def __get__(self, name):
-        return self.Pool[name]
+    def __getitem__(self, item):
+        return self.Pool[item]
 
     def get_ranker(self, rank):
         sorted_list = self.__quicksort_dict(self.Scores)
-        return sorted_list[rank]
+        key, config = sorted_list[rank]
+        return config, self.Scores[key]
 
     def get_highest(self):
         return self.get_ranker(0)

@@ -1,101 +1,52 @@
+import copy
+from utils.calculator import multiple
 import torch
-
-torch.backends.cudnn.benchmark = True
 import torch.nn.functional as F
 import os
+import torch.nn as nn
+from agents.pytorch.utilities import get_device
+from buffer.replay_buffer import ReplayBuffer
+from agents.general_agent import PolicyAgent
+from agents.pytorch.utilities import OuNoise
 
-from core.network import Network
-from core.optimizer import Optimizer
-from core.buffer import ReplayBuffer
-from .base import BaseAgent
-from .utils import OU_Noise
 
-
-class DDPG(BaseAgent):
-    action_type = "continuous"
-    """Deep deterministic policy gradient (DDPG) agent.
-
-    Args:
-        state_size (int): dimension of state.
-        action_size (int): dimension of action.
-        hidden_size (int): dimension of hidden unit.
-        actor (str): key of actor network class in _network_dict.txt.
-        critic (str): key of critic network class in _network_dict.txt.
-        head (str): key of head in _head_dict.txt.
-        optim_config (dict): dictionary of the optimizer info.
-        gamma (float): discount factor.
-        buffer_size (int): the size of the memory buffer.
-        batch_size (int): the number of samples in the one batch.
-        start_train_step (int): steps to start learning.
-        tau (float): the soft update coefficient.
-        run_step (int): the number of total steps.
-        lr_decay: lr_decay option which apply decayed weight on parameters of network.
-        mu (float): the drift coefficient of the Ornstein-Uhlenbeck process for action exploration.
-        theta (float): reversion of the time constant of the Ornstein-Uhlenbeck process.
-        sigma (float): diffusion coefficient of the Ornstein-Uhlenbeck process.
-        device (str): device to use.
-            (e.g. 'cpu' or 'gpu'. None can also be used, and in this case, the cpu is used.)
-    """
-
-    def __init__(
-        self,
-        state_size,
-        action_size,
-        hidden_size=512,
-        actor="deterministic_policy",
-        critic="continuous_q_network",
-        head="mlp",
-        optim_config={
-            "actor": "adam",
-            "critic": "adam",
-            "actor_lr": 5e-4,
-            "critic_lr": 1e-3,
-        },
-        gamma=0.99,
-        buffer_size=50000,
-        batch_size=128,
-        start_train_step=2000,
-        tau=1e-3,
-        run_step=1e6,
-        lr_decay=True,
+class DDPG(PolicyAgent):
+    def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
+        device = get_device("auto")
+        super(DDPG, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
+        gamma = 0.99,
+        buffer_size = 50000,
+        batch_size = 128,
+        start_train_step = 2000,
+        tau = 1e-3,
+        run_step = 1e6,
+        lr_decay = True,
         # OU noise
-        mu=0,
-        theta=1e-3,
-        sigma=2e-3,
-        device=None,
-        **kwargs,
-    ):
-        self.device = (
-            torch.device(device)
-            if device
-            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
+        mu = 0,
+        theta = 1e-3,
+        sigma = 2e-3,
 
-        self.actor = Network(
-            actor, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.critic = Network(
-            critic, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_actor = Network(
-            actor, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_actor.load_state_dict(self.actor.state_dict())
-        self.target_critic = Network(
-            critic, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.target_critic.load_state_dict(self.critic.state_dict())
+        self.target_actor = copy.deepcopy(self.actor)
+        self.target_critic = copy.deepcopy(self.critic)
 
-        self.actor_optimizer = Optimizer(
-            optim_config["actor"], self.actor.parameters(), lr=optim_config["actor_lr"]
-        )
-        self.critic_optimizer = Optimizer(
-            optim_config["critic"],
-            self.critic.parameters(),
-            lr=optim_config["critic_lr"],
-        )
+        # Optimizer
+        self.optimizer = dict()
+        self.loss = dict()
+        # Actor Optimizer
+        opt_arg = [
+            {'params': self.actor.parameters(), 'lr': self._config['actor_lr']},
+        ]
+        self.optimizer['actor'] = getattr(torch.optim, self._config['actor_optimizer'])(opt_arg)
+        self.loss['actor'] = getattr(nn, self._config['loss_function'])()
+        # Critic Optimizer
+        opt_arg = [
+            {'params': self.critic.parameters(), 'lr': self._config['critic_lr']}
+        ]
+        self.optimizer['critic'] = getattr(torch.optim, self._config['critic_optimizer'])(opt_arg)
+        self.loss['critic'] = getattr(nn, self._config['loss_function'])()
 
-        self.OU = OU_Noise(action_size, mu, theta, sigma)
+        action_size = multiple(self.actor.outputs_dim)
+        self.OU = OuNoise(action_size, mu, theta, sigma)
 
         self.gamma = gamma
         self.tau = tau

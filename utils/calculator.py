@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from functools import reduce
 
 
 def get_default_kpi(data, interval):
@@ -192,6 +193,10 @@ def draw_auto_rl_result(path):
     plt.ylabel('Reward')
     plt.savefig(os.path.join(path, "progress.jpg"))
     plt.clf()
+
+
+def multiple(s: list):
+    return reduce(lambda x, y: x * y, s)
 
 
 if __name__ == '__main__':
