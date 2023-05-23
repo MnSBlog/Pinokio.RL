@@ -30,3 +30,8 @@ class ReplayBuffer(BaseBuffer):
     @property
     def size(self):
         return self.buffer_counter
+
+    def clear(self):
+        self.buffer = np.zeros(self.buffer_size, dtype=dict)  # define replay buffer
+        self.buffer_index = 0
+        self.buffer_counter = 0

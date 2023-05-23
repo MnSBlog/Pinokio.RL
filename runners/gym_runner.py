@@ -1,6 +1,6 @@
 import copy
 import os
-import gym
+import gymnasium as gym
 import torch
 import matplotlib.pyplot as plt
 from runners.general_runner import GeneralRunner

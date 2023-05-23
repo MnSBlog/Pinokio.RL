@@ -1,6 +1,6 @@
 import copy
 import os
-import gym
+import gymnasium as gym
 from outer.selector import AlgorithmComparator
 from runners.general_runner import GeneralRunner
 
@@ -33,3 +33,17 @@ class AlgorithmFinder(GeneralRunner):
         super(AlgorithmFinder, self).__init__(config, env)
         self.comparator = AlgorithmComparator(self._config)
 
+    def run(self):
+        total_reward = self.loop_inner()
+        self.comparator.
+
+    def loop_inner(self):
+        state = self._env_init(reset_env=True)
+        for update in range(1, self._config['runner']['max_iteration_num'] + 1):
+            self._env_init()
+            while self._update_agent(next_state=state) is False:
+                action = self._select_action(state)
+                state = self._interaction(action)
+            print('Update: ', update, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
+            self._sweep_cycle(update)
+        return self.batch_reward

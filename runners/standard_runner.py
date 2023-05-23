@@ -1,8 +1,6 @@
 import copy
 import os
-import time
-
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 from envs import REGISTRY as ENV_REGISTRY

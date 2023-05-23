@@ -18,6 +18,9 @@ class RolloutBuffer(BaseBuffer):
         self.buffer.clear()
         return transitions
 
+    def clear(self):
+        self.buffer = list()
+
     @property
     def size(self):
         return len(self.buffer)

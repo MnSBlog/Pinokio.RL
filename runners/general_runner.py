@@ -1,6 +1,6 @@
 import copy
 import os
-import gym
+import gymnasium as gym
 import time
 
 import pandas as pd
@@ -48,7 +48,7 @@ class GeneralRunner:
 
         # Public variables
         self.count, self.batch_reward, self.done = 0, 0, False
-
+        self.transition = dict()
         # Pretrain(이어하기 조건)
         if self._config['runner']['pretrain']:
             self._load_pretrain_network()
@@ -69,7 +69,7 @@ class GeneralRunner:
         state = None
         if reset_env:
             self.done = False
-            self._clear_state_memory()
+            self._agent.buffer.clear()
             ret = self._env.reset()
             state = ret[0]
             for _ in range(self.memory_len):
@@ -88,38 +88,26 @@ class GeneralRunner:
         state = self._update_memory(state)
         self.count += 1
         self.done = done
+        self.__put_transition(state, reward, done)
 
-        if torch.is_tensor(reward) is False:
-            reward = float(reward)
-
-        train_reward = self._fit_reward(reward)
-        if isinstance(done, bool):
-            done = np.reshape(done, -1)
-            train_reward = np.reshape(train_reward, -1)
-
-        if self._config['envs']['trust_result']:
-            if self.done:
-                self.batch_reward += train_reward
-        else:
-            self.batch_reward += train_reward
-        self._agent.batch_reward.append(train_reward)
-        self._agent.batch_done.append(done)
-        self._agent.batch_next_state_matrix.append(torch.tensor(state['matrix']))
-        self._agent.batch_next_state_vector.append(torch.tensor(state['vector']))
         return state
 
     def _select_action(self, state):
         action = self._agent.select_action(state)
 
-        if torch.is_tensor(action):
-            action = action.squeeze()
+        self.transition.update(action)
+        if torch.is_tensor(action['action']):
+            action = action['action'].squeeze()
             if len(action.shape) == 0:
                 action = action.item()
+
+        self.transition.update({'matrix_state': state['matrix'],
+                                'vector_state': state['vector']})
+
         return action
 
     def _update_agent(self, next_state):
-        if len(self._agent.batch_reward) >= self._config['runner']['batch_size']:
-
+        if self._agent.buffer.size() >= self._config['runner']['batch_size']:
             # 학습 추출
             self._agent.update(next_state=next_state, done=self.done)
             return True
@@ -323,6 +311,28 @@ class GeneralRunner:
             return self.__load_tf_models()
         else:
             return self.__load_torch_models()
+
+    def __put_transition(self, state, reward, done):
+        if torch.is_tensor(reward) is False:
+            reward = float(reward)
+
+        train_reward = self._fit_reward(reward)
+        if isinstance(done, bool):
+            done = np.reshape(done, -1)
+            train_reward = np.reshape(train_reward, -1)
+
+        if self._config['envs']['trust_result']:
+            if self.done:
+                self.batch_reward += train_reward
+        else:
+            self.batch_reward += train_reward
+
+        self.transition.update({'next_matrix_state': state['matrix'],
+                                'next_vector_state': state['vector'],
+                                'done': done,
+                                'reward': train_reward})
+        self._agent.buffer.store(self.transition)
+        self.transition.clear()
 
     @staticmethod
     def __make_critic_config(actor_config):

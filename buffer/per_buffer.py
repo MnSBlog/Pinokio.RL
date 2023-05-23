@@ -67,7 +67,7 @@ class PERBuffer(ReplayBuffer):
 
         return index
 
-    def sample(self, beta, batch_size):
+    def sample(self, batch_size, beta):
         assert self.sum_tree[0] > 0.0
         uniform_sampling = np.random.uniform(size=batch_size) < self.uniform_sample_prob
         uniform_size = np.sum(uniform_sampling)
@@ -103,3 +103,10 @@ class PERBuffer(ReplayBuffer):
     @property
     def size(self):
         return self.buffer_counter
+
+    def clear(self):
+        super(PERBuffer, self).clear()
+        self.sum_tree = np.zeros(self.tree_size)  # define sum tree
+        self.tree_index = self.first_leaf_index  # define sum_tree leaf node index.
+
+        self.max_priority = 1.0

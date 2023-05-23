@@ -1,5 +1,5 @@
 import copy
-import gym
+import gymnasium as gym
 import os
 import runners.standard_runner as std_runner
 import runners.gym_runner as gym_runner

@@ -8,7 +8,7 @@ class GeneralAgent:
     def __init__(self, parameters: dict, actor, **kwargs):
         self._config = parameters
         self.actor = actor
-        self._buffer = BaseBuffer()
+        self.buffer = BaseBuffer()
         self.exconfig = dict()
         self.metric_list = ['reward', 'entropy', 'state_value', 'loss']
         self.statistics = ['max', 'min', 'std', 'mean']

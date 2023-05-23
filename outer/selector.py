@@ -1,6 +1,6 @@
 import os
+import numpy as np
 from utils.yaml_config import YamlConfig
-
 
 
 class AlgorithmComparator:
@@ -17,7 +17,7 @@ class AlgorithmComparator:
                 self.Pool[algorithm.replace('.yaml', '')] = algo_config
 
         for name in self.Pool.keys():
-            self.Scores[name] = 0
+            self.Scores[name] = np.NINF
 
     def update_score(self, key, value):
         score = self.Scores[key]

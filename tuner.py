@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import pandas as pd
-import gym
+import gymnasium as gym
 from envs import REGISTRY as ENV_REGISTRY
 import matplotlib.pyplot as plt
 from utils.yaml_config import YamlConfig

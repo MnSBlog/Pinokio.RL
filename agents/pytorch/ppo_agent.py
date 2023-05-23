@@ -41,15 +41,9 @@ class PPO(PolicyAgent):
             if len(state['action_mask']) > 0:
                 self.set_mask(state['action_mask'])
             actions, action_logprobs, next_hidden = self.act(state=state, hidden=self.hidden_state)
-
-        self.batch_state_matrix.append(state['matrix'])
-        self.batch_state_vector.append(state['vector'])
-        self.batch_action.append(actions)
-        self.batch_hidden_state.append(next_hidden)
-        self.batch_log_old_policy_pdf.append(action_logprobs)
         self.hidden_state = next_hidden
 
-        return actions
+        return {"action": actions, "action_logprobs": action_logprobs, "next_hidden": next_hidden}
 
     def act(self, state, hidden=None):
         rtn_action = []
