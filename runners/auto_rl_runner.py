@@ -46,7 +46,7 @@ class AlgorithmFinder(GeneralRunner):
             dataframe = pd.DataFrame.from_dict(self.reward_dataframe)
             dataframe.to_csv('algorithm_comparison.csv', index=False)
         else:
-            self._config['agent'] = config
+            self._config['agent'] = config['agent']
             self._config['agent_name'] = self._config['agent']['name']
             self.__change_algorithm()
 

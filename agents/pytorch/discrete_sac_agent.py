@@ -7,10 +7,11 @@ from torch.distributions import Categorical
 from torch.nn.utils import clip_grad_norm_
 from agents.general_agent import PolicyAgent
 
-class Discrete_SAC(PolicyAgent):
+
+class DiscreteSAC(PolicyAgent):
     def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
         device = get_device("auto")
-        super(Discrete_SAC, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
+        super(DiscreteSAC, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
         self.critic2 = copy.deepcopy(critic).to(device)
         self.target_critic = copy.deepcopy(critic).to(device)
         self.target_critic2 = copy.deepcopy(critic).to(device)
@@ -167,7 +168,7 @@ class Discrete_SAC(PolicyAgent):
             splited_action = a.squeeze(2)
             q1 = c1.gather(1, splited_action.long())
             q2 = c1.gather(1, splited_action.long())
-#196, 1 vs 196, 196 문제 생김 ㅅㅂ
+        # 196, 1 vs 196, 196 문제 생김 ㅅㅂ
         critic1_loss = 0.5 * self.loss(q1, Q_target)
         critic2_loss = 0.5 * self.loss(q2, Q_target)
 
@@ -193,7 +194,7 @@ class Discrete_SAC(PolicyAgent):
                    'actor_loss': actor_loss.detach().cpu(),
                    'alpha_loss': alpha_loss.detach().cpu(),
                    'critic1_loss': critic1_loss.detach().cpu(),
-                   'critic2_loss': critic2_loss.detach().cpu(),}
+                   'critic2_loss': critic2_loss.detach().cpu(), }
 
         # clear buffer
         self.batch_clear()

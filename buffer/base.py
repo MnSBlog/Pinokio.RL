@@ -55,7 +55,7 @@ class BaseBuffer(ABC):
     def stack_transition(batch):
         transitions = {}
 
-        for key in batch[0].keys():
+        for key, sample in batch[0].items():
             if len(batch[0][key]) > 1:
                 # Multimodal
                 b_list = []
@@ -64,7 +64,15 @@ class BaseBuffer(ABC):
                     b_list.append(tmp_transition)
                 transitions[key] = b_list
             else:
-                transitions[key] = np.stack([b[key][0] for b in batch], axis=0)
+                if torch.is_tensor(sample):
+                    transitions[key] = torch.stack([b[key] for b in batch], dim=0).detach()
+                elif isinstance(sample, list):
+                    pass
+                else:
+                    dump = np.stack([b[key][0] for b in batch], axis=0)
+                    if len(dump.shape) == 1:
+                        dump = np.expand_dims(dump, axis=1)
+                    transitions[key] = dump
 
         return transitions
 

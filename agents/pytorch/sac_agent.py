@@ -1,18 +1,14 @@
 import torch
-
-torch.backends.cudnn.benchmark = True
-import torch.nn.functional as F
+import torch.nn as nn
 from torch.distributions import Normal, Categorical
 import os
 import numpy as np
-
-from core.network import Network
-from core.optimizer import Optimizer
-from core.buffer import ReplayBuffer
-from .base import BaseAgent
+from buffer.replay_buffer import ReplayBuffer
+from agents.pytorch.utilities import get_device
+from agents.general_agent import PolicyAgent
 
 
-class SAC(BaseAgent):
+class SAC(PolicyAgent):
     """Soft actor critic (SAC) agent.
     Args:
         state_size (int): dimension of state.
@@ -36,40 +32,9 @@ class SAC(BaseAgent):
             (e.g. 'cpu' or 'gpu'. None can also be used, and in this case, the cpu is used.)
     """
 
-    def __init__(
-        self,
-        state_size,
-        action_size,
-        hidden_size=512,
-        actor="continuous_policy",
-        critic="continuous_q_network",
-        head="mlp",
-        optim_config={
-            "actor": "adam",
-            "critic": "adam",
-            "alpha": "adam",
-            "actor_lr": 5e-4,
-            "critic_lr": 1e-3,
-            "alpha_lr": 3e-4,
-        },
-        use_dynamic_alpha=False,
-        gamma=0.99,
-        tau=5e-3,
-        buffer_size=50000,
-        batch_size=64,
-        start_train_step=2000,
-        static_log_alpha=-2.0,
-        target_update_period=10000,
-        run_step=1e6,
-        lr_decay=True,
-        device=None,
-        **kwargs,
-    ):
-        self.device = (
-            torch.device(device)
-            if device
-            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
+    def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
+        device = get_device("auto")
+        super(SAC, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
         self.action_type = actor.split("_")[0]
 
         self.actor = Network(
@@ -124,7 +89,7 @@ class SAC(BaseAgent):
         self.target_update_period = target_update_period
 
     def critic_set(
-        self, critic_id, state_size, action_size, hidden_size, head, optim_config
+            self, critic_id, state_size, action_size, hidden_size, head, optim_config
     ):
         critic = Network(
             critic_id, state_size, action_size, D_hidden=hidden_size, head=head
@@ -207,7 +172,7 @@ class SAC(BaseAgent):
         with torch.no_grad():
             min_next_q = torch.min(next_q1, next_q2)
             target_q = reward + (1 - done) * self.gamma * (
-                min_next_q + self.alpha * entropy
+                    min_next_q + self.alpha * entropy
             )
 
         max_Q = torch.max(target_q, axis=0).values.cpu().numpy()[0]

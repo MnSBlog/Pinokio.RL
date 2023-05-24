@@ -167,16 +167,17 @@ class CustomTorchNetwork(nn.Module):
         self.state_dim = config['neck_in']
         self.action_mask = []
 
-    def pre_forward(self, x1, x2):
+    def pre_forward(self, x):
         cat_alter = []
         if 'spatial_feature' in self.networks:
+            x1 = x['matrix']
             x1 = self.networks['spatial_feature'](x1)
             cat_alter.append(x1)
         if 'non_spatial_feature' in self.networks:
+            x2 = x['vector']
             if self.use_cnn is False:
                 x2 = x2.view(x2.shape[0], -1)
             x2 = self.networks['non_spatial_feature'](x2)
-        if 0 not in x2.shape:
             x2 = x2.view(x2.shape[0], -1)
             cat_alter.append(x2)
         if len(cat_alter) == 2:
@@ -188,9 +189,7 @@ class CustomTorchNetwork(nn.Module):
     def forward(self, x, h=None):
         if h is None:
             h = []
-        spatial_x = x['matrix']
-        non_spatial_x = x['vector']
-        x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
+        x = self.pre_forward(x)
         if self.recurrent:
             self.networks['input_layer'].flatten_parameters()
             x = x.view(x.shape[0], self.rnn_len, -1)

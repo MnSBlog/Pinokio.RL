@@ -65,17 +65,18 @@ class PPO(PolicyAgent):
                 action_logprob += dist.log_prob(action)
             rtn_action.append(action.detach())
             last += output_dim
+
         return torch.stack(rtn_action, dim=0).detach(), action_logprob.detach(), hidden
 
     def update(self, next_state=None, done=None):
         transitions = self.buffer.sample()
         # Monte Carlo estimate of returns
         # Agent 수 만큼 생성
-        discounted_reward = np.zeros(self.batch_reward[0].shape[0])
-        rewards = np.zeros((len(self.batch_reward), self.batch_reward[0].shape[0]))
-        batch_count = len(self.batch_reward) - 1
+        discounted_reward = np.zeros(transitions['reward'].shape[1])
+        rewards = np.zeros(transitions['reward'].shape)
+        batch_count = transitions['reward'].shape[0] - 1
         # b, n 구조로 계산
-        for reward, is_terminal in zip(reversed(self.batch_reward), reversed(self.batch_done)):
+        for reward, is_terminal in zip(reversed(transitions['reward']), reversed(transitions['done'])):
             # batch iteration n about r(or d) shape
             for idx in range(reward.shape[0]):
                 if is_terminal[idx]:
@@ -89,28 +90,26 @@ class PPO(PolicyAgent):
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
         rewards = rewards.flatten()
         # convert list to tensor
-        part_matrix = None
+        old_state = dict()
         if 'spatial_feature' in self.actor.networks:
-            part_matrix = torch.cat(self.batch_state_matrix, dim=0).detach().to(self.device)
-        part_vector = torch.cat(self.batch_state_vector, dim=0).detach().to(self.device)
+            old_state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+        if 'non_spatial_feature':
+            old_state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
 
-        old_states = {'matrix': part_matrix, 'vector': part_vector}
-        old_actions = torch.stack(self.batch_action, dim=0).detach().to(self.device)
-        old_logprobs = torch.stack(self.batch_log_old_policy_pdf, dim=0).flatten().to(self.device)
         old_hiddens = None
         if self.actor.recurrent:
-            old_hiddens = self.batch_hidden_state[-1].detach().to(self.device)
+            old_hiddens = transitions['next_hidden']
         # Optimize policy for K epochs
         dump = torch.zeros(len(rewards), 1)
         metrics = {'reward': dump, 'entropy': dump, 'state_value': dump, 'loss': dump}
         for _ in range(self.epochs):
             # Evaluating old actions and values
-            logprobs, dist_entropy = self.evaluate(old_states, old_actions, hidden=old_hiddens)
-            state_values, _ = self.critic(old_states)
+            logprobs, dist_entropy = self.evaluate(old_state, transitions['action'], hidden=old_hiddens)
+            state_values, _ = self.critic(old_state)
             # match state_values tensor dimensions with rewards tensor
             state_values = state_values.flatten()
             # Finding the ratio (pi_theta / pi_theta__old)
-            ratios = torch.exp(logprobs - old_logprobs.detach())
+            ratios = torch.exp(logprobs - transitions['action_logprobs'].squeeze().detach())
             # ratios = ratios.clamp(min=3.0e-9, max=88)
             # Finding Surrogate Loss
             advantages = rewards - state_values.detach()
@@ -132,9 +131,6 @@ class PPO(PolicyAgent):
         # Copy new weights into old policy
         self.actor_old.load_state_dict(self.actor.state_dict())
         self.critic_old.load_state_dict(self.critic.state_dict())
-
-        # clear buffer
-        self.batch_clear()
 
         # insert metric
         self.insert_metrics(metrics)

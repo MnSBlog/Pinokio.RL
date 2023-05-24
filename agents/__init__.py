@@ -1,5 +1,5 @@
 from agents.general_agent import PolicyAgent, GeneralAgent
-from agents.pytorch.discrete_sac_agent import Discrete_SAC as TorchSAC
+from agents.pytorch.discrete_sac_agent import DiscreteSAC as TorchSAC
 from agents.pytorch.ppo_agent import PPO as TORCH_PPO
 from agents.pytorch.a2c_agent import A2C as TORCH_A2C
 from agents.pytorch.apex_agent import ApeX as TorchAPEX

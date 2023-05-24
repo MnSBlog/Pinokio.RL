@@ -93,14 +93,13 @@ class GeneralRunner:
         return state
 
     def _select_action(self, state):
-        action = self._agent.select_action(state)
+        action = self._agent.select_action(copy.deepcopy(state))
 
         self.transition.update(action)
         if torch.is_tensor(action['action']):
             action = action['action'].squeeze()
             if len(action.shape) == 0:
                 action = action.item()
-
         self.transition.update({'matrix_state': state['matrix'],
                                 'vector_state': state['vector']})
 

@@ -20,10 +20,14 @@ class AlgorithmComparator:
             self.Scores[name] = np.NINF
 
     def update_score(self, key, value):
+        value = value.item()
         score = self.Scores[key]
+        if score == np.NINF:
+            score = value
         self.Scores[key] = (score + value) / 2.0
 
     def __quicksort_dict(self, dictionary):
+        dictionary = {'apple': 3.5, 'banana': 2.0, 'orange': 4.1, 'grape': 3.8}
         if len(dictionary) <= 1:
             return dictionary
 
@@ -40,9 +44,10 @@ class AlgorithmComparator:
         return self.Pool[item]
 
     def get_ranker(self, rank):
-        sorted_list = self.__quicksort_dict(self.Scores)
-        key, config = sorted_list[rank]
-        return config, self.Scores[key]
+        sorted_list = sorted(self.Scores.items(), key=lambda x: x[1], reverse=True)
+        key, score = sorted_list[rank]
+        config = self.Pool[key]
+        return config, score
 
     def get_highest(self):
         return self.get_ranker(0)
