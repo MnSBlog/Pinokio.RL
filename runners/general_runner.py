@@ -105,13 +105,19 @@ class GeneralRunner:
 
         return action
 
-    def _update_agent(self, next_state):
-        if self._agent.buffer.size >= self._config['runner']['batch_size']:
+    def _update_agent(self, next_state, steps=None):
+        update_flag = False
+        if steps is not None:
+            if steps >= self._config['runner']['batch_size']:
+                update_flag = True
+        else:
+            if self._agent.buffer.size >= self._config['runner']['batch_size']:
+                update_flag = True
+
+        if update_flag:
             # 학습 추출
             self._agent.update(next_state=next_state, done=self.done)
-            return True
-        else:
-            return False
+        return update_flag
 
     def _sweep_cycle(self, itr):
         if isinstance(self.batch_reward, float):

@@ -172,9 +172,11 @@ class SAC(PolicyAgent):
         self.optimizer['critic2'].step()
 
         # Actor
-        pi = self.actor(state)
-        q1 = (pi * self.critic1(state)).sum(-1, keepdim=True)
-        q2 = (pi * self.critic2(state)).sum(-1, keepdim=True)
+        pi, _ = self.actor(state)
+        c1, _ = self.critic1(state)
+        c2, _ = self.critic2(state)
+        q1 = (pi * c1).sum(-1, keepdim=True)
+        q2 = (pi * c2).sum(-1, keepdim=True)
         m = Categorical(pi)
         entropy = m.entropy().unsqueeze(-1)
 
@@ -217,38 +219,40 @@ class SAC(PolicyAgent):
         self.target_critic1.load_state_dict(self.critic1.state_dict())
         self.target_critic2.load_state_dict(self.critic2.state_dict())
 
-    def save(self, path):
-        print(f"...Save model to {path}...")
-        save_dict = {
-            "actor": self.actor.state_dict(),
-            "actor_optimizer": self.actor_optimizer.state_dict(),
-            "critic1": self.critic1.state_dict(),
-            "critic2": self.critic2.state_dict(),
-            "critic_optimizer1": self.critic_optimizer1.state_dict(),
-            "critic_optimizer2": self.critic_optimizer2.state_dict(),
-        }
-        if self.use_dynamic_alpha:
-            save_dict["log_alpha"] = self.log_alpha
-            save_dict["alpha_optimizer"] = self.alpha_optimizer.state_dict()
+    def save(self, checkpoint_path: str):
+        pass
+        # print(f"...Save model to {path}...")
+        # save_dict = {
+        #     "actor": self.actor.state_dict(),
+        #     "actor_optimizer": self.actor_optimizer.state_dict(),
+        #     "critic1": self.critic1.state_dict(),
+        #     "critic2": self.critic2.state_dict(),
+        #     "critic_optimizer1": self.critic_optimizer1.state_dict(),
+        #     "critic_optimizer2": self.critic_optimizer2.state_dict(),
+        # }
+        # if self.use_dynamic_alpha:
+        #     save_dict["log_alpha"] = self.log_alpha
+        #     save_dict["alpha_optimizer"] = self.alpha_optimizer.state_dict()
+        #
+        # torch.save(save_dict, os.path.join(path, "ckpt"))
 
-        torch.save(save_dict, os.path.join(path, "ckpt"))
-
-    def load(self, path):
-        print(f"...Load model from {path}...")
-        checkpoint = torch.load(os.path.join(path, "ckpt"), map_location=self.device)
-        self.actor.load_state_dict(checkpoint["actor"])
-        self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
-
-        self.critic1.load_state_dict(checkpoint["critic1"])
-        self.critic1.load_state_dict(checkpoint["critic2"])
-        self.target_critic1.load_state_dict(self.critic1.state_dict())
-        self.target_critic2.load_state_dict(self.critic2.state_dict())
-        self.critic_optimizer1.load_state_dict(checkpoint["critic_optimizer1"])
-        self.critic_optimizer2.load_state_dict(checkpoint["critic_optimizer2"])
-
-        if self.use_dynamic_alpha and "log_alpha" in checkpoint.keys():
-            self.log_alpha = checkpoint["log_alpha"]
-            self.alpha_optimizer.load_state_dict(checkpoint["alpha_optimizer"])
+    def load(self, checkpoint_path: str):
+        pass
+        # print(f"...Load model from {path}...")
+        # checkpoint = torch.load(os.path.join(path, "ckpt"), map_location=self.device)
+        # self.actor.load_state_dict(checkpoint["actor"])
+        # self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
+        #
+        # self.critic1.load_state_dict(checkpoint["critic1"])
+        # self.critic1.load_state_dict(checkpoint["critic2"])
+        # self.target_critic1.load_state_dict(self.critic1.state_dict())
+        # self.target_critic2.load_state_dict(self.critic2.state_dict())
+        # self.critic_optimizer1.load_state_dict(checkpoint["critic_optimizer1"])
+        # self.critic_optimizer2.load_state_dict(checkpoint["critic_optimizer2"])
+        #
+        # if self.use_dynamic_alpha and "log_alpha" in checkpoint.keys():
+        #     self.log_alpha = checkpoint["log_alpha"]
+        #     self.alpha_optimizer.load_state_dict(checkpoint["alpha_optimizer"])
 
     def sync_in(self, weights):
         self.actor.load_state_dict(weights)
