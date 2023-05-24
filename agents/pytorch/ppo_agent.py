@@ -2,6 +2,7 @@ import copy
 import numpy as np
 import torch
 import torch.nn as nn
+from buffer.rollout_buffer import RolloutBuffer
 from agents.pytorch.utilities import get_device
 from agents.general_agent import PolicyAgent
 from torch.distributions import Categorical
@@ -35,6 +36,8 @@ class PPO(PolicyAgent):
         if self.hidden_state is not None:
             self.hidden_state = self.hidden_state.to(self.device)
 
+        self.buffer = RolloutBuffer()
+
     def select_action(self, state):
         state = self.convert_to_torch(state)
         with torch.no_grad():
@@ -45,7 +48,7 @@ class PPO(PolicyAgent):
 
         return {"action": actions, "action_logprobs": action_logprobs, "next_hidden": next_hidden}
 
-    def act(self, state, hidden=None):
+    def act(self, state, hidden=[]):
         rtn_action = []
         action_logprob = None
         outputs, hidden = self.actor_old(x=state, h=hidden)
@@ -65,6 +68,7 @@ class PPO(PolicyAgent):
         return torch.stack(rtn_action, dim=0).detach(), action_logprob.detach(), hidden
 
     def update(self, next_state=None, done=None):
+        transitions = self.buffer.sample()
         # Monte Carlo estimate of returns
         # Agent 수 만큼 생성
         discounted_reward = np.zeros(self.batch_reward[0].shape[0])

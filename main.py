@@ -3,7 +3,7 @@ import gymnasium as gym
 import os
 import runners.standard_runner as std_runner
 import runners.gym_runner as gym_runner
-import runners.auto_rl_runner
+import runners.auto_rl_runner as opt_runner
 from utils.yaml_config import YamlConfig
 from envs import REGISTRY as ENV_REGISTRY
 from ray.tune.registry import register_env
@@ -68,26 +68,27 @@ def main(args, parallel):
         if "Gym" in args['runner_name']:
             runner = getattr(gym_runner,
                              args['runner_name'])(config=args)
-        elif "StepRunner" in args['runner_name']:
+        else:
             runner = getattr(std_runner,
                              args['runner_name'])(config=args)
     else:
         save_folder_check(args)
+        if args['env_name'] in ENV_REGISTRY:
+            env = ENV_REGISTRY[args['env_name']](**args['envs'])
+        else:
+            env = gym.make(args['env_name'], render_mode='human', autoreset=True)
 
-        if "Ray" in args['runner_name']:
-            register_env(args['env_name'], ENV_REGISTRY[args['env_name']](**args['envs']))
-            raise NotImplementedError
-        elif "Gym" in args['runner_name']:
+        if "Gym" in args['runner_name']:
             from gym import envs
             check = envs.registry
-            env = gym.make(args['env_name'], render_mode='human')
             runner = gym_runner.GymRunner(config=copy.deepcopy(args), env=env)
         else:
-            env = ENV_REGISTRY[args['env_name']](**args['envs'])
-            # runner = runners.auto_rl_runner.AutoRLRunner(config=args, env=env)
-            runner = getattr(std_runner,
-                             args['runner_name'])(config=args,
-                                                  env=env)
+            standard_attributes = dir(std_runner)
+            if args['runner_name'] in standard_attributes:
+                runner = getattr(std_runner, args['runner_name'])(config=args, env=env)
+            else:
+                runner = getattr(opt_runner, args['runner_name'])(config=args, env=env)
+
     runner.run()
 
 

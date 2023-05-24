@@ -15,7 +15,10 @@ class BaseBuffer(ABC):
                 for i in range(len(val)):
                     print(f"{key}{i}: {val[i].shape}")
             else:
-                print(f"{key}: {val.shape}")
+                if isinstance(val, list):
+                    print(f"{key}: {len(val)}")
+                else:
+                    print(f"{key}: {val.shape}")
         print("########################################")
         self.first_store = False
 
@@ -64,3 +67,17 @@ class BaseBuffer(ABC):
                 transitions[key] = np.stack([b[key][0] for b in batch], axis=0)
 
         return transitions
+
+
+class DummyBuffer(BaseBuffer):
+    def store(self, transitions):
+        pass
+
+    def sample(self, batch_size):
+        pass
+
+    def clear(self):
+        pass
+
+    def size(self):
+        pass

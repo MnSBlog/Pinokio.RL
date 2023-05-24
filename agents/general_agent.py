@@ -1,6 +1,6 @@
 import os
 import torch
-from buffer.base import BaseBuffer
+from buffer.base import DummyBuffer
 from agents.tf.actorcritic import Actor, Critic
 
 
@@ -8,7 +8,7 @@ class GeneralAgent:
     def __init__(self, parameters: dict, actor, **kwargs):
         self._config = parameters
         self.actor = actor
-        self.buffer = BaseBuffer()
+        self.buffer = DummyBuffer()
         self.exconfig = dict()
         self.metric_list = ['reward', 'entropy', 'state_value', 'loss']
         self.statistics = ['max', 'min', 'std', 'mean']

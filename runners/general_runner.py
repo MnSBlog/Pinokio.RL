@@ -107,7 +107,7 @@ class GeneralRunner:
         return action
 
     def _update_agent(self, next_state):
-        if self._agent.buffer.size() >= self._config['runner']['batch_size']:
+        if self._agent.buffer.size >= self._config['runner']['batch_size']:
             # 학습 추출
             self._agent.update(next_state=next_state, done=self.done)
             return True
@@ -177,7 +177,7 @@ class GeneralRunner:
                     state = np.expand_dims(state, axis=0)
                     self.memory_q['matrix'].append(state)
             else:
-                # (b, c, f)로 변경
+                # (b, c * n, f)로 변경
                 if mem_lim > len(self.memory_q['vector']):
                     self.memory_q['vector'].append(state.reshape(1, 1, -1))
 
@@ -331,7 +331,7 @@ class GeneralRunner:
                                 'next_vector_state': state['vector'],
                                 'done': done,
                                 'reward': train_reward})
-        self._agent.buffer.store(self.transition)
+        self._agent.buffer.store([self.transition])
         self.transition.clear()
 
     @staticmethod

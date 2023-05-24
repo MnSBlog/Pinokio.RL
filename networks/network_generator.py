@@ -186,6 +186,8 @@ class CustomTorchNetwork(nn.Module):
         return state
 
     def forward(self, x, h=None):
+        if h is None:
+            h = []
         spatial_x = x['matrix']
         non_spatial_x = x['vector']
         x = self.pre_forward(x1=spatial_x, x2=non_spatial_x)
