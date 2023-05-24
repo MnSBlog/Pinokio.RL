@@ -65,6 +65,7 @@ class AlgorithmFinder(GeneralRunner):
 
     def __update_next(self):
         lowest, score = self.comparator.get_ranker(-1)
+        lowest['agent']['batch_size'] = self._config['runner']['batch_size']
         if score > np.NINF:
             return None
         else:

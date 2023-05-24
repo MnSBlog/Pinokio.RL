@@ -1,5 +1,5 @@
 from agents.general_agent import PolicyAgent, GeneralAgent
-from agents.pytorch.discrete_sac_agent import DiscreteSAC as TorchSAC
+from agents.pytorch.sac_agent import SAC as TORCH_SAC
 from agents.pytorch.ppo_agent import PPO as TORCH_PPO
 from agents.pytorch.a2c_agent import A2C as TORCH_A2C
 from agents.pytorch.apex_agent import ApeX as TorchAPEX
@@ -20,7 +20,7 @@ def get_value_fn(agent, **kwargs) -> GeneralAgent:
 
 
 REGISTRY = {'torchPPO': partial(get_policy_fn, agent=TORCH_PPO),
-            'torchSAC': partial(get_policy_fn, agent=TorchSAC),
+            'torchSAC': partial(get_policy_fn, agent=TORCH_SAC),
             'torchA2C': partial(get_policy_fn, agent=TORCH_A2C),
             'torchAPEX': partial(get_value_fn, agent=TorchAPEX),
             'torchDDPG': partial(get_value_fn, agent=TORCH_DDPG),

@@ -21,6 +21,7 @@ def make_lin_sequential(in_channel, out_channel, activation, num_layer):
         body.append(getattr(nn, activation)())
         sub_out_channel += sep
     body.append(nn.Linear(sub_out_channel, out_channel))
+    body.append(getattr(nn, activation)())
     return body
 
 

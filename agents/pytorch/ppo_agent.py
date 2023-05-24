@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from buffer.rollout_buffer import RolloutBuffer
-from agents.pytorch.utilities import get_device
 from agents.general_agent import PolicyAgent
 from torch.distributions import Categorical
 
@@ -11,10 +10,9 @@ from torch.distributions import Categorical
 class PPO(PolicyAgent):
 
     def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
-        device = get_device("auto")
-        super(PPO, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
-        self.actor_old = copy.deepcopy(actor).to(device)
-        self.critic_old = copy.deepcopy(critic).to(device)
+        super(PPO, self).__init__(parameters=parameters, actor=actor, critic=critic)
+        self.actor_old = copy.deepcopy(actor).to(self.device)
+        self.critic_old = copy.deepcopy(critic).to(self.device)
         # Hyper-parameters
         self.gamma = self._config['gamma']
         self.gae_lambda = self._config['gae_lambda']
@@ -31,7 +29,6 @@ class PPO(PolicyAgent):
         self.actor_old.load_state_dict(self.actor.state_dict())
         self.critic_old.load_state_dict(self.critic.state_dict())
         self.loss = getattr(nn, parameters['loss_function'])()
-        self.device = device
         self.hidden_state = copy.deepcopy(self.actor.init_h_state)
         if self.hidden_state is not None:
             self.hidden_state = self.hidden_state.to(self.device)
@@ -93,7 +90,7 @@ class PPO(PolicyAgent):
         old_state = dict()
         if 'spatial_feature' in self.actor.networks:
             old_state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
-        if 'non_spatial_feature':
+        if 'non_spatial_feature' in self.actor.networks:
             old_state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
 
         old_hiddens = None
@@ -170,39 +167,13 @@ class PPO(PolicyAgent):
         elif "critic" in checkpoint_path:
             critic_path = checkpoint_path
             actor_path = checkpoint_path.replace("critic.pth", "actor.pth")
+        else:
+            raise "error wrong path"
 
         self.actor.load_state_dict(torch.load(actor_path, map_location=lambda storage, loc: storage))
         self.actor_old.load_state_dict(torch.load(actor_path, map_location=lambda storage, loc: storage))
         self.critic.load_state_dict(torch.load(critic_path, map_location=lambda storage, loc: storage))
         self.critic_old.load_state_dict(torch.load(critic_path, map_location=lambda storage, loc: storage))
-
-    def convert_to_torch(self, state):
-        spatial_x = state['matrix']
-        non_spatial_x = state['vector']
-        mask = state['action_mask']
-
-        if torch.is_tensor(non_spatial_x) is False:
-            non_spatial_x = torch.FloatTensor(non_spatial_x)
-        non_spatial_x = non_spatial_x.to(self.device)
-
-        if torch.is_tensor(spatial_x) is False:
-            if len(spatial_x) > 0:
-                spatial_x = torch.FloatTensor(spatial_x).to(self.device)
-        else:
-            spatial_x = spatial_x.to(self.device)
-
-        if torch.is_tensor(mask) is False:
-            if len(mask) > 0:
-                mask = torch.FloatTensor(mask).to(self.device)
-                mask = mask.unsqueeze(dim=0)
-        else:
-            mask = mask.to(self.device)
-
-        state['matrix'] = spatial_x
-        state['vector'] = non_spatial_x
-        state['action_mask'] = mask
-
-        return state
 
     def set_mask(self, mask):
         if len(mask) > 0:

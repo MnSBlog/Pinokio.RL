@@ -6,7 +6,6 @@ import runners.gym_runner as gym_runner
 import runners.auto_rl_runner as opt_runner
 from utils.yaml_config import YamlConfig
 from envs import REGISTRY as ENV_REGISTRY
-from ray.tune.registry import register_env
 
 
 def load_config(form="yaml"):
@@ -93,5 +92,6 @@ def main(args, parallel):
 
 
 if __name__ == '__main__':
-    argus = load_config()
-    main(args=argus, parallel=check_parallel(argus))
+    args = load_config()
+    args['agent']['batch_size'] = args['runner']['batch_size']
+    main(args=args, parallel=check_parallel(args))

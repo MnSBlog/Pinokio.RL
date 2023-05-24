@@ -1,128 +1,108 @@
+import copy
+
 import torch
 import torch.nn as nn
-from torch.distributions import Normal, Categorical
+from torch.distributions import Normal, Multinomial, Categorical
 import os
 import numpy as np
 from buffer.replay_buffer import ReplayBuffer
-from agents.pytorch.utilities import get_device
 from agents.general_agent import PolicyAgent
 
 
 class SAC(PolicyAgent):
-    """Soft actor critic (SAC) agent.
-    Args:
-        state_size (int): dimension of state.
-        action_size (int): dimension of action.
-        hidden_size (int): dimension of hidden unit.
-        actor (str): key of actor network class in _network_dict.txt.
-        critic (str): key of critic network class in _network_dict.txt.
-        head (str): key of head in _head_dict.txt.
-        optim_config (dict): dictionary of the optimizer info.
-        use_dynamic_alpha (bool): parameter that determine whether to use autotunning entropy adjustment.
-        gamma (float): discount factor.
-        tau (float): the soft update coefficient (for soft target update).
-        buffer_size (int): the size of the memory buffer.
-        batch_size (int): the number of samples in the one batch.
-        start_train_step (int): steps to start learning.
-        static_log_alpha (float): static value used as log alpha when use_dynamic_alpha is false.
-        target_update_period (int): period to update the target network (for hard target update) (unit: step)
-        run_step (int): the number of total steps.
-        lr_decay: lr_decay option which apply decayed weight on parameters of network.
-        device (str): device to use.
-            (e.g. 'cpu' or 'gpu'. None can also be used, and in this case, the cpu is used.)
-    """
-
     def __init__(self, parameters: dict, actor: nn.Module, critic: nn.Module):
-        device = get_device("auto")
-        super(SAC, self).__init__(parameters=parameters, actor=actor.to(device), critic=critic.to(device))
-        self.action_type = actor.split("_")[0]
+        super(SAC, self).__init__(parameters=parameters, actor=actor, critic=critic)
+        # actor/critic head 교체하기
+        for seq in self.actor.networks.keys():
+            if 'head' in seq:
+                index = seq.replace('head', '')
+                dump = self.actor.networks[seq]
+                self.critic.networks[seq] = nn.Sequential(nn.Linear(dump[0].in_features,
+                                                                    self.actor.outputs_dim[int(index)])).to(self.device)
+        self.critic.outputs_dim = copy.deepcopy(self.actor.outputs_dim)
+        self.optimizer = dict()
+        opt_arg = [
+            {'params': self.actor.parameters(), 'lr': self._config['actor_lr']}
+        ]
+        self.optimizer['actor'] = getattr(torch.optim, parameters['actor_optimizer'])(opt_arg)
 
-        self.actor = Network(
-            actor, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        self.actor_optimizer = Optimizer(
-            optim_config["actor"], self.actor.parameters(), lr=optim_config["actor_lr"]
-        )
+        self.critic1 = self.critic
+        self.target_critic1 = copy.deepcopy(self.critic)
+        opt_arg = [
+            {'params': self.critic1.parameters(), 'lr': self._config['critic_lr']},
+            {'params': self.target_critic1.parameters(), 'lr': self._config['critic_lr']}
+        ]
+        self.optimizer['critic1'] = getattr(torch.optim, parameters['critic_optimizer'])(opt_arg)
 
-        (
-            self.critic1,
-            self.target_critic1,
-            self.critic_optimizer1,
-        ) = self.critic_set(
-            critic, state_size, action_size, hidden_size, head, optim_config
-        )
-        (
-            self.critic2,
-            self.target_critic2,
-            self.critic_optimizer2,
-        ) = self.critic_set(
-            critic, state_size, action_size, hidden_size, head, optim_config
-        )
+        self.critic2 = copy.deepcopy(self.critic)
+        self.target_critic2 = copy.deepcopy(self.critic)
+        opt_arg = [
+            {'params': self.critic2.parameters(), 'lr': self._config['critic_lr']},
+            {'params': self.target_critic2.parameters(), 'lr': self._config['critic_lr']}
+        ]
+        self.optimizer['critic2'] = getattr(torch.optim, parameters['critic_optimizer'])(opt_arg)
 
-        self.use_dynamic_alpha = use_dynamic_alpha
-        if use_dynamic_alpha:
+        self.use_dynamic_alpha = self._config['use_dynamic_alpha']
+        if self.use_dynamic_alpha:
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
-            self.alpha_optimizer = Optimizer(
-                optim_config["alpha"], [self.log_alpha], lr=optim_config["alpha_lr"]
-            )
+            opt_arg = [
+                {'params': [self.log_alpha], 'lr': self._config['alpha_lr']},
+            ]
+            self.optimizer['alpha'] = getattr(torch.optim, parameters['alpha_optimizer'])(opt_arg)
         else:
-            self.log_alpha = torch.tensor(static_log_alpha).to(self.device)
-            self.alpha_optimizer = None
+            self.log_alpha = torch.tensor(self._config['static_log_alpha']).to(self.device)
+            self.optimizer['alpha'] = None
         self.alpha = self.log_alpha.exp()
 
-        if self.action_type == "continuous":
-            self.target_entropy = -action_size
-        else:
-            self.target_entropy = -np.log(1 / action_size) * 0.98
+        # if self.action_type == "continuous":
+        #     self.target_entropy = -action_size
+        # else:
+        self.target_entropy = -np.log(1 / sum(self.actor.outputs_dim)) * 0.98
 
-        self.gamma = gamma
-        self.tau = tau
-        self.memory = ReplayBuffer(buffer_size)
-        self.batch_size = batch_size
-        self.start_train_step = start_train_step
-        self.run_step = run_step
-        self.lr_decay = lr_decay
+        self.gamma = self._config['gamma']
+        self.tau = self._config['tau']
+        self.buffer = ReplayBuffer()
         self.num_learn = 0
-
         self.target_update_stamp = 0
         self.time_t = 0
-        self.target_update_period = target_update_period
 
-    def critic_set(
-            self, critic_id, state_size, action_size, hidden_size, head, optim_config
-    ):
-        critic = Network(
-            critic_id, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        target_critic = Network(
-            critic_id, state_size, action_size, D_hidden=hidden_size, head=head
-        ).to(self.device)
-        target_critic.load_state_dict(critic.state_dict())
-        critic_optimizer = Optimizer(
-            optim_config["critic"],
-            critic.parameters(),
-            lr=optim_config["critic_lr"],
-        )
-        return critic, target_critic, critic_optimizer
+        self.hidden_state = copy.deepcopy(self.actor.init_h_state)
+        if self.hidden_state is not None:
+            self.hidden_state = self.hidden_state.to(self.device)
 
-    @torch.no_grad()
-    def act(self, state, training=True):
-        self.actor.train(training)
+        self.loss = getattr(nn, parameters['loss_function'])()
 
-        if self.action_type == "continuous":
-            mu, std = self.actor(self.as_tensor(state))
-            z = torch.normal(mu, std) if training else mu
-            action = torch.tanh(z)
-        else:
-            pi = self.actor(self.as_tensor(state))
-            action = (
-                torch.multinomial(pi, 1)
-                if training
-                else torch.argmax(pi, dim=-1, keepdim=True)
-            )
-        action = action.cpu().numpy()
-        return {"action": action}
+    def select_action(self, state):
+        state = self.convert_to_torch(state)
+        with torch.no_grad():
+            if len(state['action_mask']) > 0:
+                self.set_mask(state['action_mask'])
+            actions, action_logprobs, next_hidden = self.act(state=state, hidden=self.hidden_state)
+        self.hidden_state = next_hidden
 
+        return {"action": actions, "action_logprobs": action_logprobs, "next_hidden": next_hidden}
+
+    def act(self, state, hidden=[]):
+        rtn_action = []
+        action_logprob = None
+        outputs, hidden = self.actor(x=state, h=hidden)
+        last = 0
+        if len(self.actor.action_mask) > 0:
+            outputs *= self.actor.action_mask
+
+        for idx, output_dim in enumerate(self.actor.outputs_dim):
+            dist = Categorical(outputs[:, last:last + output_dim])
+            action = dist.sample()
+            if action_logprob is None:
+                action_logprob = dist.log_prob(action)
+            else:
+                action_logprob += dist.log_prob(action)
+            rtn_action.append(action.detach())
+            last += output_dim
+
+        return torch.stack(rtn_action, dim=0).detach(), action_logprob.detach(), hidden
+
+    @staticmethod
     def sample_action(self, mu, std):
         m = Normal(mu, std)
         z = m.rsample()
@@ -133,41 +113,43 @@ class SAC(PolicyAgent):
         log_prob = log_prob.sum(1, keepdim=True)
         return action, log_prob
 
-    def learn(self):
-        transitions = self.memory.sample(self.batch_size)
-        for key in transitions.keys():
-            transitions[key] = self.as_tensor(transitions[key])
+    def update(self, next_state=None, done=None):
+        transitions = self.buffer.sample(self._config['batch_size'])
 
-        state = transitions["state"]
+        state = dict()
+        if 'spatial_feature' in self.actor.networks:
+            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+        if 'non_spatial_feature' in self.actor.networks:
+            state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
+
+        next_state = dict()
+        if 'spatial_feature' in self.actor.networks:
+            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).to(self.device)})
+        if 'non_spatial_feature':
+            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).to(self.device)})
         action = transitions["action"]
         reward = transitions["reward"]
-        next_state = transitions["next_state"]
+        reward = torch.FloatTensor(reward).to(self.device)
         done = transitions["done"]
+        done = torch.FloatTensor(done).to(self.device)
 
-        if self.action_type == "continuous":
-            q1 = self.critic1(state, action)
-            q2 = self.critic2(state, action)
+        q1, _ = self.critic1(state)
+        q1 = q1.gather(1, action.squeeze(1).long())
+        q2, _ = self.critic2(state)
+        q2 = q2.gather(1, action.squeeze(1).long())
 
-            with torch.no_grad():
-                mu, std = self.actor(next_state)
-                next_action, next_log_prob = self.sample_action(mu, std)
-                next_q1 = self.target_critic1(next_state, next_action)
-                next_q2 = self.target_critic2(next_state, next_action)
-                entropy = -next_log_prob
-        else:
-            q1 = self.critic1(state).gather(1, action.long())
-            q2 = self.critic2(state).gather(1, action.long())
-
-            with torch.no_grad():
-                next_pi = self.actor(next_state)
-                next_q1 = (next_pi * self.target_critic1(next_state)).sum(
-                    -1, keepdim=True
-                )
-                next_q2 = (next_pi * self.target_critic2(next_state)).sum(
-                    -1, keepdim=True
-                )
-                m = Categorical(next_pi)
-                entropy = m.entropy().unsqueeze(-1)
+        with torch.no_grad():
+            next_pi, _ = self.actor(next_state)
+            n_q1, _ = self.target_critic1(next_state)
+            next_q1 = (next_pi * n_q1).sum(
+                -1, keepdim=True
+            )
+            n_q2, _ = self.target_critic2(next_state)
+            next_q2 = (next_pi * n_q2).sum(
+                -1, keepdim=True
+            )
+            m = Categorical(next_pi)
+            entropy = m.entropy().unsqueeze(-1)
 
         with torch.no_grad():
             min_next_q = torch.min(next_q1, next_q2)
@@ -178,36 +160,29 @@ class SAC(PolicyAgent):
         max_Q = torch.max(target_q, axis=0).values.cpu().numpy()[0]
 
         # Critic
-        critic_loss1 = F.mse_loss(q1, target_q)
-        critic_loss2 = F.mse_loss(q2, target_q)
+        critic_loss1 = self.loss(q1, target_q)
+        critic_loss2 = self.loss(q2, target_q)
 
-        self.critic_optimizer1.zero_grad(set_to_none=True)
+        self.optimizer['critic1'].zero_grad(set_to_none=True)
         critic_loss1.backward()
-        self.critic_optimizer1.step()
+        self.optimizer['critic1'].step()
 
-        self.critic_optimizer2.zero_grad(set_to_none=True)
+        self.optimizer['critic2'].zero_grad(set_to_none=True)
         critic_loss2.backward()
-        self.critic_optimizer2.step()
+        self.optimizer['critic2'].step()
 
         # Actor
-        if self.action_type == "continuous":
-            mu, std = self.actor(state)
-            sample_action, log_prob = self.sample_action(mu, std)
-            q1 = self.critic1(state, sample_action)
-            q2 = self.critic2(state, sample_action)
-            entropy = -log_prob
-        else:
-            pi = self.actor(state)
-            q1 = (pi * self.critic1(state)).sum(-1, keepdim=True)
-            q2 = (pi * self.critic2(state)).sum(-1, keepdim=True)
-            m = Categorical(pi)
-            entropy = m.entropy().unsqueeze(-1)
+        pi = self.actor(state)
+        q1 = (pi * self.critic1(state)).sum(-1, keepdim=True)
+        q2 = (pi * self.critic2(state)).sum(-1, keepdim=True)
+        m = Categorical(pi)
+        entropy = m.entropy().unsqueeze(-1)
 
         min_q = torch.min(q1, q2)
         actor_loss = -((self.alpha.detach() * entropy) + min_q).mean()
-        self.actor_optimizer.zero_grad(set_to_none=True)
+        self.optimizer['actor'].zero_grad(set_to_none=True)
         actor_loss.backward()
-        self.actor_optimizer.step()
+        self.optimizer['actor'].step()
 
         # Alpha
         alpha_loss = self.log_alpha * (entropy - self.target_entropy).detach().mean()
@@ -215,11 +190,11 @@ class SAC(PolicyAgent):
         self.alpha = self.log_alpha.exp()
 
         if self.use_dynamic_alpha:
-            self.alpha_optimizer.zero_grad(set_to_none=True)
+            self.optimizer['alpha'].zero_grad(set_to_none=True)
             alpha_loss.backward()
-            self.alpha_optimizer.step()
+            self.optimizer['alpha'].step()
 
-        self.num_learn += 1
+        self.update_target_hard()
 
         result = {
             "critic_loss1": critic_loss1.item(),
@@ -231,7 +206,6 @@ class SAC(PolicyAgent):
             "alpha": self.alpha.item(),
             "entropy": entropy.mean().item(),
         }
-        return result
 
     def update_target_soft(self):
         for t_p, p in zip(self.target_critic1.parameters(), self.critic1.parameters()):
@@ -242,37 +216,6 @@ class SAC(PolicyAgent):
     def update_target_hard(self):
         self.target_critic1.load_state_dict(self.critic1.state_dict())
         self.target_critic2.load_state_dict(self.critic2.state_dict())
-
-    def process(self, transitions, step):
-        result = {}
-        # Process per step
-        self.memory.store(transitions)
-        delta_t = step - self.time_t
-        self.time_t = step
-        self.target_update_stamp += delta_t
-
-        if self.memory.size > self.batch_size and step >= self.start_train_step:
-            result = self.learn()
-
-            if self.lr_decay:
-                self.learning_rate_decay(
-                    step,
-                    [
-                        self.actor_optimizer,
-                        self.critic_optimizer1,
-                        self.critic_optimizer2,
-                    ],
-                )
-
-        if self.num_learn > 0:
-            if self.action_type == "continuous":
-                self.update_target_soft()
-            else:
-                if self.target_update_stamp >= self.target_update_period:
-                    self.update_target_hard()
-                    self.target_update_stamp = 0
-
-        return result
 
     def save(self, path):
         print(f"...Save model to {path}...")

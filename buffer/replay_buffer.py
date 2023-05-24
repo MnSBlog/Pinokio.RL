@@ -1,9 +1,11 @@
+import copy
+
 import numpy as np
 from buffer.base import BaseBuffer
 
 
 class ReplayBuffer(BaseBuffer):
-    def __init__(self, buffer_size):
+    def __init__(self, buffer_size=50000):
         super(ReplayBuffer, self).__init__()
         self.buffer = np.zeros(buffer_size, dtype=dict)  # define replay buffer
         self.buffer_index = 0
@@ -15,7 +17,7 @@ class ReplayBuffer(BaseBuffer):
             self.check_dim(transitions[0])
 
         for transition in transitions:
-            self.buffer[self.buffer_index] = transition
+            self.buffer[self.buffer_index] = copy.deepcopy(transition)
             self.buffer_index = (self.buffer_index + 1) % self.buffer_size
             self.buffer_counter = min(self.buffer_counter + 1, self.buffer_size)
 

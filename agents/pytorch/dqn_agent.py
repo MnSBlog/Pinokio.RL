@@ -28,13 +28,12 @@ class DQN(GeneralAgent):
 
         self._parameter = EasyDict(self._config)
         # Network
-        self.network = network
-        self.target_network = copy.deepcopy(network)
-        self.target_network.load_state_dict(self.network.state_dict())
+        self.target_network = copy.deepcopy(self.actor)
+        self.target_network.load_state_dict(self.actor.state_dict())
 
         # Optimizer
         opt_arg = [
-            {'params': self.network.parameters(), 'lr': self._config['learning_rate']},
+            {'params': self.actor.parameters(), 'lr': self._config['learning_rate']},
         ]
         self.optimizer = getattr(torch.optim, self._config['optimizer'])(opt_arg)  # adam
         self.loss = getattr(nn, self._config['loss_function'])()  # smooth_l1_loss
