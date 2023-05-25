@@ -38,17 +38,19 @@ class AlgorithmFinder(GeneralRunner):
         super(AlgorithmFinder, self).__init__(config, env)
 
     def run(self):
-        trajectory = self.__loop_inner()
-        self.reward_dataframe[self._config['agent_name']] = trajectory
-        self.comparator.update_score(self._config['agent_name'], sum(trajectory))
-        config = self.__update_next()
-        if config is None:
-            dataframe = pd.DataFrame.from_dict(self.reward_dataframe)
-            dataframe.to_csv('algorithm_comparison.csv', index=False)
-        else:
-            self._config['agent'] = config['agent']
-            self._config['agent_name'] = self._config['agent']['name']
-            self.__change_algorithm()
+        while True:
+            trajectory = self.__loop_inner()
+            self.reward_dataframe[self._config['agent_name']] = trajectory
+            self.comparator.update_score(self._config['agent_name'], sum(trajectory))
+            config = self.__update_next()
+            if config is None:
+                dataframe = pd.DataFrame.from_dict(self.reward_dataframe)
+                dataframe.to_csv('algorithm_comparison.csv', index=False)
+                return
+            else:
+                self._config['agent'] = config['agent']
+                self._config['agent_name'] = self._config['agent']['name']
+                self.__change_algorithm()
 
     def __loop_inner(self):
         trajectory = []

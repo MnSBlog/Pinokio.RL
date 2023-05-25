@@ -11,164 +11,159 @@ from utils.calculator import multiple
 class Rainbow(DQN):
     def __init__(self, parameters: dict, actor, **kwargs):
         super(Rainbow, self).__init__(parameters=parameters, actor=actor)
-        hidden_size=512,
-        network="rainbow",
-        head="mlp",
-        optim_config={"name": "adam"},
-        gamma=0.99,
-        buffer_size=50000,
-        batch_size=64,
-        start_train_step=2000,
-        target_update_period=500,
-        run_step=1e6,
-        lr_decay=True,
-        # MultiStep
-        n_step=4,
-        # PER
-        alpha=0.6,
-        beta=0.4,
-        learn_period=4,
-        uniform_sample_prob=1e-3,
-        # Noisy
-        noise_type="factorized",  # [independent, factorized]
-        # C51
-        v_min=-10,
-        v_max=10,
-        num_support=51,
-        device=None,
 
-        self.action_size = multiple(self.actor.outputs_dim)
-        self.target_network = copy.deepcopy(self.actor)
-
-        self.gamma = gamma
-        self.batch_size = batch_size
-        self.start_train_step = start_train_step
-        self.target_update_stamp = 0
-        self.target_update_period = target_update_period
-        self.num_learn = 0
-        self.time_t = 0
-        self.run_step = run_step
-        self.lr_decay = lr_decay
-
-        # MultiStep
-        self.n_step = n_step
-        self.tmp_buffer = deque(maxlen=n_step)
+        # self.action_size = multiple(self.actor.outputs_dim)
+        self.target_actor = copy.deepcopy(self.actor)
+        self.gamma = self._config['gamma']
+        self.random_flag = True
 
         # PER
-        self.alpha = alpha
-        self.beta = beta
-        self.learn_period = learn_period
+        self.alpha = self._config['alpha']
+        self.beta = self._config['beta']
+        self.learn_period = self._config['learn_period']
         self.learn_period_stamp = 0
-        self.uniform_sample_prob = uniform_sample_prob
-        self.beta_add = (1 - beta) / run_step
+        self.uniform_sample_prob = self._config['uniform_sample_prob']
+        self.beta_add = (1 - self.beta) / 100000
 
         # C51
-        self.v_min = v_min
-        self.v_max = v_max
-        self.num_support = num_support
+        self.v_min = self._config['v_min']
+        self.v_max = self._config['v_max']
+        self.num_support = self._config['num_support']
 
         # MultiStep
-        self.memory = PERBuffer(buffer_size, uniform_sample_prob)
+        self.buffer = PERBuffer(uniform_sample_prob=self.uniform_sample_prob)
 
         # C51
-        self.delta_z = (v_max - v_min) / (num_support - 1)
-        self.z = torch.linspace(v_min, v_max, num_support, device=self.device).view(
-            1, -1
+        self.delta_z = (self.v_max - self.v_min) / (self.num_support - 1)
+        self.z = torch.linspace(self.v_min, self.v_max, self.num_support, device=self.device).view(1, -1)
+
+    def select_action(self, state):
+        state = self.convert_to_torch(state)
+        with torch.no_grad():
+            if len(state['action_mask']) > 0:
+                self.set_mask(state['action_mask'])
+            actions, next_hidden = self.act(state=state, hidden=self.hidden_state)
+        self.hidden_state = next_hidden
+
+        return {"action": actions, "next_hidden": next_hidden}
+
+    def act(self, state, hidden=[]):
+        rtn_action = []
+        last = 0
+        logits, hidden = self.actor(x=state, h=hidden)
+        for idx, output_dim in enumerate(self.actor.outputs_dim):
+            if self.random_flag:
+                output_dim = output_dim // self.num_support
+                batch_size = logits.shape[0]
+                action = torch.randint(0, output_dim, size=(batch_size, 1))
+            else:
+                _, q_action = self.logits2q(logits[:, last:last + output_dim], output_dim)
+                action = torch.argmax(q_action, -1, keepdim=True).cpu().numpy()
+                last += output_dim
+            rtn_action.append(action)
+        return torch.stack(rtn_action, dim=0).detach(), hidden
+
+    def update(self, next_state=None, done=None):
+        transitions, weights, indices, sampled_p, mean_p = self.buffer.sample(
+            self.beta, self._config['batch_size']
         )
+        state = dict()
+        if 'spatial_feature' in self.actor.networks:
+            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+        if 'non_spatial_feature' in self.actor.networks:
+            state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
 
-    @torch.no_grad()
-    def act(self, state, training=True):
-        self.network.train(training)
+        next_state = dict()
+        if 'spatial_feature' in self.actor.networks:
+            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).to(self.device)})
+        if 'non_spatial_feature':
+            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).to(self.device)})
 
-        if training and self.memory.size < max(self.batch_size, self.start_train_step):
-            batch_size = (
-                state[0].shape[0] if isinstance(state, list) else state.shape[0]
-            )
-            action = np.random.randint(0, self.action_size, size=(batch_size, 1))
-        else:
-            logits = self.network(self.as_tensor(state), training)
-            _, q_action = self.logits2Q(logits)
-            action = torch.argmax(q_action, -1, keepdim=True).cpu().numpy()
-        return {"action": action}
-
-    def learn(self):
-        transitions, weights, indices, sampled_p, mean_p = self.memory.sample(
-            self.beta, self.batch_size
-        )
-        for key in transitions.keys():
-            transitions[key] = self.as_tensor(transitions[key])
-
-        state = transitions["state"]
         action = transitions["action"]
         reward = transitions["reward"]
-        next_state = transitions["next_state"]
+        reward = torch.FloatTensor(reward).to(self.device)
         done = transitions["done"]
+        done = torch.FloatTensor(done).to(self.device)
 
-        logit = self.network(state, True)
-        p_logit, q_action = self.logits2Q(logit)
+        logit, _ = self.actor(state, True)
+        last = 0
+        KL = None
+        max_Q = None
+        max_logit = None
+        min_logit = None
+        for idx, output_dim in enumerate(self.actor.outputs_dim):
+            p_logit, q_action = self.logits2q(logit[:, last:last + output_dim], output_dim)
+            last += output_dim
+            action_eye = torch.eye(q_action.shape[1]).to(self.device)
+            sub_action = action[:, idx, :]
+            sub_action = sub_action.squeeze(1)
+            action_onehot = action_eye[sub_action.long()]
+            p_action = torch.squeeze(action_onehot @ p_logit, 1)
 
-        action_eye = torch.eye(self.action_size).to(self.device)
-        action_onehot = action_eye[action.long()]
+            target_dist = torch.zeros(
+                self._config['batch_size'], self.num_support, device=self.device, requires_grad=False
+            )
+            with torch.no_grad():
+                # Double
+                _, next_q_action = self.logits2q(self.actor(next_state)[0], output_dim)
+                target_p_logit, _ = self.logits2q(self.target_actor(next_state)[0], output_dim)
 
-        p_action = torch.squeeze(action_onehot @ p_logit, 1)
+                target_action = torch.argmax(next_q_action, -1, keepdim=True)
+                target_action_onehot = action_eye[target_action.long()]
+                target_p_action = torch.squeeze(target_action_onehot @ target_p_logit, 1)
 
-        target_dist = torch.zeros(
-            self.batch_size, self.num_support, device=self.device, requires_grad=False
-        )
-        with torch.no_grad():
-            # Double
-            _, next_q_action = self.logits2Q(self.network(next_state, True))
+                Tz = self.z
 
-            target_p_logit, _ = self.logits2Q(self.target_network(next_state, True))
+                b = torch.clamp(Tz - self.v_min, 0, self.v_max - self.v_min) / self.delta_z
+                l = torch.floor(b).long()
+                u = torch.ceil(b).long()
 
-            target_action = torch.argmax(next_q_action, -1, keepdim=True)
-            target_action_onehot = action_eye[target_action.long()]
-            target_p_action = torch.squeeze(target_action_onehot @ target_p_logit, 1)
+                support_eye = torch.eye(self.num_support, device=self.device)
+                l_support_onehot = support_eye[l]
+                u_support_onehot = support_eye[u]
 
-            Tz = self.z
-            for i in reversed(range(self.n_step)):
-                Tz = (
-                    reward[:, i].expand(-1, self.num_support)
-                    + (1 - done[:, i]) * self.gamma * Tz
+                l_support_binary = torch.unsqueeze(u - b, -1)
+                u_support_binary = torch.unsqueeze(b - l, -1)
+                target_p_action_binary = torch.unsqueeze(target_p_action, -1)
+
+                lluu = (
+                    l_support_onehot * l_support_binary
+                    + u_support_onehot * u_support_binary
                 )
 
-            b = torch.clamp(Tz - self.v_min, 0, self.v_max - self.v_min) / self.delta_z
-            l = torch.floor(b).long()
-            u = torch.ceil(b).long()
+                target_dist += done * torch.mean(
+                    l_support_onehot * u_support_onehot + lluu, 1
+                )
+                target_dist += (1 - done) * torch.sum(
+                    target_p_action_binary * lluu, 1
+                )
+                target_dist /= torch.clamp(
+                    torch.sum(target_dist, 1, keepdim=True), min=1e-8
+                )
 
-            support_eye = torch.eye(self.num_support, device=self.device)
-            l_support_onehot = support_eye[l]
-            u_support_onehot = support_eye[u]
+            if max_Q is None:
+                max_Q = torch.max(q_action).item()
+            else:
+                max_Q += torch.max(q_action).item()
+            if max_logit is None:
+                max_logit = torch.max(logit).item()
+            else:
+                max_logit *= torch.max(logit).item()
+            if min_logit is None:
+                min_logit = torch.min(logit).item()
+            else:
+                min_logit *= torch.min(logit).item()
 
-            l_support_binary = torch.unsqueeze(u - b, -1)
-            u_support_binary = torch.unsqueeze(b - l, -1)
-            target_p_action_binary = torch.unsqueeze(target_p_action, -1)
+            # PER
+            if KL is None:
+                KL = -(target_dist * torch.clamp(p_action, min=1e-8).log()).sum(-1)
+            else:
+                KL += -(target_dist * torch.clamp(p_action, min=1e-8).log()).sum(-1)
 
-            lluu = (
-                l_support_onehot * l_support_binary
-                + u_support_onehot * u_support_binary
-            )
-
-            target_dist += done[:, 0, :] * torch.mean(
-                l_support_onehot * u_support_onehot + lluu, 1
-            )
-            target_dist += (1 - done[:, 0, :]) * torch.sum(
-                target_p_action_binary * lluu, 1
-            )
-            target_dist /= torch.clamp(
-                torch.sum(target_dist, 1, keepdim=True), min=1e-8
-            )
-
-        max_Q = torch.max(q_action).item()
-        max_logit = torch.max(logit).item()
-        min_logit = torch.min(logit).item()
-
-        # PER
-        KL = -(target_dist * torch.clamp(p_action, min=1e-8).log()).sum(-1)
         p_j = torch.pow(KL, self.alpha)
 
         for i, p in zip(indices, p_j):
-            self.memory.update_priority(p.item(), i)
+            self.buffer.update_priority(p.item(), i)
 
         weights = torch.unsqueeze(torch.FloatTensor(weights).to(self.device), -1)
 
@@ -178,8 +173,7 @@ class Rainbow(DQN):
         loss.backward()
         self.optimizer.step()
 
-        self.num_learn += 1
-
+        self.update_target()
         result = {
             "loss": loss.item(),
             "beta": self.beta,
@@ -192,57 +186,12 @@ class Rainbow(DQN):
 
         return result
 
-    def process(self, transitions, step):
-        result = {}
-
-        # Process per step
-        delta_t = step - self.time_t
-        self.memory.store(transitions)
-        self.time_t = step
-        self.target_update_stamp += delta_t
-        self.learn_period_stamp += delta_t
-
-        # Annealing beta
-        self.beta = min(1.0, self.beta + (self.beta_add * delta_t))
-
-        if (
-            self.learn_period_stamp >= self.learn_period
-            and self.memory.buffer_counter >= self.batch_size
-            and self.time_t >= self.start_train_step
-        ):
-            result = self.learn()
-            if self.lr_decay:
-                self.learning_rate_decay(step)
-            self.learn_period_stamp -= self.learn_period
-
-        # Process per step if train start
-        if self.num_learn > 0 and self.target_update_stamp >= self.target_update_period:
-            self.update_target()
-            self.target_update_stamp -= self.target_update_period
-
-        return result
-
-    def logits2Q(self, logits):
-        _logits = logits.view(logits.shape[0], self.action_size, self.num_support)
+    def logits2q(self, logits, action_size):
+        action_size = action_size // self.num_support
+        _logits = logits.view(logits.shape[0], action_size, self.num_support)
         p_logit = torch.exp(F.log_softmax(_logits, dim=-1))
 
-        z_action = self.z.expand(p_logit.shape[0], self.action_size, self.num_support)
+        z_action = self.z.expand(p_logit.shape[0], action_size, self.num_support)
         q_action = torch.sum(z_action * p_logit, dim=-1)
 
         return p_logit, q_action
-
-    def interact_callback(self, transition):
-        _transition = {}
-        self.tmp_buffer.append(transition)
-        if len(self.tmp_buffer) == self.n_step:
-            _transition["state"] = self.tmp_buffer[0]["state"]
-            _transition["action"] = self.tmp_buffer[0]["action"]
-            _transition["next_state"] = self.tmp_buffer[-1]["next_state"]
-
-            for key in self.tmp_buffer[0].keys():
-                if key not in ["state", "action", "next_state"]:
-                    _transition[key] = np.stack(
-                        [t[key] for t in self.tmp_buffer], axis=1
-                    )
-
-        return _transition

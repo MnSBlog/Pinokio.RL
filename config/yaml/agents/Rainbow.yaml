@@ -10,14 +10,18 @@ agent:
   epsilon_min: 0.1
   epsilon_eval: 0.0
   explore_ratio: 0.1
-  n_step: 4
-  noise_type: "factorized"
   v_min: -10
   v_max: 10
   num_support: 51
-  # --- Only Tensorflow ---
-  #state_dim: 0 # You have to set this value (e.g. env.observation_space.shape[0])
+  # --- PER ---
+  alpha: 0.5
+  beta: 0.4
+  learn_period: 2
+  uniform_sample_prob: 0.001
+  # --- Noisy ---
+  noise_type: "factorized"  # [independent, factorized]
   # - Model configuration -
+  actor_lr: 0.0001 # Actor learning rate
   optimizer: 'Adam'
   loss_function: 'MSELoss'
   # - Kinds of Action

@@ -1,11 +1,12 @@
-import numpy as np
+import copy
 
-from .replay_buffer import ReplayBuffer
+import numpy as np
+from buffer.replay_buffer import ReplayBuffer
 
 
 # Reference: https://github.com/LeejwUniverse/following_deepmid/tree/master/jungwoolee_pytorch/100%20Algorithm_For_RL/01%20sum_tree
 class PERBuffer(ReplayBuffer):
-    def __init__(self, buffer_size, uniform_sample_prob=1e-3):
+    def __init__(self, buffer_size=50000, uniform_sample_prob=1e-3):
         super(PERBuffer, self).__init__(buffer_size)
         self.tree_size = (self.buffer_size * 2) - 1
         self.first_leaf_index = self.buffer_size - 1
@@ -17,6 +18,7 @@ class PERBuffer(ReplayBuffer):
         self.uniform_sample_prob = uniform_sample_prob
 
     def store(self, transitions):
+        transitions = copy.deepcopy(transitions)
         if self.first_store:
             self.check_dim(transitions[0])
 
@@ -67,7 +69,7 @@ class PERBuffer(ReplayBuffer):
 
         return index
 
-    def sample(self, batch_size, beta):
+    def sample(self, beta, batch_size):
         assert self.sum_tree[0] > 0.0
         uniform_sampling = np.random.uniform(size=batch_size) < self.uniform_sample_prob
         uniform_size = np.sum(uniform_sampling)

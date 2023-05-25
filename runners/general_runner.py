@@ -303,12 +303,20 @@ class GeneralRunner:
         return actor, critic
 
     def __load_torch_models(self):
-        self._config['network']['critic'] = self.__make_critic_config(self._config['network']['actor'])
-        dim_in = self._config['network']['actor']['memory_q_len'] * self._config['network']['actor']['non_spatial_feature']['dim_in']
-        actor = CustomTorchNetwork(self._config['network']['actor'])
-        critic = CustomTorchNetwork(self._config['network']['critic'])
-        # actor = SimpleActorNetwork(input_dim=dim_in, output_dim=2)
-        # critic = SimpleCriticNetwork(input_dim=dim_in)
+        actor_config = copy.deepcopy(self._config['network']['actor'])
+
+        self._config['network']['critic'] = self.__make_critic_config(actor_config)
+        critic_config = copy.deepcopy(self._config['network']['critic'])
+
+        if "num_support" in self._config['agent']:
+            n_atom = self._config['agent']['num_support']
+            actor_config['neck_out'] *= n_atom
+            for idx, action in enumerate(actor_config['n_of_actions']):
+                action *= n_atom
+                actor_config['n_of_actions'][idx] = action
+
+        actor = CustomTorchNetwork(actor_config)
+        critic = CustomTorchNetwork(critic_config)
         return actor, critic
 
     def _load_networks(self, framework='tf'):

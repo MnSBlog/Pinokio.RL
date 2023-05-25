@@ -122,7 +122,7 @@ class R2D2(ApeX):
             max_one_hot_action = eye[max_a.long()]
 
             next_target_q = self.get_q(
-                next_state, next_prev_action_onehot, next_hidden, self.target_network
+                next_state, next_prev_action_onehot, next_hidden, self.target_actor
             )
             target_q = (next_target_q * max_one_hot_action).sum(-1, keepdims=True)
             target_q = self.inv_val_rescale(target_q)
