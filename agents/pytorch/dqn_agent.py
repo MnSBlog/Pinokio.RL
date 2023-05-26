@@ -38,6 +38,7 @@ class DQN(GeneralAgent):
             self.hidden_state = self.hidden_state.to(self.device)
 
     def select_action(self, state):
+        state = self.convert_to_torch(state)
         epsilon = self.epsilon
         rtn_action = []
         last = 0
@@ -50,7 +51,7 @@ class DQN(GeneralAgent):
                 action = torch.argmax(q[:, last:last + output_dim], -1, keepdim=True)
                 last += output_dim
             rtn_action.append(action)
-        return {"action": rtn_action}
+        return {"action": torch.stack(rtn_action, dim=0).detach()}
 
     def update(self, next_state=None, done=None):
         transitions = self._buffer.sample(self._config['batch_size'])
