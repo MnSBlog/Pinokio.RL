@@ -15,14 +15,14 @@ network:
     # --- non-spatial features ---
     non_spatial_feature:
       use: True
-      num_layer: 3
+      num_layer: 1
       dim_in: 4
-      dim_out: 16
+      dim_out: 128
       extension: True
       use_cnn: True
       freeze: False
     # --- outputs ---
-    neck_out: 128
+    neck_out: 64
     neck_activation: "ReLU"
     neck_num_layer: 3
     num_memory_layer: 0

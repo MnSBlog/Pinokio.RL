@@ -11,9 +11,15 @@ agent:
   epsilon_eval: 0.0
   explore_ratio: 0.1
   clip_grad_norm: 40.0
-  n_step: 4
-  # - Model configuration -
-  optimizer: 'Adam'
+  target_update_period: 5
+  # --- PER ---
+  alpha: 0.5
+  beta: 0.4
+  learn_period: 2
+  uniform_sample_prob: 0.001
+  # - Model configuration
+  actor_lr: 0.0001 # Actor learning rate
+  optimizer: 'RMSProp'
   loss_function: 'SmoothL1Loss'
   buffer: 'PER'
   # - Kinds of Action

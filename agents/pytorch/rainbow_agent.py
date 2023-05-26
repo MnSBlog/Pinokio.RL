@@ -173,7 +173,8 @@ class Rainbow(DQN):
         loss.backward()
         self.optimizer.step()
 
-        self.update_target()
+        if self.update_target():
+            self.random_flag = False
         result = {
             "loss": loss.item(),
             "beta": self.beta,

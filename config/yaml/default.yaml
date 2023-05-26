@@ -2,4 +2,4 @@
 runner_name: "AlgorithmFinder" # path about StepRunner / GymRunner / EpisodeRunner / AutoRLRunner
 network_name: "CartPole-v1" # custom_network_path / torchvision.models(pre-trained)
 env_name: "CartPole-v1" # Environment name (include gym.env)
-agent_name: "Rainbow" # Algorithm nam
+agent_name: "DQN" # Algorithm nam

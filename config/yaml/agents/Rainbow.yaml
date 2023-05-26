@@ -13,6 +13,7 @@ agent:
   v_min: -10
   v_max: 10
   num_support: 51
+  target_update_period: 5
   # --- PER ---
   alpha: 0.5
   beta: 0.4

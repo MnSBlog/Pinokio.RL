@@ -342,9 +342,14 @@ class GeneralRunner:
 
         self.transition.update({'next_matrix_state': state['matrix'],
                                 'next_vector_state': state['vector'],
-                                'done': done,
-                                'reward': train_reward})
-        self._agent.buffer.store([self.transition])
+                                'done': torch.FloatTensor(done),
+                                'reward': torch.FloatTensor(train_reward)})
+
+        checker = dir(self._agent)
+        if 'interact_callback' in checker:
+            self.transition = self._agent.interact_callback(copy.deepcopy(self.transition))
+        if self.transition:
+            self._agent.buffer.store([self.transition])
         self.transition.clear()
 
     @staticmethod

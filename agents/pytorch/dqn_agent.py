@@ -15,6 +15,7 @@ class DQN(GeneralAgent):
         epsilon_min = self._config['epsilon_min']  # 0.1
         explore_ratio = self._config['explore_ratio']  # 0.1
         run_step = 100000
+        self.update_num = 0
         self.epsilon = epsilon_init
         self.explore_step = run_step * explore_ratio
         self.epsilon_delta = (epsilon_init - epsilon_min) / self.explore_step
@@ -38,42 +39,56 @@ class DQN(GeneralAgent):
 
     def select_action(self, state):
         epsilon = self.epsilon
-
-        if np.random.random() < epsilon:
-            batch_size = (
-                state[0].shape[0] if isinstance(state, list) else state.shape[0]
-            )
-            action = np.random.randint(0, self.action_size, size=(batch_size, 1))
-        else:
-            action = (
-                torch.argmax(self.network(self.as_tensor(state)), -1, keepdim=True)
-                .cpu()
-                .numpy()
-            )
-        return {"action": action}
+        rtn_action = []
+        last = 0
+        q, _ = self.actor(state)
+        for idx, output_dim in enumerate(self.actor.outputs_dim):
+            if np.random.random() < epsilon:
+                batch_size = q.shape[0]
+                action = torch.randint(0, output_dim, size=(batch_size, 1))
+            else:
+                action = torch.argmax(q[:, last:last + output_dim], -1, keepdim=True)
+                last += output_dim
+            rtn_action.append(action)
+        return {"action": rtn_action}
 
     def update(self, next_state=None, done=None):
-        transitions = self._buffer.sample(self.batch_size)
-        for key in transitions.keys():
-            transitions[key] = self.as_tensor(transitions[key])
+        transitions = self._buffer.sample(self._config['batch_size'])
 
-        state = transitions["state"]
+        state = dict()
+        if 'spatial_feature' in self.actor.networks:
+            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+        if 'non_spatial_feature' in self.actor.networks:
+            state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
+
+        next_state = dict()
+        if 'spatial_feature' in self.actor.networks:
+            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).to(self.device)})
+        if 'non_spatial_feature':
+            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).to(self.device)})
         action = transitions["action"]
         reward = transitions["reward"]
         next_state = transitions["next_state"]
         done = transitions["done"]
 
-        eye = torch.eye(self.action_size, device=self.device)
-        one_hot_action = eye[action.view(-1).long()]
-        q = (self.network(state) * one_hot_action).sum(1, keepdims=True)
-        with torch.no_grad():
-            max_q = torch.max(q).item()
-            next_q = self.target_actor(next_state)
-            target_q = (
-                    reward + (1 - done) * self._parameter.gamma * next_q.max(1, keepdims=True).values
-            )
+        q, _ = self.actor(state, True)
+        next_q = self.target_actor(next_state)
+        loss = None
+        last = 0
+        for idx, output_dim in enumerate(self.actor.outputs_dim):
+            eye = torch.eye(output_dim, device=self.device)
+            one_hot_action = eye[action.view(-1).long()]
+            sub_q = (q[:, last:last + output_dim] * one_hot_action).sum(1, keepdims=True)
+            with torch.no_grad():
+                max_q = torch.max(sub_q).item()
+                target_q = (
+                        reward + (1 - done) * self._config['gamma'] * next_q[:, last:last + output_dim].max(1, keepdims=True).values
+                )
 
-        loss = self.loss(q, target_q)
+            if loss is None:
+                loss = self.loss(q, target_q)
+            else:
+                loss += self.loss(q, target_q)
         self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
         self.optimizer.step()
@@ -82,7 +97,8 @@ class DQN(GeneralAgent):
                    'entropy': self.epsilon,
                    'state_value': q.detach().cpu(),
                    'loss': loss.detach().cpu()}
-        self.__epsilon_decay()
+        self._epsilon_decay()
+        self.update_target()
 
     def save(self, checkpoint_path: str):
         torch.save(self.actor.state_dict(), checkpoint_path + 'actor.pth')
@@ -92,9 +108,15 @@ class DQN(GeneralAgent):
         self.actor.load_state_dict(torch.load(checkpoint_path + 'actor.pth'))
         self.target_actor.load_state_dict(torch.load(checkpoint_path + 'target_actor.pth'))
 
-    def __epsilon_decay(self):
+    def _epsilon_decay(self):
         new_epsilon = self.epsilon - self.epsilon_delta
         self.epsilon = max(self._parameter.epsilon_min, new_epsilon)
 
     def update_target(self):
-        self.target_actor.load_state_dict(self.actor.state_dict())
+        self.update_num += 1
+        if self.update_num == self._config['target_update_period']:
+            self.update_num = 0
+            self.target_actor.load_state_dict(self.actor.state_dict())
+            return True
+        else:
+            return False
