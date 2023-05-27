@@ -54,17 +54,19 @@ class AlgorithmFinder(GeneralRunner):
 
     def __loop_inner(self):
         trajectory = []
-        state = self._env_init(reset_env=True)
-        for update in range(1, self._config['runner']['max_iteration_num'] + 1):
-            self._env_init()
-            steps = 0
-            while self._update_agent(next_state=state, steps=steps) is False:
+        steps = 0
+        for ep in range(1, self._config['runner']['max_iteration_num'] + 1):
+            state = self._env_init(reset_env=True)
+            while not self.done:
                 steps += 1
                 action = self._select_action(state)
                 state = self._interaction(action)
-            print('Update: ', update, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
+                if self._update_agent(next_state=state, steps=steps):
+                    steps = 0
+
+            print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
             trajectory.append(self.batch_reward)
-            self._sweep_cycle(update)
+            self._sweep_cycle(ep)
         return trajectory
 
     def __update_next(self):

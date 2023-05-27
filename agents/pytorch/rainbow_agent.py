@@ -58,7 +58,7 @@ class Rainbow(DQN):
                 action = torch.randint(0, output_dim, size=(batch_size, 1))
             else:
                 _, q_action = self.logits2q(logits[:, last:last + output_dim], output_dim)
-                action = torch.argmax(q_action, -1, keepdim=True).cpu().numpy()
+                action = torch.argmax(q_action, -1, keepdim=True).cpu()
                 last += output_dim
             rtn_action.append(action)
         return torch.stack(rtn_action, dim=0).detach(), hidden
@@ -69,21 +69,19 @@ class Rainbow(DQN):
         )
         state = dict()
         if 'spatial_feature' in self.actor.networks:
-            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).detach().to(self.device)})
         if 'non_spatial_feature' in self.actor.networks:
-            state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
+            state.update({'vector': torch.FloatTensor(transitions['vector_state']).detach().to(self.device)})
 
         next_state = dict()
         if 'spatial_feature' in self.actor.networks:
-            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).to(self.device)})
+            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).detach().to(self.device)})
         if 'non_spatial_feature':
-            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).to(self.device)})
+            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).detach().to(self.device)})
 
-        action = transitions["action"]
-        reward = transitions["reward"]
-        reward = torch.FloatTensor(reward).to(self.device)
-        done = transitions["done"]
-        done = torch.FloatTensor(done).to(self.device)
+        action = transitions["action"].detach().to(self.device)
+        reward = transitions["reward"].unsqueeze(-1).detach().to(self.device)
+        done = transitions["done"].unsqueeze(-1).detach().to(self.device)
 
         logit, _ = self.actor(state, True)
         last = 0
@@ -96,7 +94,6 @@ class Rainbow(DQN):
             last += output_dim
             action_eye = torch.eye(q_action.shape[1]).to(self.device)
             sub_action = action[:, idx, :]
-            sub_action = sub_action.squeeze(1)
             action_onehot = action_eye[sub_action.long()]
             p_action = torch.squeeze(action_onehot @ p_logit, 1)
 

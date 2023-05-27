@@ -13,6 +13,7 @@ class ReplayBuffer(BaseBuffer):
         self.buffer_counter = 0
 
     def store(self, transitions):
+        transitions = super(ReplayBuffer, self).store(transitions)
         if self.first_store:
             self.check_dim(transitions[0])
 

@@ -31,7 +31,7 @@ class DQN(GeneralAgent):
         ]
         self.optimizer = getattr(torch.optim, self._config['optimizer'])(opt_arg)  # adam
         self.loss = getattr(nn, self._config['loss_function'])()  # smooth_l1_loss
-        self._buffer = ReplayBuffer()
+        self.buffer = ReplayBuffer()
 
         self.hidden_state = copy.deepcopy(self.actor.init_h_state)
         if self.hidden_state is not None:
@@ -54,50 +54,50 @@ class DQN(GeneralAgent):
         return {"action": torch.stack(rtn_action, dim=0).detach()}
 
     def update(self, next_state=None, done=None):
-        transitions = self._buffer.sample(self._config['batch_size'])
+        transitions = self.buffer.sample(self._config['batch_size'])
 
         state = dict()
         if 'spatial_feature' in self.actor.networks:
-            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).detach().to(self.device)})
         if 'non_spatial_feature' in self.actor.networks:
-            state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
+            state.update({'vector': torch.FloatTensor(transitions['vector_state']).detach().to(self.device)})
 
         next_state = dict()
         if 'spatial_feature' in self.actor.networks:
-            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).to(self.device)})
+            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).detach().to(self.device)})
         if 'non_spatial_feature':
-            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).to(self.device)})
-        action = transitions["action"]
-        reward = transitions["reward"]
-        next_state = transitions["next_state"]
-        done = transitions["done"]
+            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).detach().to(self.device)})
+        action = transitions["action"].detach().to(self.device)
+        reward = transitions["reward"].detach().to(self.device)
+        done = transitions["done"].detach().to(self.device)
 
         q, _ = self.actor(state, True)
-        next_q = self.target_actor(next_state)
+        next_q, _ = self.target_actor(next_state)
         loss = None
         last = 0
         for idx, output_dim in enumerate(self.actor.outputs_dim):
             eye = torch.eye(output_dim, device=self.device)
             one_hot_action = eye[action.view(-1).long()]
-            sub_q = (q[:, last:last + output_dim] * one_hot_action).sum(1, keepdims=True)
+            sub_q = (q[:, last:last + output_dim] * one_hot_action).sum(1, keepdims=True).squeeze()
             with torch.no_grad():
                 max_q = torch.max(sub_q).item()
+                sub_next = next_q[:, last:last + output_dim].max(1, keepdims=True).values.squeeze()
                 target_q = (
-                        reward + (1 - done) * self._config['gamma'] * next_q[:, last:last + output_dim].max(1, keepdims=True).values
+                        reward + (1 - done) * self._config['gamma'] * sub_next
                 )
 
             if loss is None:
-                loss = self.loss(q, target_q)
+                loss = self.loss(sub_q, target_q)
             else:
-                loss += self.loss(q, target_q)
+                loss += self.loss(sub_q, target_q)
         self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
         self.optimizer.step()
 
-        metrics = {'reward': max_q.detach().cpu(),
-                   'entropy': self.epsilon,
-                   'state_value': q.detach().cpu(),
-                   'loss': loss.detach().cpu()}
+        # metrics = {'reward': max_q
+        #            'entropy': self.epsilon,
+        #            'state_value': q,
+        #            'loss': loss.detach().cpu()}
         self._epsilon_decay()
         self.update_target()
 
@@ -111,7 +111,7 @@ class DQN(GeneralAgent):
 
     def _epsilon_decay(self):
         new_epsilon = self.epsilon - self.epsilon_delta
-        self.epsilon = max(self._parameter.epsilon_min, new_epsilon)
+        self.epsilon = max(self._config['epsilon_min'], new_epsilon)
 
     def update_target(self):
         self.update_num += 1

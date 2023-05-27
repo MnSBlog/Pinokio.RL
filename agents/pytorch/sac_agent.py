@@ -118,25 +118,23 @@ class SAC(PolicyAgent):
 
         state = dict()
         if 'spatial_feature' in self.actor.networks:
-            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).detach().to(self.device)})
         if 'non_spatial_feature' in self.actor.networks:
-            state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
+            state.update({'vector': torch.FloatTensor(transitions['vector_state']).detach().to(self.device)})
 
         next_state = dict()
         if 'spatial_feature' in self.actor.networks:
-            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).to(self.device)})
+            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).detach().to(self.device)})
         if 'non_spatial_feature':
-            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).to(self.device)})
-        action = transitions["action"]
-        reward = transitions["reward"]
-        reward = torch.FloatTensor(reward).to(self.device)
-        done = transitions["done"]
-        done = torch.FloatTensor(done).to(self.device)
+            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).detach().to(self.device)})
+        action = transitions["action"].detach().to(self.device)
+        reward = transitions["reward"].detach().to(self.device)
+        done = transitions["done"].detach().to(self.device)
 
         q1, _ = self.critic1(state)
-        q1 = q1.gather(1, action.squeeze(1).long())
+        q1 = q1.gather(1, action.long()).squeeze()
         q2, _ = self.critic2(state)
-        q2 = q2.gather(1, action.squeeze(1).long())
+        q2 = q2.gather(1, action.long()).squeeze()
 
         with torch.no_grad():
             next_pi, _ = self.actor(next_state)
@@ -149,15 +147,15 @@ class SAC(PolicyAgent):
                 -1, keepdim=True
             )
             m = Categorical(next_pi)
-            entropy = m.entropy().unsqueeze(-1)
+            entropy = m.entropy()
 
         with torch.no_grad():
             min_next_q = torch.min(next_q1, next_q2)
             target_q = reward + (1 - done) * self.gamma * (
-                    min_next_q + self.alpha * entropy
+                    min_next_q.squeeze() + self.alpha * entropy
             )
 
-        max_Q = torch.max(target_q, axis=0).values.cpu().numpy()[0]
+        max_Q = torch.max(target_q).item()
 
         # Critic
         critic_loss1 = self.loss(q1, target_q)

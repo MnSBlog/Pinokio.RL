@@ -18,7 +18,7 @@ class PERBuffer(ReplayBuffer):
         self.uniform_sample_prob = uniform_sample_prob
 
     def store(self, transitions):
-        transitions = copy.deepcopy(transitions)
+        transitions = super(ReplayBuffer, self).store(transitions)
         if self.first_store:
             self.check_dim(transitions[0])
 

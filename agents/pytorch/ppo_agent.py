@@ -60,15 +60,20 @@ class PPO(PolicyAgent):
                 action_logprob = dist.log_prob(action)
             else:
                 action_logprob += dist.log_prob(action)
-            rtn_action.append(action.detach())
+            rtn_action.append(action.unsqueeze(dim=0).detach())
             last += output_dim
 
-        return torch.stack(rtn_action, dim=0).detach(), action_logprob.detach(), hidden
+        return torch.stack(rtn_action, dim=0).detach(), action_logprob.unsqueeze(dim=0).detach(), hidden
 
     def update(self, next_state=None, done=None):
         transitions = self.buffer.sample()
         # Monte Carlo estimate of returns
         # Agent 수 만큼 생성
+        transitions["reward"] = transitions["reward"].unsqueeze(-1)
+        transitions["done"] = transitions["done"].unsqueeze(-1)
+        for key, transition in transitions.items():
+            transitions[key] = transition.detach().to(self.device)
+
         discounted_reward = np.zeros(transitions['reward'].shape[1])
         rewards = np.zeros(transitions['reward'].shape)
         batch_count = transitions['reward'].shape[0] - 1
@@ -89,9 +94,9 @@ class PPO(PolicyAgent):
         # convert list to tensor
         old_state = dict()
         if 'spatial_feature' in self.actor.networks:
-            old_state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+            old_state.update({'matrix': transitions['matrix_state']})
         if 'non_spatial_feature' in self.actor.networks:
-            old_state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
+            old_state.update({'vector': transitions['vector_state']})
 
         old_hiddens = None
         if self.actor.recurrent:

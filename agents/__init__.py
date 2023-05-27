@@ -8,6 +8,7 @@ from agents.pytorch.dqn_agent import DQN as TORCH_DQN
 from agents.pytorch.r2d2_agent import R2D2 as TORCH_R2D2
 from agents.pytorch.rainbow_agent import Rainbow as TorchRainbow
 from agents.pytorch.td3_agent import TD3 as TORCH_TD3
+from agents.pytorch.c51_agent import C51 as TORCH_C51
 from functools import partial
 
 
@@ -27,4 +28,5 @@ REGISTRY = {'torchPPO': partial(get_policy_fn, agent=TORCH_PPO),
             'torchDQN': partial(get_value_fn, agent=TORCH_DQN),
             'torchR2D2': partial(get_policy_fn, agent=TORCH_R2D2),
             'torchRainbow': partial(get_value_fn, agent=TorchRainbow),
+            'torchC51': partial(get_value_fn, agent=TORCH_C51),
             'torchTD3': partial(get_value_fn, agent=TORCH_TD3)}

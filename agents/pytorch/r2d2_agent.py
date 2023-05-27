@@ -108,34 +108,23 @@ class R2D2(ApeX):
         transitions, weights, indices, sampled_p, mean_p = self.buffer.sample(
             self._config['beta'], self._config['batch_size']
         )
-        for key, value in transitions.items():
-            if isinstance(transitions[key], np.ndarray):
-                continue
-            else:
-                transitions[key] = transitions[key].squeeze(1)
-
-        state = transitions["state"][:, : self.seq_len]
-        prev_action_onehot = transitions["prev_action_onehot"][:, : self.seq_len]
-        next_state = transitions["state"][:, self.n_step:]
-        next_prev_action_onehot = transitions["prev_action_onehot"][:, self.n_step:]
-        action = transitions["action"][:, : self.seq_len]
-        reward = transitions["reward"]
-        done = transitions["done"]
-        hidden_h = transitions["hidden_h"].transpose(0, 1).contiguous()
-        hidden_c = transitions["hidden_c"].transpose(0, 1).contiguous()
-        next_hidden_h = transitions["next_hidden_h"].transpose(0, 1).contiguous()
-        next_hidden_c = transitions["next_hidden_c"].transpose(0, 1).contiguous()
+        state = transitions["state"][:, : self.seq_len].detach().to(self.device)
+        prev_action_onehot = transitions["prev_action_onehot"][:, : self.seq_len].detach().to(self.device)
+        next_state = transitions["state"][:, self.n_step:].detach().to(self.device)
+        next_prev_action_onehot = transitions["prev_action_onehot"][:, self.n_step:].detach().to(self.device)
+        action = transitions["action"][:, : self.seq_len].detach().to(self.device)
+        reward = transitions["reward"].detach().to(self.device)
+        done = transitions["done"].detach().to(self.device)
+        hidden_h = transitions["hidden_h"].transpose(0, 1).contiguous().detach().to(self.device)
+        hidden_c = transitions["hidden_c"].transpose(0, 1).contiguous().detach().to(self.device)
+        next_hidden_h = transitions["next_hidden_h"].transpose(0, 1).contiguous().detach().to(self.device)
+        next_hidden_c = transitions["next_hidden_c"].transpose(0, 1).contiguous().detach().to(self.device)
         hidden = (hidden_h, hidden_c)
         next_hidden = (next_hidden_h, next_hidden_c)
         loss = None
         for idx, output_dim in enumerate(self.actor.outputs_dim):
             eye = torch.eye(output_dim).to(self.device)
             one_hot_action = eye[action.view(-1, self.seq_len).long()][:, self.n_burn_in:]
-            print('================================================')
-            print(state.shape)
-            print('------------------------------------------------')
-            print(prev_action_onehot.shape)
-            print('================================================')
             q_pred = self.get_q(state, prev_action_onehot, hidden, self.actor)
             q = (q_pred * one_hot_action).sum(-1, keepdims=True)
             with torch.no_grad():
@@ -187,6 +176,9 @@ class R2D2(ApeX):
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self._config['clip_grad_norm'])
         self.optimizer.step()
+
+        self.update_target()
+        self._epsilon_decay()
 
         result = {
             "loss": loss.item(),
@@ -354,16 +346,17 @@ class R2D2(ApeX):
         if network is None:
             network = self.actor
 
-        if self.prev_action is None:
-            prev_action_onehot = torch.zeros(
-                (x.shape[0], 1, sum(network.outputs_dim)), device=self.device
-            )
-        else:
-            if prev_action_onehot is None:
+        if prev_action_onehot is None:
+            if self.prev_action is None:
+                prev_action_onehot = torch.zeros(
+                    (x.shape[0], 1, sum(network.outputs_dim)), device=self.device
+                )
+            else:
                 prev_action_onehot = F.one_hot(
                     torch.tensor(self.prev_action, dtype=torch.long, device=self.device),
                     sum(network.outputs_dim),
                 )
+
         x = torch.cat([x, prev_action_onehot], dim=-1)
         if hidden_state is None:
             hidden_state = (

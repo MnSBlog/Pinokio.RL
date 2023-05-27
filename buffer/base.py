@@ -1,3 +1,4 @@
+import copy
 from abc import abstractmethod, ABC
 import numpy as np
 import torch
@@ -22,14 +23,23 @@ class BaseBuffer(ABC):
         print("########################################")
         self.first_store = False
 
-    @abstractmethod
     def store(self, transitions):
-        """
-        Store transitions into buffer.
+        transitions = copy.deepcopy(transitions)
+        del_keys = set()
+        for index, object_transition in enumerate(transitions):
+            for key, transition in object_transition.items():
+                if len(transition) == 0:
+                    del_keys.add(key)
+                else:
+                    if torch.is_tensor(transition):
+                        transitions[index][key] = transition.to("cpu")
+                    else:
+                        transitions[index][key] = torch.FloatTensor(transition).to("cpu")
 
-        Parameter Type
-        - transitions: List[Dict]
-        """
+        for index, _ in enumerate(transitions):
+            for element in del_keys:
+                del transitions[index][element]
+        return transitions
 
     @abstractmethod
     def sample(self, batch_size):
@@ -65,9 +75,7 @@ class BaseBuffer(ABC):
                 transitions[key] = b_list
             else:
                 if torch.is_tensor(sample):
-                    transitions[key] = torch.stack([b[key] for b in batch], dim=0).detach()
-                elif isinstance(sample, list):
-                    pass
+                    transitions[key] = torch.cat([b[key] for b in batch], dim=0).detach()
                 else:
                     dump = np.stack([b[key][0] for b in batch], axis=0)
                     if len(dump.shape) == 1:
@@ -79,6 +87,7 @@ class BaseBuffer(ABC):
 
 class DummyBuffer(BaseBuffer):
     def store(self, transitions):
+        super(DummyBuffer, self).store(transitions)
         pass
 
     def sample(self, batch_size):

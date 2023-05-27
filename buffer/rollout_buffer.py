@@ -10,6 +10,7 @@ class RolloutBuffer(BaseBuffer):
         self.buffer = list()
 
     def store(self, transitions):
+        transitions = super(RolloutBuffer, self).store(transitions)
         if self.first_store:
             self.check_dim(transitions[0])
         self.buffer += copy.deepcopy(transitions)

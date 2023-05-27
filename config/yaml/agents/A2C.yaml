@@ -11,4 +11,4 @@ agent:
   critic_optimizer: 'Adam'
   loss_function: 'MSELoss'
   # - Kinds of Action
-  action: 'Discrete/Continuous'
+  action: 'Continuous' # Discrete/Continuous
