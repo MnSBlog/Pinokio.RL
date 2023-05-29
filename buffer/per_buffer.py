@@ -86,7 +86,6 @@ class PERBuffer(ReplayBuffer):
         indices = np.asarray(uniform_indices + prioritized_indices)
         priorities = np.asarray([self.sum_tree[index] for index in indices])
         assert len(indices) == len(priorities) == batch_size
-
         uniform_probs = np.asarray(1.0 / self.buffer_counter)
         prioritized_probs = priorities / self.sum_tree[0]
 

@@ -41,6 +41,9 @@ class YamlConfig:
     def get_config(self, filenames: list):
         for file_path in filenames:
             a = os.path.join(self.root_path, file_path + '.yaml')
+            if "APEX-DQN" in file_path:
+                file_path = file_path.replace("APEX-DQN", "APEX")
+
             sub_dict = self.get_dict(os.path.join(self.root_path, file_path + '.yaml'))
             self.final_config_dict = self.recursive_dict_update(self.final_config_dict, sub_dict)
 

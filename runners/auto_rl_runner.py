@@ -14,9 +14,9 @@ class AutoRLRunner(GeneralRunner):
 
     def run(self):
         reward_sum = 0.0
+        state = self._env_init(reset_env=True)
         for ep in range(1, self._config['runner']['max_iteration_num'] + 1):
             # 에피소드 초기화
-            state = self._env_init(reset_env=True)
             while not self.done:
                 action = self._select_action(state)
                 state = self._interaction(action)
@@ -85,4 +85,6 @@ class AlgorithmFinder(GeneralRunner):
         algo_name = self._config['agent']['framework'] + self._config['agent_name']
         self._agent: GeneralAgent = AGENT_REGISTRY[algo_name](parameters=self._config['agent'],
                                                               actor=actor, critic=critic)
+
+        print("==" + algo_name + "==")
 

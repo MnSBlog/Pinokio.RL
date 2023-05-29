@@ -14,7 +14,7 @@ class DQN(GeneralAgent):
         epsilon_init = self._config['epsilon_init']  # 1.0
         epsilon_min = self._config['epsilon_min']  # 0.1
         explore_ratio = self._config['explore_ratio']  # 0.1
-        run_step = 100000
+        run_step = 10000
         self.update_num = 0
         self.epsilon = epsilon_init
         self.explore_step = run_step * explore_ratio

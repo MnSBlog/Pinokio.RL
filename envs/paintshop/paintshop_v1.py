@@ -64,7 +64,7 @@ class PaintShop(gym.Env, ABC):
         mask = np.array(mask)
         state = np.concatenate((cost_map, down_stream))
 
-        state = {'matrix': torch.empty((0)),
+        state = {'matrix': torch.empty(0),
                  'vector': torch.tensor(state, dtype=torch.float).unsqueeze(dim=0),
                  'action_mask': torch.tensor(mask, dtype=torch.float)}
         return state

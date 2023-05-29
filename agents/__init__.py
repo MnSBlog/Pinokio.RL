@@ -23,7 +23,7 @@ def get_value_fn(agent, **kwargs) -> GeneralAgent:
 REGISTRY = {'torchPPO': partial(get_policy_fn, agent=TORCH_PPO),
             'torchSAC': partial(get_policy_fn, agent=TORCH_SAC),
             'torchA2C': partial(get_policy_fn, agent=TORCH_A2C),
-            'torchAPEX': partial(get_value_fn, agent=TorchAPEX),
+            'torchAPEX-DQN': partial(get_value_fn, agent=TorchAPEX),
             'torchDDPG': partial(get_value_fn, agent=TORCH_DDPG),
             'torchDQN': partial(get_value_fn, agent=TORCH_DQN),
             'torchR2D2': partial(get_policy_fn, agent=TORCH_R2D2),

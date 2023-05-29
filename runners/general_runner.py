@@ -69,7 +69,6 @@ class GeneralRunner:
         state = None
         if reset_env:
             self.done = False
-            self._agent.buffer.clear()
             ret = self._env.reset()
             state = ret[0]
             for _ in range(self.memory_len):
@@ -328,17 +327,19 @@ class GeneralRunner:
     def __put_transition(self, state, reward, done):
         if torch.is_tensor(reward) is False:
             reward = float(reward)
+        else:
+            reward = reward.item()
+        if self._config['envs']['trust_result']:
+            if self.done:
+                self.batch_reward += reward
+        else:
+            self.batch_reward += reward
 
+        #train_reward = self._fit_reward(reward)
         train_reward = self._fit_reward(reward)
         if isinstance(done, bool):
             done = np.reshape(done, -1)
             train_reward = np.reshape(train_reward, -1)
-
-        if self._config['envs']['trust_result']:
-            if self.done:
-                self.batch_reward += train_reward
-        else:
-            self.batch_reward += train_reward
 
         self.transition.update({'next_matrix_state': state['matrix'],
                                 'next_vector_state': state['vector'],

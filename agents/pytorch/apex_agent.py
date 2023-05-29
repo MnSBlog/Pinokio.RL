@@ -8,6 +8,9 @@ from agents.pytorch.dqn_agent import DQN
 class ApeX(DQN):
     def __init__(self, parameters: dict, actor, **kwargs):
         super(ApeX, self).__init__(parameters=parameters, actor=actor)
+
+        self.n_step = self.actor.local_len
+
         # ApeX
         self.num_transitions = 0
 
@@ -33,35 +36,39 @@ class ApeX(DQN):
         for idx, output_dim in enumerate(self.actor.outputs_dim):
             if np.random.random() < epsilon:
                 batch_size = q.shape[0]
-                action = torch.randint(0, output_dim, size=(batch_size, 1))
+                action = torch.randint(0, output_dim, size=(batch_size, 1)).to(self.device)
             else:
-                action = torch.argmax(q[:, last:last + output_dim], -1, keepdim=True).cpu().numpy()
+                action = torch.argmax(q[:, last:last + output_dim], -1, keepdim=True)
                 last += output_dim
-                q = np.take(q.cpu().numpy(), action)
+            q = torch.take(q, action)
             rtn_action.append(action)
         return torch.stack(rtn_action, dim=0).detach(), q, hidden
 
     def update(self, next_state=None, done=None):
-        transitions, weights, indices, sampled_p, mean_p = self._buffer.sample(
+        transitions, weights, indices, sampled_p, mean_p = self.buffer.sample(
             self._config['beta'], self._config['batch_size']
         )
+
+        transitions["reward"] = transitions["reward"].unsqueeze(-1)
+        transitions["done"] = transitions["done"].unsqueeze(-1)
+        for key, transition in transitions.items():
+            transitions[key] = transition.detach().to(self.device)
+
         state = dict()
         if 'spatial_feature' in self.actor.networks:
-            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).to(self.device)})
+            state.update({'matrix': transitions['matrix_state']})
         if 'non_spatial_feature' in self.actor.networks:
-            state.update({'vector': torch.FloatTensor(transitions['vector_state']).to(self.device)})
+            state.update({'vector': transitions['vector_state']})
 
         next_state = dict()
         if 'spatial_feature' in self.actor.networks:
-            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).to(self.device)})
-        if 'non_spatial_feature':
-            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).to(self.device)})
+            next_state.update({'matrix': transitions['next_matrix_state']})
+        if 'non_spatial_feature' in self.actor.networks:
+            next_state.update({'vector': transitions['next_vector_state']})
 
-        action = transitions["action"]
-        reward = transitions["reward"]
-        reward = torch.FloatTensor(reward).to(self.device)
-        done = transitions["done"]
-        done = torch.FloatTensor(done).to(self.device)
+        action = transitions['action']
+        reward = transitions['reward']
+        done = transitions['done']
         loss = None
         for idx, output_dim in enumerate(self.actor.outputs_dim):
             eye = torch.eye(output_dim).to(self.device)
@@ -74,11 +81,12 @@ class ApeX(DQN):
                 max_a = torch.argmax(next_q, dim=1)
                 max_one_hot_action = eye[max_a.long()]
 
-                next_target_q = self.target_actor(next_state)
+                next_target_q, _ = self.target_actor(next_state)
                 target_q = (next_target_q * max_one_hot_action).sum(1, keepdims=True)
+                target_q = reward + (1 - done) * self._config['gamma'] * target_q
 
-                for i in reversed(range(self._config['n_step'])):
-                    target_q = reward[:, i] + (1 - done[:, i]) * self._config['gamma'] * target_q
+                # for i in reversed(range(self.n_step)):
+                #                 #     target_q = reward[:, i] + (1 - done[:, i]) * self._config['gamma'] * target_q
 
             # Update sum tree
             td_error = abs(target_q - q)

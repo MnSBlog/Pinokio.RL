@@ -20,7 +20,8 @@ class AlgorithmComparator:
             self.Scores[name] = np.NINF
 
     def update_score(self, key, value):
-        value = value.item()
+        if 'APEX-DQN' in key:
+            key = 'APEX'
         score = self.Scores[key]
         if score == np.NINF:
             score = value

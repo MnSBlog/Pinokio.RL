@@ -23,7 +23,7 @@ class A2C(PolicyAgent):
         self._parameter = EasyDict(self._config)
 
         # Buffer
-        self._buffer = RolloutBuffer()
+        self.buffer = RolloutBuffer()
         # Optimizer
         self.optimizer = dict()
         self.loss = dict()
@@ -85,7 +85,7 @@ class A2C(PolicyAgent):
 
     def update(self, next_state=None, done=None):
         # unpack memory
-        transitions = self._buffer.sample()
+        transitions = self.buffer.sample()
         # get td target
         next_v_values = self.critic(transitions['state'])
         td_targets = self.get_td_target(transitions['reward'], next_v_values.numpy(), transitions['done'])

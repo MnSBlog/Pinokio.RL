@@ -153,9 +153,7 @@ class R2D2(ApeX):
 
             # Update sum tree
             td_error = abs(target_q - q)
-            priority = self.eta * torch.max(td_error, dim=1).values + (
-                    1 - self.eta
-            ) * torch.mean(td_error, dim=1)
+            priority = self.eta * torch.max(td_error, dim=1).values + (1 - self.eta) * torch.mean(td_error, dim=1)
             p_j = torch.pow(priority, self._config['alpha'])
             for i, p in zip(indices, p_j):
                 self.buffer.update_priority(p.item(), i)
@@ -352,9 +350,8 @@ class R2D2(ApeX):
                     (x.shape[0], 1, sum(network.outputs_dim)), device=self.device
                 )
             else:
-                prev_action_onehot = F.one_hot(
-                    torch.tensor(self.prev_action, dtype=torch.long, device=self.device),
-                    sum(network.outputs_dim),
+                prev_action_onehot = F.one_hot(self.prev_action.clone().detach(),
+                                               sum(network.outputs_dim),
                 )
 
         x = torch.cat([x, prev_action_onehot], dim=-1)
@@ -363,7 +360,7 @@ class R2D2(ApeX):
                 torch.zeros(1, x.size(0), self.hidden_size).to(x.device),
                 torch.zeros(1, x.size(0), self.hidden_size).to(x.device),
             )
-
+        network.networks['input_layer'].flatten_parameters()
         x, hidden_out = network.networks['input_layer'](x, hidden_state)
         if 'neck' in network.networks:
             x = network.networks['neck'](x)
