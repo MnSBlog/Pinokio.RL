@@ -41,7 +41,7 @@ def convert_to_numpy(path, name):
 
 
 def draw_game_result(path, filename):
-    col_title = ['TypeID', 'FirstGun', 'SecondGun', 'HP', 'Kill', 'Step', 'Playtime', 'Result', 'None']
+    col_title = ['Step', 'Playtime', 'Result', 'None']
     data = pd.read_csv(os.path.join(path, filename), header=None)
     data.columns = col_title
     window = 10
@@ -115,9 +115,9 @@ def draw_metric_solver(path):
             files = os.listdir(search)
             for _ in range(len(files) // 2):
                 gen_results.append((float(output) - min_value) / (max_value - min_value))
-        if len(gen_results) != 8:
-            for _ in range(8 - len(gen_results)):
-                gen_results.append(min(gen_results))
+        if len(gen_results) != 7:
+            for _ in range(7 - len(gen_results)):
+                gen_results.append(1.0)
         observation.append(gen_results)
 
     for l in index:
@@ -200,5 +200,6 @@ def multiple(s: list):
 
 
 if __name__ == '__main__':
-    root = r'D:\MnS\Projects\RL_Library'
-    draw_metric_solver(path=r'D:\MnS\Projects\RL_Library\figures\AutoRL\RLFPSv4\2023-02-03-12-25-03')
+    root = r'D:\MnS\Projects\RL_Library\figures\AutoRL\LunarLander-v2\2023-01-25-00-04-06'
+    draw_metric_solver(root)
+    #draw_metric_solver(path=r'D:\MnS\Projects\RL_Library\figures\AutoRL\RLFPSv4\2023-02-03-12-25-03')
