@@ -6,11 +6,10 @@ from agents.pytorch.dqn_agent import DQN
 
 class C51(DQN):
     """C51 agent.
-
     Args:
         state_size (int): dimension of state.
         action_size (int): dimension of action.
-        v_min (float): minimum value of support.
+        v_min (float): minimum value of support. # 이거 우리 리워드레인지를 올바르게 스케일링하고 있는지 확인필요
         v_max (float): maximum value of support.
         num_support (int): number of support.
     """
