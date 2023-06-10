@@ -2,6 +2,8 @@ import torch
 import numpy as np
 from typing import Union
 import torch.nn.functional as F
+import torch_geometric
+import networkx as nx
 
 
 def get_device(device: Union[torch.device, str] = "auto") -> torch.device:
@@ -59,3 +61,10 @@ def stable_softmax(x, tau):
     max_x, max_indices = torch.max(x, -1, keepdim=True)
     y = x - max_x
     return torch.exp(F.log_softmax(y / tau, -1))
+
+
+def draw_graph(data, unidirectional=True):
+    g = torch_geometric.utils.to_networkx(data, to_undirected=unidirectional)
+    nx.draw(g, with_labels=True)
+
+def summary_graph()
