@@ -53,6 +53,7 @@ class GeneralAgent:
     def convert_to_torch(self, state):
         spatial_x = state['matrix']
         non_spatial_x = state['vector']
+        graph = state['graph']
         mask = state['action_mask']
 
         if torch.is_tensor(non_spatial_x) is False:
@@ -74,6 +75,7 @@ class GeneralAgent:
 
         state['matrix'] = spatial_x
         state['vector'] = non_spatial_x
+        state['graph'] = graph
         state['action_mask'] = mask
 
         return state

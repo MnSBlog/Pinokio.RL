@@ -12,8 +12,16 @@ def make_sequential(in_channels, out_channels, *args, **kwargs):
                          nn.PReLU())
 
 
+def make_graph_sequential(in_channel, out_channel, **kwargs):
+    sep = (out_channel - in_channel) // kwargs['num_layer']
+    sub_out_channel = in_channel
+    body = GCN(in_channels=in_channel, hidden_channels=sub_out_channel + sep, out_channels=out_channel,
+               num_layers=kwargs['num_layer'], act=kwargs['activation'].lower(), dropout=kwargs['dropout'])
+    return body
+
+
 def make_lin_sequential(in_channel, out_channel, activation, num_layer):
-    sep = int((out_channel - in_channel) / num_layer)
+    sep = (out_channel - in_channel) // num_layer
     sub_out_channel = in_channel
 
     body = nn.Sequential()
@@ -27,7 +35,7 @@ def make_lin_sequential(in_channel, out_channel, activation, num_layer):
 
 
 def make_conv1d_sequential(in_channel, out_channel, num_layer):
-    sep = int((out_channel - in_channel) / num_layer)
+    sep = (out_channel - in_channel) // num_layer
     sub_out_channel = in_channel
 
     body = nn.Sequential()
@@ -48,7 +56,11 @@ class CustomTorchNetwork(nn.Module):
         if config['graph_feature']['use']:
             config['memory_q_len'] = 1
             self.local_len = config['memory_q_len']
-            graph_processor =
+
+            networks['graph_feature'] = make_graph_sequential(config['graph_feature']['dim_in'],
+                                                              config['graph_feature']['dim_out'],
+                                                              **config['graph_feature'])
+            config['graph_feature']['dim_out'] *= config['graph_feature']['multi_step']
         # Spatial feature network 정의
         if config['spatial_feature']['use']:
             in_channel = config['spatial_feature']['dim_in'][0] * self.local_len
@@ -115,8 +127,9 @@ class CustomTorchNetwork(nn.Module):
             config['non_spatial_feature']['dim_out'] = 0
 
         # neck 부분
-        config['neck_in'] = config['spatial_feature']['dim_out'] + config['non_spatial_feature']['dim_out']
-        sep = int((config['neck_out'] - config['neck_in']) / (config['neck_num_layer']) + 1)
+        config['neck_in'] = config['spatial_feature']['dim_out'] + \
+                            config['non_spatial_feature']['dim_out'] + config['graph_feature']['dim_out']
+        sep = (config['neck_out'] - config['neck_in']) // (config['neck_num_layer'] + 1)
         sub_out_channel = config['neck_in']
 
         if config['num_memory_layer'] == 0:
@@ -187,7 +200,16 @@ class CustomTorchNetwork(nn.Module):
             x2 = self.networks['non_spatial_feature'](x2)
             x2 = x2.view(x2.shape[0], -1)
             cat_alter.append(x2)
-        if len(cat_alter) == 2:
+        if 'graph_feature' in self.networks:
+            x3, edge_index = x['graph'].x, x['graph'].edge_index
+            x3 = self.networks['graph_feature'](x3, edge_index)
+            if len(x3.shape) == 2:
+                x3 = x3.view(1, -1)
+            else:
+                x3 = x3.view(x3.shape[0], -1)
+            cat_alter.append(x3)
+
+        if len(cat_alter) >= 2:
             state = torch.cat(cat_alter, dim=1)
         else:
             state = cat_alter.pop()

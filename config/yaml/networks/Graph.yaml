@@ -8,8 +8,9 @@ network:
       use: True
       num_layer: 2
       dim_in: 4
+      multi_step: 5 # 이거 임시임
       dim_out: 16
-      activation: 'relu'
+      activation: 'ReLU'
       dropout: 0.2
     # --- spatial features ---
     spatial_feature:
@@ -21,7 +22,7 @@ network:
       freeze: False
     # --- non-spatial features ---
     non_spatial_feature:
-      use: True
+      use: False
       num_layer: 1
       dim_in: 4
       dim_out: 64

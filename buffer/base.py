@@ -1,5 +1,6 @@
 import copy
 from abc import abstractmethod, ABC
+from torch_geometric.loader import DataLoader
 import numpy as np
 import torch
 
@@ -12,14 +13,10 @@ class BaseBuffer(ABC):
         print("########################################")
         print("You should check dimension of transition")
         for key, val in transition.items():
-            if len(val) > 1:
-                for i in range(len(val)):
-                    print(f"{key}{i}: {val[i].shape}")
+            if "graph" in key:
+                print(f"Graph nodes: {val.num_nodes}, and feature {val.num_features} ")
             else:
-                if isinstance(val, list):
-                    print(f"{key}: {len(val)}")
-                else:
-                    print(f"{key}: {val.shape}")
+                print(f"{key}: {val.shape}")
         print("########################################")
         self.first_store = False
 
@@ -31,7 +28,7 @@ class BaseBuffer(ABC):
                 if len(transition) == 0:
                     del_keys.add(key)
                 else:
-                    if torch.is_tensor(transition):
+                    if torch.is_tensor(transition) or "graph" in key:
                         transitions[index][key] = transition.to("cpu")
                     else:
                         transitions[index][key] = torch.FloatTensor(transition).to("cpu")
@@ -66,6 +63,11 @@ class BaseBuffer(ABC):
         transitions = {}
 
         for key, sample in batch[0].items():
+            if "graph" in key:
+                loader = DataLoader([b[key] for b in batch], batch_size=len(batch))
+                transitions[key] = next(iter(loader))
+                continue
+
             if len(batch[0][key]) > 1:
                 # Multimodal
                 b_list = []

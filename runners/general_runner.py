@@ -29,7 +29,7 @@ class GeneralRunner:
                                                               actor=actor, critic=critic)
 
         # state
-        self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
+        self.memory_q = {'matrix': [], 'vector': [], 'graph': [], 'action_mask': []}
 
         # Calculate information
         self.save_batch_reward = []
@@ -100,7 +100,8 @@ class GeneralRunner:
             if len(action.shape) == 0:
                 action = action.item()
         self.transition.update({'matrix_state': state['matrix'],
-                                'vector_state': state['vector']})
+                                'vector_state': state['vector'],
+                                'graph_state': state['graph']})
 
         return action
 
@@ -162,6 +163,9 @@ class GeneralRunner:
         if isinstance(state, dict):
             # Custom environment, 이미 형식이 맞춰져 있다고 판단
             self.torch_state = True
+            if len(state['graph']) > 0:
+                if mem_lim > len(self.memory_q['graph']):
+                    self.memory_q['graph'].append(state['graph'])
             if len(state['matrix']) > 0:
                 if mem_lim > len(self.memory_q['matrix']):
                     self.memory_q['matrix'].append(state['matrix'])
@@ -189,12 +193,15 @@ class GeneralRunner:
         self.memory_q = {'matrix': [], 'vector': [], 'action_mask': []}
 
     def _update_memory(self, state=None):
-        matrix_obs, vector_obs, mask_obs = [], [], []
+        matrix_obs, vector_obs, graph_obs, mask_obs = [], [], [], []
 
         if state is not None:
             self._insert_q(state)
 
         if self.torch_state:
+            if len(self.memory_q['graph']) > 0:
+                graph_obs = self.memory_q['graph'].pop(0)
+
             if len(self.memory_q['matrix']) > 0:
                 matrix_obs = torch.cat(self.memory_q['matrix'], dim=2).detach()
                 shape = matrix_obs.shape
@@ -223,7 +230,7 @@ class GeneralRunner:
                 mask_obs = self.memory_q['action_mask'][-1]
                 self.memory_q['action_mask'].pop(0)
 
-        state = {'matrix': matrix_obs, 'vector': vector_obs, 'action_mask': mask_obs}
+        state = {'matrix': matrix_obs, 'vector': vector_obs, 'graph': graph_obs, 'action_mask': mask_obs}
         return state
 
     def _save_agent(self, prefix_option=True):
@@ -343,6 +350,7 @@ class GeneralRunner:
 
         self.transition.update({'next_matrix_state': state['matrix'],
                                 'next_vector_state': state['vector'],
+                                'next_graph_state': state['graph'],
                                 'done': torch.FloatTensor(done),
                                 'reward': torch.FloatTensor(train_reward)})
 
