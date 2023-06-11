@@ -3,6 +3,7 @@ import numpy as np
 from typing import Union
 import torch.nn.functional as F
 import torch_geometric
+from torch_geometric.data import Data
 import networkx as nx
 
 
@@ -63,8 +64,21 @@ def stable_softmax(x, tau):
     return torch.exp(F.log_softmax(y / tau, -1))
 
 
-def draw_graph(data, unidirectional=True):
+def draw_graph(data: Data, unidirectional=False):
     g = torch_geometric.utils.to_networkx(data, to_undirected=unidirectional)
     nx.draw(g, with_labels=True)
 
-def summary_graph()
+
+def summary_graph(graph: Data, draw=False):
+    print("=========SUMMARY GRAPH=========")
+    print("CUDA: ", graph.is_cuda, " Undirected: ", graph.is_undirected(), " Coalesced ", graph.is_coalesced())
+    print("=====Node:")
+    print("# of node:", graph.num_nodes, "# of node feature", graph.num_node_features)
+    print("node types: ", graph.num_node_types)
+    print("=====Edges:")
+    print("# of edges:", graph.num_edges, "# of edge feature", graph.num_edge_features)
+    print("node types: ", graph.num_edge_types)
+    print("=====Others:")
+
+    if draw:
+        draw_graph(graph)

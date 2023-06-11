@@ -1,0 +1,7 @@
+envs:
+  # --- Defaults ---
+  env_name: CartPole
+  name: CartPole-v1 # Write existed gym env name
+  trust_result: False
+  multi_step: 5
+  reward_range: [0, 1]

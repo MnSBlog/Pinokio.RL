@@ -2,6 +2,7 @@ import copy
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from torch_geometric.nn import GCN
 from torch.distributions import Categorical
 
 
@@ -43,6 +44,11 @@ class CustomTorchNetwork(nn.Module):
         super(CustomTorchNetwork, self).__init__()
         networks = dict()
         self.local_len = config['memory_q_len']
+        # graph feature network 정의
+        if config['graph_feature']['use']:
+            config['memory_q_len'] = 1
+            self.local_len = config['memory_q_len']
+            graph_processor =
         # Spatial feature network 정의
         if config['spatial_feature']['use']:
             in_channel = config['spatial_feature']['dim_in'][0] * self.local_len
