@@ -97,6 +97,8 @@ class PPO(PolicyAgent):
             old_state.update({'matrix': transitions['matrix_state']})
         if 'non_spatial_feature' in self.actor.networks:
             old_state.update({'vector': transitions['vector_state']})
+        if 'graph_feature' in self.actor.networks:
+            old_state.update({'graph': transitions['graph_state']})
 
         old_hiddens = None
         if self.actor.recurrent:

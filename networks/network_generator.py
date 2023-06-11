@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from torch_geometric.nn import GCN
+from torch_geometric.data import Data, Batch
 from torch.distributions import Categorical
 
 
@@ -203,10 +204,10 @@ class CustomTorchNetwork(nn.Module):
         if 'graph_feature' in self.networks:
             x3, edge_index = x['graph'].x, x['graph'].edge_index
             x3 = self.networks['graph_feature'](x3, edge_index)
-            if len(x3.shape) == 2:
-                x3 = x3.view(1, -1)
+            if isinstance(x['graph'], Batch):
+                x3 = x3.view(x['graph'].num_graphs, -1)
             else:
-                x3 = x3.view(x3.shape[0], -1)
+                x3 = x3.view(1, -1)
             cat_alter.append(x3)
 
         if len(cat_alter) >= 2:

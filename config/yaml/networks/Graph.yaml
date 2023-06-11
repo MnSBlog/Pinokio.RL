@@ -7,9 +7,9 @@ network:
     graph_feature:
       use: True
       num_layer: 2
-      dim_in: 4
+      dim_in: 6
       multi_step: 5 # 이거 임시임
-      dim_out: 16
+      dim_out: 18
       activation: 'ReLU'
       dropout: 0.2
     # --- spatial features ---
@@ -34,9 +34,9 @@ network:
     neck_activation: "ReLU"
     neck_num_layer: 3
     num_memory_layer: 0
-    memory_rnn_len: 2
+    memory_rnn_len: 0
     n_of_actions:
-      - 2
+      - 3
     action_mode: "Discrete" # Discrete or Continuous
     # --- save / load ---
     model_path: 'Networks'
