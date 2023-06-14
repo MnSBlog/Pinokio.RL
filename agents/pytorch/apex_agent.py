@@ -59,12 +59,16 @@ class ApeX(DQN):
             state.update({'matrix': transitions['matrix_state']})
         if 'non_spatial_feature' in self.actor.networks:
             state.update({'vector': transitions['vector_state']})
+        if 'graph_feature' in self.actor.networks:
+            state.update({'graph': transitions['graph_state']})
 
         next_state = dict()
         if 'spatial_feature' in self.actor.networks:
             next_state.update({'matrix': transitions['next_matrix_state']})
         if 'non_spatial_feature' in self.actor.networks:
             next_state.update({'vector': transitions['next_vector_state']})
+        if 'graph_feature' in self.actor.networks:
+            next_state.update({'graph': transitions['next_graph_state']})
 
         action = transitions['action']
         reward = transitions['reward']

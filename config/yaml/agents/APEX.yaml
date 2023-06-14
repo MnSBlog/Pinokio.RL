@@ -11,7 +11,7 @@ agent:
   epsilon_eval: 0.0
   explore_ratio: 0.1
   clip_grad_norm: 40.0
-  target_update_period: 5
+  target_update_period: 10
   # --- PER ---
   alpha: 0.5
   beta: 0.4

@@ -30,7 +30,8 @@ class OHTRouting(gym.Env, ABC):
         self.builder = MsgBuilder.OHTMsgBuilder()
         # Environment 실행
         self.start_env()
-
+        self.episode_length = 80
+        self.episode_counter = 0
         # 젠장..
         self.reset_counter = 0
 
@@ -107,32 +108,29 @@ class OHTRouting(gym.Env, ABC):
         pass
 
     def step(self, action):
-        try:
-            # print("step in")
-            msg = self.builder.BuildReplyMessage(self.id, MsgType.MsgType.DoneCheck, action)
-            self.server.send(msg)
-            # print("step send")
-            if self.reset_counter > 500:
-                graph, reward, done, truncate, info = self.__achilles()
-            else:
-                self.reset_counter += 1
-                begin = time.time()
-                graph, reward, done, truncate, info = self.server.listen()
-                # print("step listen done")
-                # print("interaction_time: ", time.time() - begin)
-            # print("action: ", action, " and reward: ", reward)
-            state = {'matrix': torch.empty(0),
-                     'vector': torch.empty(0),
-                     'graph': graph,
-                     'action_mask': torch.empty(0)}
-        except:
-            print("NETMQ EXCEPT")
+        # print("step in")
+        msg = self.builder.BuildReplyMessage(self.id, MsgType.MsgType.DoneCheck, action)
+        self.server.send(msg)
+        # print("step send")
+        if self.reset_counter > 500:
             graph, reward, done, truncate, info = self.__achilles()
-            state = {'matrix': torch.empty(0),
-                     'vector': torch.empty(0),
-                     'graph': graph,
-                     'action_mask': torch.empty(0)}
-
+        else:
+            self.reset_counter += 1
+            begin = time.time()
+            graph, reward, done, truncate, info = self.server.listen()
+            # print("step listen done")
+            # print("interaction_time: ", time.time() - begin)
+        # print("action: ", action, " and reward: ", reward)
+        reward = torch.clamp(torch.tensor(reward), min=-1, max=1).item()
+        state = {'matrix': torch.empty(0),
+                 'vector': torch.empty(0),
+                 'graph': graph,
+                 'action_mask': torch.empty(0)}
+        self.episode_counter += 1
+        if self.episode_length == self.episode_counter:
+            self.episode_counter = 0
+            done = True
+            truncate = True
         return state, reward, done, truncate, info
 
     def close(self):

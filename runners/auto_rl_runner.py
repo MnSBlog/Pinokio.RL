@@ -14,13 +14,15 @@ class AutoRLRunner(GeneralRunner):
 
     def run(self):
         reward_sum = 0.0
+        steps = 0
         state = self._env_init(reset_env=True)
         for ep in range(1, self._config['runner']['max_iteration_num'] + 1):
             # 에피소드 초기화
             while not self.done:
+                steps += 1
                 action = self._select_action(state)
                 state = self._interaction(action)
-                self._update_agent(next_state=state)
+                self._update_agent(next_state=state, steps=steps)
 
             # 에피소드마다 결과 보상값 출력
             print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
