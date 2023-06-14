@@ -1,5 +1,6 @@
 import time
 import zmq
+from Batch.FlatData import FlatData
 
 
 class ZmqServer:
@@ -16,16 +17,16 @@ class ZmqServer:
 
     def listen(self):
         while True:
-                    if self.send_done:
-                        msg = self.socket.recv()
-                        self.send_done = False
-                        self._callback(msg)
-                    time.sleep(0.001)
-
+            if self.send_done:
+                msg = self.socket.recv()
+                self.send_done = False
+                return self._callback(msg)
+            time.sleep(0.001)
 
     def send(self, reply):
         self.socket.send(reply)
         self.send_done = True
+        # time.sleep(0.2)
 
 
 class ZmqClient:

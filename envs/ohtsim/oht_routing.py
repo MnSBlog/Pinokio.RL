@@ -9,6 +9,7 @@ from utils.zero_mq import ZmqServer
 
 class OhtBase(gym.Env):
     def __init__(self, env_config):
+        raise 'duplicated!! Use new environment smat'
         put = input("DBMS ID 입력 : ")
         if is_valid(itr=env_config['iteration'], value=put, key=env_config['env_config']['id']) is False:
             raise "Wrong ID value. check your configuration"
@@ -22,7 +23,7 @@ class OhtBase(gym.Env):
         self._envConfig = env_config['env_config']
 
         # Base Parameters
-        self.server = ZmqServer(self._envConfig['port'], self.on_received)
+        self.server = ZmqServer(self._envConfig['port'], self.get_state)
         self.subEnvs = {}
         self.envId = 0
         self.envCount = self._envConfig['env_count']

@@ -4,7 +4,9 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
+
 
 class FlatData(object):
     __slots__ = ['_tab']
@@ -20,6 +22,7 @@ class FlatData(object):
     def GetRootAsFlatData(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # FlatData
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -74,21 +77,48 @@ class FlatData(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         return o == 0
 
+
 def FlatDataStart(builder): builder.StartObject(2)
+
+
 def Start(builder):
     return FlatDataStart(builder)
-def FlatDataAddInfo(builder, info): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(info), 0)
+
+
+def FlatDataAddInfo(builder, info): builder.PrependUOffsetTRelativeSlot(0,
+                                                                        flatbuffers.number_types.UOffsetTFlags.py_type(
+                                                                            info), 0)
+
+
 def AddInfo(builder, info):
     return FlatDataAddInfo(builder, info)
+
+
 def FlatDataStartInfoVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+
+
 def StartInfoVector(builder, numElems):
     return FlatDataStartInfoVector(builder, numElems)
-def FlatDataAddMask(builder, mask): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(mask), 0)
+
+
+def FlatDataAddMask(builder, mask): builder.PrependUOffsetTRelativeSlot(1,
+                                                                        flatbuffers.number_types.UOffsetTFlags.py_type(
+                                                                            mask), 0)
+
+
 def AddMask(builder, mask):
     return FlatDataAddMask(builder, mask)
+
+
 def FlatDataStartMaskVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+
+
 def StartMaskVector(builder, numElems):
     return FlatDataStartMaskVector(builder, numElems)
+
+
 def FlatDataEnd(builder): return builder.EndObject()
+
+
 def End(builder):
     return FlatDataEnd(builder)

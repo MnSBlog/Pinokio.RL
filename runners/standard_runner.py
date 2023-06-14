@@ -36,7 +36,9 @@ class StepRunner(GeneralRunner):
         state = self._env_init(reset_env=True)
         for update in range(1, self._config['runner']['max_iteration_num'] + 1):
             self._env_init()
-            while self._update_agent(next_state=state) is False:
+            steps = 0
+            while self._update_agent(next_state=state, steps=steps) is False:
+                steps += 1
                 action = self._select_action(state)
                 state = self._interaction(action)
             print('Update: ', update, 'Steps: ', self.count, 'Reward: ', self.batch_reward)

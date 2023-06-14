@@ -61,7 +61,7 @@ class CustomTorchNetwork(nn.Module):
             networks['graph_feature'] = make_graph_sequential(config['graph_feature']['dim_in'],
                                                               config['graph_feature']['dim_out'],
                                                               **config['graph_feature'])
-            config['graph_feature']['dim_out'] *= config['graph_feature']['multi_step']
+            config['graph_feature']['dim_out'] *= config['graph_feature']['node']
         # Spatial feature network 정의
         if config['spatial_feature']['use']:
             in_channel = config['spatial_feature']['dim_in'][0] * self.local_len
@@ -202,8 +202,8 @@ class CustomTorchNetwork(nn.Module):
             x2 = x2.view(x2.shape[0], -1)
             cat_alter.append(x2)
         if 'graph_feature' in self.networks:
-            x3, edge_index = x['graph'].x, x['graph'].edge_index
-            x3 = self.networks['graph_feature'](x3, edge_index)
+            x3, edge_index, edge_weight = x['graph'].x, x['graph'].edge_index, x['graph'].edge_attr
+            x3 = self.networks['graph_feature'](x3, edge_index=edge_index, edge_weight=edge_weight)
             if isinstance(x['graph'], Batch):
                 x3 = x3.view(x['graph'].num_graphs, -1)
             else:

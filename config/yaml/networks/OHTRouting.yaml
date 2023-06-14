@@ -1,24 +1,42 @@
 network:
-  # --- learning option ---
-  obs_stack: True # should not use LSTM layer with this
-  n_of_obs_stack: 3
-  use_lstm: False
-  n_of_lstm_layer: 3
-  # - State definition -
-  # --- spatial features ---
-  spatial_feature:
-    use: True
-    dim: 7
-    backbone: 'resnet50'
-    freeze: False
-  # --- non-spatial features ---
-  non_spatial_feature:
-    use: True
-    dim: 26
-    freeze: False
-  # --- outputs ---
-  neck_input: 128
-  n_of_actions:
-    - 2
-  # --- save / load ---
-  model_path: 'Networks'
+  actor:
+    # --- learning option ---
+    obs_stack: True # should not use Memory layer with this
+    memory_q_len: 1 # Integer / List
+    # - State definition -
+    graph_feature:
+      use: True
+      num_layer: 2
+      dim_in: 4
+      node: 13
+      dim_out: 16
+      activation: 'ReLU'
+      dropout: 0.2
+    # --- spatial features ---
+    spatial_feature:
+      use: False
+      num_layer: 0
+      dim_in: 0
+      dim_out: 0
+      backbone: 'resnet50'
+      freeze: False
+    # --- non-spatial features ---
+    non_spatial_feature:
+      use: False
+      num_layer: 1
+      dim_in: 4
+      dim_out: 64
+      extension: True
+      use_cnn: True
+      freeze: False
+    # --- outputs ---
+    neck_out: 32
+    neck_activation: "ReLU"
+    neck_num_layer: 3
+    num_memory_layer: 0
+    memory_rnn_len: 0
+    n_of_actions:
+      - 2
+    action_mode: "Discrete" # Discrete or Continuous
+    # --- save / load ---
+    model_path: 'Networks'

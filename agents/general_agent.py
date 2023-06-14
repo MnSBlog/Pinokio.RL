@@ -75,7 +75,7 @@ class GeneralAgent:
 
         state['matrix'] = spatial_x
         state['vector'] = non_spatial_x
-        state['graph'] = graph
+        state['graph'] = graph.to(self.device)
         state['action_mask'] = mask
 
         return state

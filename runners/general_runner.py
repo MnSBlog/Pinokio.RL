@@ -33,7 +33,7 @@ class GeneralRunner:
 
         # Calculate information
         self.save_batch_reward = []
-        self.reward_info = {'mu': [0], 'max': [0], 'min': [0], 'episode': [0], 'memory': []}
+        self.reward_info = {'mu': [], 'max': [], 'min': [], 'episode': [0], 'memory': []}
         self.rew_min = self._config['envs']['reward_range'][0]
         self.rew_max = self._config['envs']['reward_range'][1]
         self.rew_gap = (self.rew_max - self.rew_min) / 2
@@ -256,6 +256,10 @@ class GeneralRunner:
         self.reward_info['memory'].clear()
 
         plt.clf()
+        if len(self.reward_info['episode']) == 2:
+            self.reward_info['mu'].append(self.reward_info['mu'][0])
+            self.reward_info['min'].append(self.reward_info['min'][0])
+            self.reward_info['max'].append(self.reward_info['max'][0])
         plt.plot(self.reward_info['episode'], self.reward_info['mu'], '-')
         plt.fill_between(self.reward_info['episode'],
                          self.reward_info['min'], self.reward_info['max'], alpha=0.2)

@@ -8,7 +8,7 @@ network:
       use: True
       num_layer: 2
       dim_in: 6
-      multi_step: 5 # 이거 임시임
+      multi_step: 5
       dim_out: 18
       activation: 'ReLU'
       dropout: 0.2

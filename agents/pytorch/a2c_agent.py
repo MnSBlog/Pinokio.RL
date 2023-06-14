@@ -2,7 +2,6 @@ import copy
 import numpy as np
 import torch
 import torch.nn as nn
-from easydict import EasyDict
 from buffer.rollout_buffer import RolloutBuffer
 from agents.pytorch.utilities import get_device
 from agents.general_agent import PolicyAgent
@@ -20,8 +19,6 @@ class A2C(PolicyAgent):
         actor_lr = self._config['actor_lr']
         critic_lr = self._config['critic_lr']
 
-        self._parameter = EasyDict(self._config)
-
         # Buffer
         self.buffer = RolloutBuffer()
         # Optimizer
@@ -29,16 +26,16 @@ class A2C(PolicyAgent):
         self.loss = dict()
         # Actor Optimizer
         opt_arg = [
-            {'params': self.actor.parameters(), 'lr': self._parameter.actor_lr},
+            {'params': self.actor.parameters(), 'lr': actor_lr},
         ]
-        self.optimizer['actor'] = getattr(torch.optim, self._parameter.actor_optimizer)(opt_arg)
-        self.loss['actor'] = getattr(nn, self._parameter.loss_function)()
+        self.optimizer['actor'] = getattr(torch.optim, self._config['actor_optimizer'])(opt_arg)
+        self.loss['actor'] = getattr(nn, self._config['loss_function'])()
         # Critic Optimizer
         opt_arg = [
-            {'params': self.critic.parameters(), 'lr': self._parameter.critic_lr}
+            {'params': self.critic.parameters(), 'lr': critic_lr}
         ]
-        self.optimizer['critic'] = getattr(torch.optim, self._parameter.critic_optimizer)(opt_arg)
-        self.loss['critic'] = getattr(nn, self._parameter.loss_function)()
+        self.optimizer['critic'] = getattr(torch.optim, self._config['critic_optimizer'])(opt_arg)
+        self.loss['critic'] = getattr(nn, self._config['loss_function'])()
 
         self.device = device
         self.hidden_state = copy.deepcopy(self.actor.init_h_state)
@@ -55,14 +52,7 @@ class A2C(PolicyAgent):
                 self.set_mask(state['action_mask'])
             actions, action_logprobs, next_hidden = self.act(state=state, hidden=self.hidden_state)
 
-        self.batch_state_matrix.append(state['matrix'])
-        self.batch_state_vector.append(state['vector'])
-        self.batch_action.append(actions)
-        self.batch_hidden_state.append(next_hidden)
-        self.batch_log_old_policy_pdf.append(action_logprobs)
-        self.hidden_state = next_hidden
-
-        return actions
+        return {"action": actions, "action_logprobs": action_logprobs, "next_hidden": next_hidden}
 
     def act(self, state, hidden=None):
         rtn_action = []
@@ -95,7 +85,7 @@ class A2C(PolicyAgent):
         # 어드밴티지 계산
         v_values = self.critic(transitions['state'])
         next_v_values = self.critic(transitions['next_state'])
-        advantages = transitions['reward'] + self._parameter.gamma * next_v_values - v_values
+        advantages = transitions['reward'] + self._config['gamma'] * next_v_values - v_values
 
         metrics = {'reward': transitions['reward'].detach().cpu(),
                    'state_value': next_v_values.detach().cpu()}
@@ -113,7 +103,7 @@ class A2C(PolicyAgent):
             if done[i]:
                 y_i[i] = rew[i]
             else:
-                y_i[i] = rew[i] + self._parameter.gamma * next_v[i]
+                y_i[i] = rew[i] + self._config['gamma'] * next_v[i]
         return y_i
 
     def update_x(self, **kwargs):
@@ -149,34 +139,6 @@ class A2C(PolicyAgent):
 
         self.actor.load_state_dict(torch.load(actor_path, map_location=lambda storage, loc: storage))
         self.critic.load_state_dict(torch.load(critic_path, map_location=lambda storage, loc: storage))
-
-    def convert_to_torch(self, state):
-        spatial_x = state['matrix']
-        non_spatial_x = state['vector']
-        mask = state['action_mask']
-
-        if torch.is_tensor(non_spatial_x) is False:
-            non_spatial_x = torch.FloatTensor(non_spatial_x)
-        non_spatial_x = non_spatial_x.to(self.device)
-
-        if torch.is_tensor(spatial_x) is False:
-            if len(spatial_x) > 0:
-                spatial_x = torch.FloatTensor(spatial_x).to(self.device)
-        else:
-            spatial_x = spatial_x.to(self.device)
-
-        if torch.is_tensor(mask) is False:
-            if len(mask) > 0:
-                mask = torch.FloatTensor(mask).to(self.device)
-                mask = mask.unsqueeze(dim=0)
-        else:
-            mask = mask.to(self.device)
-
-        state['matrix'] = spatial_x
-        state['vector'] = non_spatial_x
-        state['action_mask'] = mask
-
-        return state
 
     def set_mask(self, mask):
         if len(mask) > 0:
