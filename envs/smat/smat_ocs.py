@@ -121,7 +121,7 @@ class OHTRouting(gym.Env, ABC):
             # print("step listen done")
             # print("interaction_time: ", time.time() - begin)
         # print("action: ", action, " and reward: ", reward)
-        reward = torch.clamp(torch.tensor(reward), min=-1, max=1).item()
+        reward = torch.clamp(torch.tensor(reward), min=-5, max=1).item()
         state = {'matrix': torch.empty(0),
                  'vector': torch.empty(0),
                  'graph': graph,

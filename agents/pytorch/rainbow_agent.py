@@ -67,21 +67,30 @@ class Rainbow(DQN):
         transitions, weights, indices, sampled_p, mean_p = self.buffer.sample(
             self.beta, self._config['batch_size']
         )
+        transitions["reward"] = transitions["reward"].unsqueeze(-1)
+        transitions["done"] = transitions["done"].unsqueeze(-1)
+        for key, transition in transitions.items():
+            transitions[key] = transition.detach().to(self.device)
+
         state = dict()
         if 'spatial_feature' in self.actor.networks:
-            state.update({'matrix': torch.FloatTensor(transitions['matrix_state']).detach().to(self.device)})
+            state.update({'matrix': transitions['matrix_state']})
         if 'non_spatial_feature' in self.actor.networks:
-            state.update({'vector': torch.FloatTensor(transitions['vector_state']).detach().to(self.device)})
+            state.update({'vector': transitions['vector_state']})
+        if 'graph_feature' in self.actor.networks:
+            state.update({'graph': transitions['graph_state']})
 
         next_state = dict()
         if 'spatial_feature' in self.actor.networks:
-            next_state.update({'matrix': torch.FloatTensor(transitions['next_matrix_state']).detach().to(self.device)})
-        if 'non_spatial_feature':
-            next_state.update({'vector': torch.FloatTensor(transitions['next_vector_state']).detach().to(self.device)})
+            next_state.update({'matrix': transitions['next_matrix_state']})
+        if 'non_spatial_feature' in self.actor.networks:
+            next_state.update({'vector': transitions['next_vector_state']})
+        if 'graph_feature' in self.actor.networks:
+            next_state.update({'graph': transitions['next_graph_state']})
 
-        action = transitions["action"].detach().to(self.device)
-        reward = transitions["reward"].unsqueeze(-1).detach().to(self.device)
-        done = transitions["done"].unsqueeze(-1).detach().to(self.device)
+        action = transitions['action']
+        reward = transitions['reward']
+        done = transitions['done']
 
         logit, _ = self.actor(state, True)
         last = 0

@@ -340,14 +340,15 @@ class GeneralRunner:
             reward = float(reward)
         else:
             reward = reward.item()
-        if self._config['envs']['trust_result']:
-            if self.done:
-                self.batch_reward += reward
-        else:
-            self.batch_reward += reward
 
         #train_reward = self._fit_reward(reward)
         train_reward = self._fit_reward(reward)
+        if self._config['envs']['trust_result']:
+            if self.done:
+                self.batch_reward += train_reward
+        else:
+            self.batch_reward += train_reward
+
         if isinstance(done, bool):
             done = np.reshape(done, -1)
             train_reward = np.reshape(train_reward, -1)

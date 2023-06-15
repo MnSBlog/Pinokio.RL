@@ -6,7 +6,7 @@ runner:
   off_pg: False
   logger: False # False or True(OpenAI Logger)
   # --- Learning Condition ---
-  batch_size: 32 # batch size
+  batch_size: 64 # batch size
   self_play: False
   # --- Operation options ---
   use_cuda: True # Use gpu by default unless it isn't available

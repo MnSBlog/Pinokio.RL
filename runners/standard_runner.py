@@ -25,7 +25,11 @@ class EpisodeRunner(GeneralRunner):
             print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
             self.save_batch_reward.append(self.batch_reward)
             self._sweep_cycle(ep)
-
+            # 아잇 시발 자꾸 죽으니 100단위로 저장하고 self.batch_reward는 매 에피소드마다 append하는걸로
+            temp = open("reward_history.txt", "a")
+            temp.write("%.4f\n" % self.batch_reward)
+            temp.close()
+            self._save_agent()
             # **** gym auto done(auto reset) 모드랑 아닐때랑 OHTRouting 이 세개가 모두 다름..
             self.done = False
             self.count = 0

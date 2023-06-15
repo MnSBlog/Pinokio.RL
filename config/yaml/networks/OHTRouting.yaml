@@ -6,10 +6,10 @@ network:
     # - State definition -
     graph_feature:
       use: True
-      num_layer: 3
+      num_layer: 2
       dim_in: 4
       node: 13
-      dim_out: 32
+      dim_out: 12
       activation: 'ReLU'
       dropout: 0.2
     # --- spatial features ---
@@ -30,9 +30,9 @@ network:
       use_cnn: True
       freeze: False
     # --- outputs ---
-    neck_out: 128
-    neck_activation: "PReLU"
-    neck_num_layer: 4
+    neck_out: 64
+    neck_activation: "ReLU"
+    neck_num_layer: 3
     num_memory_layer: 0
     memory_rnn_len: 0
     n_of_actions:

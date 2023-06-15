@@ -1,7 +1,7 @@
 envs:
   # --- Defaults ---
   name: OHTRouting
-  reward_range: [-1, 1]
+  reward_range: [-5, 1]
   trust_result: False
   # --- Simulator arguments(only string) ---
   args:
