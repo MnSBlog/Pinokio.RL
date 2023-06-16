@@ -9,7 +9,7 @@ network:
       num_layer: 2
       dim_in: 4
       node: 13
-      dim_out: 12
+      dim_out: 32
       activation: 'ReLU'
       dropout: 0.2
     # --- spatial features ---
@@ -30,7 +30,7 @@ network:
       use_cnn: True
       freeze: False
     # --- outputs ---
-    neck_out: 64
+    neck_out: 256
     neck_activation: "ReLU"
     neck_num_layer: 3
     num_memory_layer: 0

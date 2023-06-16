@@ -2,5 +2,5 @@ hmcr: 0.7
 par: 0.1
 hms: 6
 maximize: True
-parallel: True
+parallel: False
 load_last: True

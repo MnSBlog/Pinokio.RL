@@ -8,14 +8,14 @@ network-actor-non_spatial_feature-dim_out: [16, 32, 64, 128, 256, 512, 1024]
 network-actor-spatial_feature-num_layer: [1, 2, 3, 4]
 network-actor-spatial_feature-dim_out: [16, 32, 64, 128, 256, 512, 1024]
 network-actor-neck_num_layer: [1, 2, 3, 4]
-network-actor-num_memory_layer: [0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8]
-network-actor-memory_rnn_len: [1, 2, 3, 4, 5, 6, 7, 8]
+# network-actor-num_memory_layer: [0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+# network-actor-memory_rnn_len: [1, 2, 3, 4, 5, 6, 7, 8]
 network-actor-neck_out: [8, 16, 32, 64, 128, 256]
 agent-epochs:
   min: 10
   max: 75
 agent-loss_function: ["CrossEntropyLoss", "MSELoss", "L1Loss"]
-agent-optimizer: ['SGD','Adam','Adagrad','RMSprop']
+agent-optimizer: ['SGD','Adam','Adagrad','RMSprop','Adadelta']
 runner-batch_size:
   min: 20
   max: 300

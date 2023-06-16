@@ -2,7 +2,7 @@ import copy
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from torch_geometric.nn import GCN
+from torch_geometric.nn import GCN, Sequential
 from torch_geometric.data import Data, Batch
 from torch.distributions import Categorical
 
@@ -16,8 +16,15 @@ def make_sequential(in_channels, out_channels, *args, **kwargs):
 def make_graph_sequential(in_channel, out_channel, **kwargs):
     sep = (out_channel - in_channel) // kwargs['num_layer']
     sub_out_channel = in_channel
-    body = GCN(in_channels=in_channel, hidden_channels=sub_out_channel + sep, out_channels=out_channel,
-               num_layers=kwargs['num_layer'], act=kwargs['activation'].lower(), dropout=kwargs['dropout'])
+    body = Sequential('x, edge_index, edge_weight',
+                      [
+                          (GCN(in_channels=in_channel, hidden_channels=16,
+                               num_layers=1, act=kwargs['activation'].lower(), dropout=kwargs['dropout']),
+                           'x=x, edge_index=edge_index, edge_weight=edge_weight -> x1'),
+                          (GCN(in_channels=16, hidden_channels=out_channel,
+                               num_layers=2, act=kwargs['activation'].lower(), dropout=kwargs['dropout']),
+                           'x=x1, edge_index=edge_index, edge_weight=edge_weight -> x2')
+                      ])
     return body
 
 

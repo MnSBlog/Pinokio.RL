@@ -240,7 +240,7 @@ class HarmonySearch(Solver):
             for i in range(self.__hms + 1):
                 temp = copy.deepcopy(run_args)
                 if 'port' in temp['envs']:
-                    temp['envs']['port'] = 49999 - i
+                    temp['envs']['zmqport'] = 5555 - i
                 run_args_list.append(temp)
 
             if self._Parameters['parallel']:
@@ -248,7 +248,7 @@ class HarmonySearch(Solver):
                     new_output = p.starmap(self._TestFunc, zip(short_term_memory, run_args_list))
             else:
                 for idx in range(self.__hms):
-                    out = self._TestFunc(short_term_memory[idx])
+                    out = self._TestFunc(short_term_memory[idx], run_args_list[idx])
                     new_output.append(copy.deepcopy(out))
 
             worst_output = copy.deepcopy(self.__hm['output'][-1])

@@ -72,7 +72,10 @@ class PPO(PolicyAgent):
         transitions["reward"] = transitions["reward"].unsqueeze(-1)
         transitions["done"] = transitions["done"].unsqueeze(-1)
         for key, transition in transitions.items():
-            transitions[key] = transition.detach().to(self.device)
+            try:
+                transitions[key] = transition.detach().to(self.device)
+            except AttributeError:
+                print(key)
 
         discounted_reward = np.zeros(transitions['reward'].shape[1])
         rewards = np.zeros(transitions['reward'].shape)

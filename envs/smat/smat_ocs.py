@@ -30,8 +30,6 @@ class OHTRouting(gym.Env, ABC):
         self.builder = MsgBuilder.OHTMsgBuilder()
         # Environment 실행
         self.start_env()
-        self.episode_length = 80
-        self.episode_counter = 0
         # 젠장..
         self.reset_counter = 0
 
@@ -126,14 +124,16 @@ class OHTRouting(gym.Env, ABC):
                  'vector': torch.empty(0),
                  'graph': graph,
                  'action_mask': torch.empty(0)}
-        self.episode_counter += 1
-        if self.episode_length == self.episode_counter:
-            self.episode_counter = 0
-            done = True
-            truncate = True
         return state, reward, done, truncate, info
 
     def close(self):
-        pass
+        import psutil
+        del self.server
+        del self.builder
+        for proc in psutil.process_iter():
+            if proc.name() == "PinokioRL.exe":
+                proc.kill()
+        self.reset_counter = 0
+        time.sleep(5)
 
     # endregion

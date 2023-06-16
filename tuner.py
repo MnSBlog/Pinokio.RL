@@ -45,7 +45,7 @@ def save_outputs(args, metric, path):
 
 def test_function(memory, run_args):
     try:
-        from gym import envs
+        from gymnasium import envs
         check = envs.registry
 
         if run_args['env_name'] in check:

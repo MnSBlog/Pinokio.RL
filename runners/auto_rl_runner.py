@@ -16,18 +16,29 @@ class AutoRLRunner(GeneralRunner):
         reward_sum = 0.0
         steps = 0
         state = self._env_init(reset_env=True)
+
+        Temp = 0
         for ep in range(1, self._config['runner']['max_iteration_num'] + 1):
             # 에피소드 초기화
             while not self.done:
+                if Temp >= 80:
+                    Temp = 0
+                    break
+                Temp += 1
                 steps += 1
                 action = self._select_action(state)
                 state = self._interaction(action)
-                self._update_agent(next_state=state, steps=steps)
-
+                if self._update_agent(next_state=state, steps=steps):
+                    steps = 0
             # 에피소드마다 결과 보상값 출력
             print('Episode: ', ep, 'Steps: ', self.count, 'Reward: ', self.batch_reward)
             self._sweep_cycle(ep)
-            reward_sum += copy.deepcopy(self.batch_reward.item())
+            reward_sum += copy.deepcopy(self.batch_reward)
+
+            self.done = False
+            self.count = 0
+            self.batch_reward = 0
+
         self._save_reward_log()
         self._close_env()
         return reward_sum, self._agent.metric
