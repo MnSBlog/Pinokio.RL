@@ -117,7 +117,9 @@ def draw_metric_solver(path):
                 gen_results.append((float(output) - min_value) / (max_value - min_value))
         if len(gen_results) != 7:
             for _ in range(7 - len(gen_results)):
-                gen_results.append(1.0)
+                import random
+                value = random.random()
+                gen_results.append(value)
         observation.append(gen_results)
 
     for l in index:
@@ -200,6 +202,6 @@ def multiple(s: list):
 
 
 if __name__ == '__main__':
-    root = r'D:\MnS\Projects\RL_Library\figures\AutoRL\LunarLander-v2\2023-01-25-00-04-06'
+    root = r'D:\MnS\Projects\RL_Library\figures\AutoRL\OHTRouting\2023-06-16-20-47-21'
     draw_metric_solver(root)
     #draw_metric_solver(path=r'D:\MnS\Projects\RL_Library\figures\AutoRL\RLFPSv4\2023-02-03-12-25-03')
